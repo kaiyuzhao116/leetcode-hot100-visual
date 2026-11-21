@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>239</text></svg>">
+<title>239 滑动窗口最大值 - 单调队列可视化</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;
+    --blue:#58a6ff;--green:#3fb950;--orange:#e3b341;--purple:#bc8cff;--red:#f85149;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.55;padding:24px}
+  .wrap{max-width:1280px;margin:0 auto}
+  h1{font-size:22px;display:flex;align-items:center;gap:10px}
+  .badge{font-size:12px;font-weight:600;color:#ffdcd7;background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.4);border-radius:20px;padding:2px 10px}
+  .sub{color:var(--muted);font-size:12.5px;margin:6px 0 16px}
+  .idea{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:13px 16px;font-size:13px;margin-bottom:18px}
+  .idea b{color:var(--blue)}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 13px;cursor:pointer;font-size:12px;font-family:var(--mono)}
+  .casebtn.active{color:var(--text);border-color:var(--blue);background:rgba(88,166,255,.12)}
+  .layout{display:grid;grid-template-columns:1fr 430px;gap:18px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .card h2{font-size:12.5px;font-family:var(--mono);color:var(--muted);margin-bottom:12px;font-weight:600}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-bottom:8px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .svgbox{width:100%;overflow-x:auto}
+  svg{display:block;width:100%;min-width:560px}
+  .qpanel{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px;min-height:54px}
+  .qcard{background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:8px 12px;text-align:center;min-width:58px;position:relative}
+  .qcard .qi{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .qcard .qv{font-family:var(--mono);font-size:18px;font-weight:700;margin-top:2px}
+  .qcard.head{border-color:var(--green);background:rgba(63,185,80,.12)}
+  .qcard.head .qv{color:var(--green)}
+  .qcard.inq{border-color:var(--blue)}
+  .qcard.inq .qv{color:var(--blue)}
+  .qtag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:9.5px;background:var(--green);color:#04140a;border-radius:10px;padding:1px 7px;font-weight:700;white-space:nowrap}
+  .qarrow{color:var(--muted);font-family:var(--mono);font-size:13px}
+  .ansrow{display:flex;gap:6px;flex-wrap:wrap;min-height:48px;align-items:center}
+  .anscell{width:46px;height:46px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:16px;font-weight:700;color:var(--muted)}
+  .anscell.filled{border-style:solid;border-color:var(--green);background:rgba(63,185,80,.1);color:var(--green)}
+  .infos{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+  .info{background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center}
+  .info .k{font-size:11px;color:var(--muted)}
+  .info .v{font-family:var(--mono);font-size:17px;font-weight:700;margin-top:3px}
+  .msg{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;min-height:52px;margin-top:14px}
+  .codecard{padding:0;overflow:hidden;position:sticky;top:16px}
+  .codehead{display:flex;align-items:center;gap:7px;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--panel2)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .codefile{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-left:6px}
+  #code{padding:12px 0;max-height:520px;overflow:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7}
+  .ln{display:block;padding:0 14px;white-space:pre;color:var(--muted)}
+  .ln.on{background:rgba(88,166,255,.13);color:var(--text);border-left:3px solid var(--blue);padding-left:11px}
+  .kw{color:var(--purple)}
+  .controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:16px}
+  .ctl{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 15px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px}
+  .ctl:hover{border-color:var(--blue)}
+  .ctl svg{width:15px;height:15px;fill:var(--text)}
+  #slider{flex:1;min-width:160px;accent-color:var(--blue);cursor:pointer}
+  .stepmeta{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:64px;text-align:center}
+  .spdgroup{display:flex;gap:5px}
+  .spd{background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:7px 10px;cursor:pointer;font-size:11.5px}
+  .spd.active{color:var(--text);border-color:var(--blue)}
+  @media(max-width:980px){
+    .layout{grid-template-columns:1fr}
+    .codecard{position:static}
+    #code{max-height:380px}
+    body{padding:14px}
+    .infos{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>239. 滑动窗口最大值 <span class="badge">困难</span></h1>
+  <div class="sub">单调双端队列（存下标）· 时间 O(n) 每个元素入队出队各一次 · 空间 O(k)</div>
+
+  <div class="idea">
+    维护一个存<b>下标</b>的双端队列，下标对应的值<b>从队首到队尾单调递减</b>，所以队首永远是当前窗口最大值。
+    每轮三步：① 队尾所有比当前元素小的下标 <b>pollLast 淘汰</b>；② 当前下标 <b>offerLast 加到队尾</b>；
+    ③ 队首若滑出窗口左边界 <b>pollFirst 清理</b>。窗口成形后，队首值即答案。
+  </div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="layout">
+    <div>
+      <div class="card">
+        <h2>数组、窗口与单调队列</h2>
+        <div class="legend">
+          <span><i style="background:var(--orange)"></i>当前 i</span>
+          <span><i style="background:var(--green)"></i>队首=窗口最大</span>
+          <span><i style="background:var(--blue)"></i>队列内</span>
+          <span><i style="background:var(--red)"></i>本轮淘汰/过期</span>
+          <span><i style="background:rgba(139,148,158,.35)"></i>窗口框</span>
+        </div>
+        <div class="svgbox"><svg id="svg" viewBox="0 0 980 250"></svg></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>单调队列 dp（队首 → 队尾，值递减；存的是下标）</h2>
+        <div class="qpanel" id="qpanel"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>答案数组 ans（每个窗口的最大值）</h2>
+        <div class="ansrow" id="ansrow"></div>
+        <div class="infos">
+          <div class="info"><div class="k">当前 i</div><div class="v" id="vI" style="color:var(--orange)">—</div></div>
+          <div class="info"><div class="k">窗口范围</div><div class="v" id="vWin" style="color:var(--muted)">—</div></div>
+          <div class="info"><div class="k">队首下标</div><div class="v" id="vHead" style="color:var(--green)">—</div></div>
+          <div class="info"><div class="k">窗口最大值</div><div class="v" id="vMax" style="color:var(--green)">—</div></div>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <div class="card codecard">
+      <div class="codehead">
+        <span class="dot" style="background:#ff5f57"></span>
+        <span class="dot" style="background:#febc2e"></span>
+        <span class="dot" style="background:#28c840"></span>
+        <span class="codefile">Solution.java</span>
+      </div>
+      <div id="code"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl" id="reset"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 7l5 5V8a5 5 0 1 1-5 5H5a7 7 0 1 0 7-8z"/></svg>重置</button>
+    <button class="ctl" id="prev"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6V6z"/></svg>上一步</button>
+    <button class="ctl" id="play"><svg viewBox="0 0 24 24"><path id="playic" d="M8 5v14l11-7L8 5z"/></svg><span id="playtxt">播放</span></button>
+    <button class="ctl" id="next">下一步<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6V6z"/></svg></button>
+    <input type="range" id="slider" min="0" value="0" step="1">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+    <div class="spdgroup">
+      <button class="spd" data-ms="1200">0.5x</button>
+      <button class="spd active" data-ms="700">1x</button>
+      <button class="spd" data-ms="350">2x</button>
+    </div>
+  </div>
+</div>
+<script>
+const CASES=[
+  {nums:[1,3,-1,-3,5,3,6,7],k:3},
+  {nums:[1,3,1,2,0,5],k:3},
+  {nums:[7,2,4],k:2},
+  {nums:[1,-1],k:1},
+  {nums:[1,2,3,4,5],k:5}
+];
+const CODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public</span> <span class="kw">int</span>[] maxSlidingWindow(<span class="kw">int</span>[] nums, <span class="kw">int</span> k) {',
+  '      <span class="kw">int</span> n = nums.length;',
+  '      <span class="kw">int</span>[] ans = <span class="kw">new</span> <span class="kw">int</span>[n-k+1];',
+  '      Deque&lt;Integer&gt; dp = <span class="kw">new</span> ArrayDeque&lt;&gt;();',
+  '      <span class="kw">for</span>(<span class="kw">int</span> i = 0; i&lt;n; i++){',
+  '          <span class="kw">while</span>(!dp.isEmpty() &amp;&amp; nums[dp.peekLast()]&lt;nums[i]){',
+  '              dp.pollLast();',
+  '          }',
+  '          dp.offerLast(i);',
+  '          <span class="kw">if</span>(dp.peekFirst()&lt;=i-k){',
+  '              dp.pollFirst();',
+  '          }',
+  '          <span class="kw">if</span>(i-k+1&gt;=0){',
+  '              ans[i-k+1] = nums[dp.peekFirst()];',
+  '          }',
+  '      }',
+  '      <span class="kw">return</span> ans;',
+  '  }',
+  '}'
+];
+function $(id){return document.getElementById(id);}
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function buildSteps(cs){
+  const nums=cs.nums,k=cs.k,n=nums.length,ansSize=n-k+1;
+  const ans=new Array(ansSize).fill(null);
+  let deque=[];
+  const out=[];
+  const snap=()=>({i:null,deque:deque.slice(),ans:ans.slice(),popped:null,expired:null,
+    winL:null,line:null,action:'check',max:null});
+  const push=(msg,line,extra)=>{const o=snap();o.msg=msg;o.line=line;if(extra)Object.assign(o,extra);out.push(o);};
+  push(`初始化：n=${n}，ans 长度 n-k+1=${ansSize}，空双端队列 dp。`,4);
+  for(let i=0;i<n;i++){
+    const winL=i-k+1;
+    const wl=winL>=0?winL:null;
+    if(deque.length===0){
+      push(`i=${i}，num=${nums[i]}：队列为空，while 的 !isEmpty 不成立，直接去入队。`,6,{i,winL:wl});
+    }else{
+      while(deque.length>0 && nums[deque[deque.length-1]] < nums[i]){
+        const dead=deque.pop();
+        push(`while：队尾下标 ${dead}（值 ${nums[dead]}）&lt; 当前 ${nums[i]}，它不可能再当窗口最大，pollLast 淘汰。`,7,{i,popped:dead,winL:wl,action:'pop'});
+      }
+      if(deque.length===0){
+        push(`比当前小的队尾都弹完了，队列空。`,6,{i,winL:wl});
+      }else{
+        const tail=deque[deque.length-1];
+        push(`队尾下标 ${tail}（值 ${nums[tail]}）≥ 当前 ${nums[i]}，停止淘汰，保持单调递减。`,6,{i,winL:wl});
+      }
+    }
+    deque.push(i);
+    push(`offerLast(${i})：当前下标加到队尾。`,9,{i,winL:wl,action:'offer'});
+    const head=deque[0];
+    if(head<=i-k){
+      deque.shift();
+      push(`队首下标 ${head} ≤ i-k=${i-k}，已滑出窗口左边界，pollFirst 清理。`,11,{i,expired:head,winL:wl,action:'expire'});
+    }else{
+      push(`队首下标 ${head} &gt; i-k=${i-k}，还在窗口内，不清理。`,10,{i,winL:wl});
+    }
+    if(winL>=0){
+      const h=deque[0],mx=nums[h];
+      ans[winL]=mx;
+      push(`窗口成形 [${winL}..${i}]，ans[${winL}] = nums[队首 ${h}] = <b>${mx}</b>。`,14,{i,winL,max:mx,action:'write'});
+    }else{
+      push(`i-k+1=${winL}&lt;0，窗口还没凑满 k 个，不写答案。`,13,{i,winL:null});
+    }
+  }
+  push(`遍历结束，return ans = [${ans.join(',')}]。`,17,{action:'end'});
+  return out;
+}
+
+let steps=[],posIdx=0,curCase=0,timer=null,playMs=700;
+
+function drawSvg(s){
+  const nums=CASES[curCase].nums,n=nums.length;
+  const padX=40,totalW=980-2*padX;
+  const cellW=totalW/n,boxW=Math.min(cellW*.72,60);
+  const boxY=120,boxH=64;
+  const cx=idx=>padX+cellW*idx+cellW/2;
+  const inQ=new Set(s.deque),head=s.deque[0];
+  let g='';
+  if(s.winL!==null&&s.winL!==undefined){
+    const x1=cx(s.winL)-boxW/2-8,x2=cx(s.i)+boxW/2+8;
+    g+=`<rect x="${x1}" y="${boxY-12}" width="${x2-x1}" height="${boxH+24}" rx="12" fill="rgba(139,148,158,.06)" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="6 5"/>`;
+  }
+  for(let idx=0;idx<n;idx++){
+    const x=cx(idx)-boxW/2;
+    let fill='#161b22',stroke='#30363d',tcol='#8b949e';
+    if(inQ.has(idx)){fill='rgba(88,166,255,.1)';stroke='#58a6ff';tcol='#58a6ff';}
+    if(idx===head){fill='rgba(63,185,80,.13)';stroke='#3fb950';tcol='#3fb950';}
+    if(idx===s.popped||idx===s.expired){fill='rgba(248,81,73,.14)';stroke='#f85149';tcol='#f85149';}
+    if(idx===s.i&&!(idx===s.popped||idx===s.expired)){stroke='#e3b341';}
+    g+=`<rect x="${x}" y="${boxY}" width="${boxW}" height="${boxH}" rx="9" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    g+=`<text x="${cx(idx)}" y="${boxY+40}" text-anchor="middle" font-size="20" font-weight="700" fill="${tcol}">${nums[idx]}</text>`;
+    g+=`<text x="${cx(idx)}" y="${boxY+boxH+20}" text-anchor="middle" font-size="12" fill="#8b949e">${idx}</text>`;
+    if(inQ.has(idx)){
+      g+=`<circle cx="${cx(idx)}" cy="${boxY-22}" r="5" fill="${idx===head?'#3fb950':'#58a6ff'}"/>`;
+    }
+  }
+  $('svg').innerHTML=g;
+}
+function drawQueue(s){
+  if(s.deque.length===0){$('qpanel').innerHTML='<span style="color:var(--muted);font-size:12px">空队列</span>';return;}
+  let h='';
+  s.deque.forEach((idx,j)=>{
+    const tag=j===0?'<span class="qtag">窗口最大</span>':'';
+    h+=`<div class="qcard inq${j===0?' head':''}">${tag}<div class="qi">下标 ${idx}</div><div class="qv">${CASES[curCase].nums[idx]}</div></div>`;
+    if(j<s.deque.length-1)h+='<span class="qarrow">›</span>';
+  });
+  $('qpanel').innerHTML=h;
+}
+function drawAns(s){
+  $('ansrow').innerHTML=s.ans.map(v=>`<div class="anscell${v!==null?' filled':''}">${v===null?'':v}</div>`).join('');
+}
+function render(){
+  const s=steps[posIdx];
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('msg').innerHTML=s.msg;
+  $('vI').textContent=s.i===null?'—':s.i;
+  $('vWin').textContent=(s.winL===null||s.winL===undefined)?'—':`[${s.winL}..${s.i}]`;
+  const head=s.deque[0];
+  $('vHead').textContent=head===undefined?'—':head;
+  $('vMax').textContent=(head!==undefined&&s.winL!==null)?CASES[curCase].nums[head]:'—';
+  drawSvg(s);drawQueue(s);drawAns(s);
+  $('code').querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;
+  steps=buildSteps(CASES[i]);
+  posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">用例 ${i+1}：[${c.nums}] k=${c.k}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

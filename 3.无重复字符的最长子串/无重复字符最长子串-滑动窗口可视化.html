@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%230d1117'/><text x='12' y='17' font-size='14' text-anchor='middle' fill='%2358a6ff' font-family='monospace'>3</text></svg>">
+<title>3. 无重复字符的最长子串 · 滑动窗口可视化</title>
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+  --orange:#e3b341;--purple:#bc8cff;--red:#f85149;--water:#388bfd;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6;padding:28px 20px 60px}
+.wrap{max-width:1080px;margin:0 auto}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:26px;font-weight:700}
+.diff{font-size:12px;color:var(--orange);border:1px solid var(--orange);border-radius:6px;padding:1px 9px}
+.sub{color:var(--muted);font-size:13px;margin:8px 0 18px}
+.ideacard{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:14px 16px;font-size:13.5px;margin-bottom:16px}
+.ideacard b{color:var(--blue)}
+.casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.casebtn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer}
+.casebtn.active{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.1)}
+.vizwrap{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+.vizwrap h2{font-size:15px;font-weight:700;margin-bottom:12px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:var(--muted)}
+.lg{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid var(--border)}
+.winlayout{display:grid;grid-template-columns:1fr 220px;gap:16px}
+.mapcard{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;min-width:0}
+.mapcard .mh{font-size:12px;color:var(--muted);margin-bottom:10px;font-weight:600}
+.mitem{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:6px 10px;margin-bottom:6px;font-size:13px}
+.mitem .mc{font-weight:700;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:rgba(188,140,255,.15);color:var(--purple)}
+.mitem .mi{font-family:Consolas,monospace;color:var(--orange);font-size:12px}
+.msg{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13.5px;margin-bottom:14px;min-height:46px}
+.infobar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:6px}
+.icard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+.icard .vval{font-size:18px;font-weight:700}
+.icard .subval{font-size:11px;margin-top:3px;font-weight:600;color:var(--muted)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 14px}
+button.ctl{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer}
+button.ctl:hover{border-color:var(--blue)}
+button.primary{background:rgba(88,166,255,.15);border-color:var(--blue);color:var(--blue);font-weight:600}
+input[type=range]{flex:1;min-width:160px;accent-color:var(--blue);height:22px}
+.spd{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:5px 11px;font-size:12px;cursor:pointer}
+.spd.active{border-color:var(--blue);color:var(--blue)}
+.stepmeta{font-size:12px;color:var(--muted);font-family:Consolas,monospace;min-width:64px;text-align:right}
+.codewrap{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px}
+.codewrap h2{font-size:14px;margin-bottom:12px;color:var(--muted)}
+.code{font-family:Consolas,"Courier New",monospace;font-size:13.5px;line-height:1.85}
+.ln{display:block;padding:0 12px;border-left:3px solid transparent;white-space:pre}
+.ln.on{background:rgba(88,166,255,.12);border-left-color:var(--blue)}
+.kw{color:#ff7b72}
+.hidden{display:none!important}
+@media(max-width:760px){
+  .winlayout{grid-template-columns:1fr}
+  .infobar{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>3. 无重复字符的最长子串</h1>
+    <span class="diff">中等</span>
+  </div>
+  <div class="sub">滑动窗口 + HashMap · 时间 O(n) 空间 O(字符集) · 维护一个始终无重复字符的窗口，求窗口最大长度</div>
+
+  <div class="ideacard">
+    右指针 <b>i</b> 逐个扫字符，用 <b>map</b> 记录每个字符<b>最近一次出现的下标</b>。一旦当前字符 c 已在窗口内（map 里有它、且旧下标 &gt;= left），就把左指针 <b>left 跳到旧下标 +1</b>，把重复字符移出窗口；然后更新 map 并取窗口长度 i-left+1 的最大值。
+  </div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="vizwrap">
+    <h2>滑动窗口（绿=窗口内，灰=窗口外，红=重复旧位置，橙 L=left 蓝 i=右指针）</h2>
+    <div class="legend">
+      <span class="lg"><span class="sw" style="background:rgba(63,185,80,.25);border-color:var(--green)"></span>窗口内</span>
+      <span class="lg"><span class="sw" style="background:#30363d"></span>窗口外</span>
+      <span class="lg"><span class="sw" style="background:var(--red)"></span>重复旧位置</span>
+      <span class="lg"><span class="sw" style="background:var(--purple)"></span>map 记录</span>
+      <span class="lg"><span class="sw" style="background:rgba(248,81,81,.15);border:2px dashed var(--red)"></span>错误窗口（去掉 &gt;=left）</span>
+    </div>
+    <div class="winlayout">
+      <svg id="svg" viewBox="0 0 760 300" style="width:100%;height:auto"></svg>
+      <div class="mapcard">
+        <div class="mh">HashMap 字符 → 最新下标</div>
+        <div id="mapitems"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar">
+    <div class="icard"><div class="lab">left 左边界</div><div class="vval" id="vLeft" style="color:var(--orange)">0</div></div>
+    <div class="icard"><div class="lab">i 右指针</div><div class="vval" id="vI" style="color:var(--blue)">0</div></div>
+    <div class="icard"><div class="lab">当前窗口长度</div><div class="vval" id="vLen" style="color:var(--green)">0</div></div>
+    <div class="icard"><div class="lab">最长 count</div><div class="vval" id="vCount" style="color:var(--purple)">0</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl primary" id="play"><span id="playtxt">播放</span></button>
+    <button class="ctl" id="prev">上一步</button>
+    <button class="ctl" id="next">下一步</button>
+    <button class="ctl" id="reset">重置</button>
+    <input type="range" id="slider" min="0" value="0">
+    <span class="stepmeta" id="stepmeta"></span>
+    <button class="spd" data-ms="1200">0.5x</button>
+    <button class="spd active" data-ms="700">1x</button>
+    <button class="spd" data-ms="350">2x</button>
+  </div>
+
+  <div class="codewrap">
+    <h2>Java 滑动窗口代码</h2>
+    <div class="code" id="code"></div>
+  </div>
+</div>
+<script>
+const CASES=["abcabcbb","bbbbb","pwwkew","abba"];
+const CODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public int</span> lengthOfLongestSubstring(String s) {',
+  '      Map&lt;Character,Integer&gt; map = <span class="kw">new</span> HashMap&lt;&gt;();',
+  '      <span class="kw">int</span> left = 0;',
+  '      <span class="kw">int</span> count = 0;',
+  '      <span class="kw">for</span>(<span class="kw">int</span> i = 0;i&lt;s.length();i++){',
+  '          <span class="kw">char</span> c = s.charAt(i);',
+  '          <span class="kw">if</span>(map.containsKey(c) &amp;&amp; map.get(c) &gt;= left){',
+  '              left = map.get(c) +1;',
+  '          }',
+  '          map.put(c,i);',
+  '          count = Math.max(count,i - left +1);',
+  '      }',
+  '      <span class="kw">return</span> count;',
+  '  }',
+  '}'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+function hasOwn(o,k){return Object.prototype.hasOwnProperty.call(o,k);}
+function buildSteps(s){
+  const n=s.length;
+  const map={};
+  let left=0,count=0;
+  const out=[];
+  const snap=()=>({i:null,c:null,left,map:Object.assign({},map),count,winLen:0,oldIdx:null,init:false,line:null});
+  const push=(msg,line,extra)=>{const o=snap();o.msg=msg;o.line=line;if(extra)Object.assign(o,extra);out.push(o);};
+  push('初始化：空 map、left=0、count=0。',2,{init:true});
+  for(let i=0;i<n;i++){
+    const c=s.charAt(i);
+    push(`i=${i}，c = s.charAt(i) = '${c}'，准备检查它是否在窗口内。`,6,{i,c});
+    if(hasOwn(map,c)&&map[c]>=left){
+      const oldIdx=map[c];
+      left=oldIdx+1;
+      push(`'${c}' 在窗口内（旧下标 ${oldIdx} &gt;= left），left = ${oldIdx}+1 = ${left}，把旧的 '${c}' 移出窗口。`,8,{i,c,oldIdx});
+    }else if(!hasOwn(map,c)){
+      push(`map 里没有 '${c}'，是新字符，left 保持 ${left}。`,7,{i,c});
+    }else{
+      const wrongLeft=map[c]+1;
+      push(`'${c}' 出现过，但旧下标 ${map[c]} &lt; left=${left}，已在窗口外，<b style="color:var(--green)">正确写法 left 保持 ${left}</b>。<br>若去掉 &gt;=left 只写 containsKey，left 会错误退回到 ${wrongLeft}，错误窗口 [${wrongLeft},${i}]="${s.substring(wrongLeft,i+1)}" 里出现重复字符。`,7,{i,c,wrongLeft});
+    }
+    map[c]=i;
+    const winLen=i-left+1;
+    count=Math.max(count,winLen);
+    push(`map.put('${c}',${i})；当前窗口 [${left},${i}] 长度 ${winLen}，count 更新为 ${count}。`,11,{i,c,winLen});
+  }
+  push(`遍历结束，return count = ${count}。`,13);
+  return out;
+}
+let steps=[],posIdx=0,curCase=0,timer=null,playMs=700;
+function $(id){return document.getElementById(id);}
+function drawSvg(s){
+  const str=CASES[curCase],n=str.length;
+  const padX=40,totalW=760-2*padX;
+  const cellW=totalW/n,boxW=Math.min(cellW*0.74,64);
+  const boxY=118,boxH=66;
+  const cx=idx=>padX+cellW*idx+cellW/2;
+  const rightEnd=s.i===null?n-1:s.i;
+  let g='';
+  if(s.wrongLeft!==undefined&&s.wrongLeft!==null&&s.i!==null){
+    const x1=cx(s.wrongLeft)-boxW/2,x2=cx(s.i)+boxW/2;
+    g+=`<rect x="${x1}" y="${boxY-6}" width="${x2-x1}" height="${boxH+12}" rx="10" fill="rgba(248,81,81,.07)" stroke="#f85149" stroke-width="2" stroke-dasharray="8 5"/>`;
+  }
+  for(let idx=0;idx<n;idx++){
+    const x=cx(idx)-boxW/2;
+    const inWin=s.init?false:(idx>=s.left&&idx<=rightEnd);
+    const isOld=idx===s.oldIdx;
+    let fill='#161b22',stroke='#30363d',tcol='#8b949e';
+    if(inWin){fill='rgba(63,185,80,.14)';stroke='#3fb950';tcol='#e6edf3';}
+    if(isOld){fill='rgba(248,81,81,.22)';stroke='#f85149';tcol='#f85149';}
+    g+=`<rect x="${x}" y="${boxY}" width="${boxW}" height="${boxH}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    g+=`<text x="${cx(idx)}" y="${boxY+41}" text-anchor="middle" font-size="20" font-weight="700" fill="${tcol}">${str.charAt(idx)}</text>`;
+    g+=`<text x="${cx(idx)}" y="${boxY+boxH+20}" text-anchor="middle" font-size="12" fill="#8b949e">${idx}</text>`;
+    if(s.map[str.charAt(idx)]===idx)g+=`<circle cx="${x+boxW-8}" cy="${boxY+8}" r="3.5" fill="#bc8cff"/>`;
+  }
+  if(!s.init){
+    g+=`<text x="${cx(s.left)}" y="${boxY-14}" text-anchor="middle" font-size="15" font-weight="700" fill="#e3b341">L</text>`;
+    if(s.i!==null)g+=`<text x="${cx(s.i)}" y="${boxY-14}" text-anchor="middle" font-size="15" font-weight="700" fill="#58a6ff">i</text>`;
+    if(s.wrongLeft!==undefined&&s.wrongLeft!==null&&s.i!==null){
+      g+=`<text x="${cx(s.wrongLeft)}" y="${boxY-36}" text-anchor="middle" font-size="12" font-weight="700" fill="#f85149">错误L=${s.wrongLeft}</text>`;
+    }
+  }
+  $('svg').innerHTML=g;
+}
+function render(){
+  const s=steps[posIdx];
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('msg').innerHTML=s.msg;
+  $('vLeft').textContent=s.left;
+  $('vI').textContent=s.init?'—':(s.i===null?'—':s.i);
+  let len;
+  if(s.init)len='—';
+  else if(s.i===null)len=CASES[curCase].length-s.left;
+  else len=s.i-s.left+1;
+  $('vLen').textContent=len;
+  $('vCount').textContent=s.count;
+  drawSvg(s);
+  $('mapitems').innerHTML=Object.keys(s.map).length?Object.keys(s.map).map(k=>
+    `<div class="mitem"><span class="mc">${k}</span><span class="mi">下标 ${s.map[k]}</span></div>`
+  ).join(''):'<div style="font-size:12px;color:var(--muted)">空 map</div>';
+  $('code').querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;
+  steps=buildSteps(CASES[i]);
+  posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">用例 ${i+1}：${c}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

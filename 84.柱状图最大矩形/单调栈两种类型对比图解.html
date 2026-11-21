@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>S</text></svg>">
+<title>单调栈两种类型对比图解</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --fg:#e6edf3; --muted:#8b949e;
+    --blue:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149; --purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;line-height:1.6;min-height:100vh;padding:26px 22px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:6px}
+  .lead{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .card.dec{border-top:3px solid var(--blue)}
+  .card.inc{border-top:3px solid var(--purple)}
+  .card-head{padding:16px 18px 12px;border-bottom:1px solid var(--border)}
+  .tag{
+    display:inline-block;font-family:var(--mono);font-size:12px;font-weight:700;
+    padding:3px 10px;border-radius:20px;margin-bottom:8px;
+  }
+  .dec .tag{background:rgba(88,166,255,.15);color:var(--blue)}
+  .inc .tag{background:rgba(188,140,255,.15);color:var(--purple)}
+  .dir{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .viz{
+    display:flex;align-items:center;justify-content:center;gap:18px;
+    padding:24px 18px 16px;
+  }
+  .stackbox{display:flex;flex-direction:column;align-items:center}
+  .stackmini{display:flex;flex-direction:column-reverse;gap:6px}
+  .slabel{
+    font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.5px;
+    color:var(--muted);padding:2px 0;
+  }
+  .top-lbl{color:var(--fg)}
+  .bucket{
+    border-left:3px solid var(--border);
+    border-right:3px solid var(--border);
+    border-bottom:3px solid var(--border);
+    border-radius:0 0 10px 10px;
+    padding:10px 9px 0;
+    display:flex;
+  }
+  .dec .bucket{border-color:rgba(88,166,255,.65)}
+  .inc .bucket{border-color:rgba(188,140,255,.65)}
+  .el{
+    font-family:var(--mono);font-weight:700;width:64px;text-align:center;
+    border:1px solid var(--border);background:var(--panel2);border-radius:6px;padding:8px 0;
+    transition:all .3s ease;
+  }
+  .dec .el{border-color:rgba(88,166,255,.45);color:var(--blue)}
+  .inc .el{border-color:rgba(188,140,255,.45);color:var(--purple)}
+  .el.top{border-width:2px}
+  .el.ghost{
+    border:1px dashed var(--red);color:var(--red);opacity:.6;
+    transform:translateX(14px);
+  }
+  .cmp{
+    font-family:var(--mono);font-size:26px;font-weight:700;
+  }
+  .dec .cmp{color:var(--blue)}
+  .inc .cmp{color:var(--purple)}
+  .curbox{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .cur{
+    font-family:var(--mono);font-weight:700;width:64px;text-align:center;
+    border:1px solid var(--orange);background:rgba(210,153,34,.12);color:var(--orange);
+    border-radius:6px;padding:8px 0;transition:all .3s ease;
+  }
+  .cur.fire{box-shadow:0 0 0 2px var(--orange);transform:scale(1.06)}
+  .curlbl{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .settle{
+    text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--green);
+    min-height:20px;opacity:0;transition:opacity .3s ease;
+  }
+  .settle.show{opacity:1}
+  .info{padding:14px 18px;display:flex;flex-direction:column;gap:8px;font-size:12.5px}
+  .info-row{display:flex;gap:9px;align-items:baseline}
+  .info-row .k{
+    font-family:var(--mono);font-size:10.5px;color:var(--muted);
+    min-width:48px;flex-shrink:0;
+  }
+  .info-row .v code{
+    font-family:var(--mono);background:var(--panel2);border:1px solid var(--border);
+    border-radius:4px;padding:1px 6px;font-size:11px;
+  }
+  .btn-row{padding:0 18px 18px;margin-top:auto}
+  .demo-btn{
+    width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    border-radius:7px;padding:9px;cursor:pointer;font-size:12.5px;
+  }
+  .demo-btn:hover{background:#272e3a}
+  .tpl{
+    margin-top:26px;background:var(--panel);border:1px solid var(--border);
+    border-radius:10px;padding:18px 20px;
+  }
+  .tpl h2{font-size:14px;margin-bottom:12px;font-family:var(--mono);color:var(--muted)}
+  pre{
+    font-family:var(--mono);font-size:12.5px;line-height:1.7;color:#c9d1d9;
+    overflow:auto;
+  }
+  .tpl .kw{color:#ff7b72}.tpl .cmt{color:#8b949e}
+  @media(max-width:760px){
+    .grid{grid-template-columns:1fr}
+    body{padding:18px 13px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>单调栈 · 两种类型对比</h1>
+  <div class="lead">栈里永远是「还没等到答案的元素」；当前元素与栈顶的大小关系决定触发方向。点击「模拟触发」看弹出结算。</div>
+
+  <div class="grid">
+    <!-- 递减栈 -->
+    <div class="card dec" id="cardDec">
+      <div class="card-head">
+        <span class="tag">单调递减栈</span>
+        <div class="dir">栈底 → 栈顶：值递减（底大顶小）</div>
+      </div>
+      <div class="viz">
+        <div class="stackbox">
+          <div class="slabel top-lbl">栈顶 TOP（开口）</div>
+          <div class="bucket">
+            <div class="stackmini" id="stackDec"></div>
+          </div>
+          <div class="slabel bottom-lbl">栈底 BOTTOM</div>
+        </div>
+        <div class="cmp">&gt;</div>
+        <div class="curbox">
+          <div class="cur" id="curDec">8</div>
+          <div class="curlbl">当前元素</div>
+        </div>
+      </div>
+      <div class="settle" id="settleDec">弹出栈顶，结算 ans</div>
+      <div class="info">
+        <div class="info-row"><span class="k">触发</span><span class="v"><code>当前 &gt; 栈顶</code> 就弹出</span></div>
+        <div class="info-row"><span class="k">用途</span><span class="v">找「下一个更大」元素</span></div>
+        <div class="info-row"><span class="k">题目</span><span class="v">739 每日温度</span></div>
+      </div>
+      <div class="btn-row"><button class="demo-btn" data-card="dec">模拟触发</button></div>
+    </div>
+
+    <!-- 递增栈 -->
+    <div class="card inc" id="cardInc">
+      <div class="card-head">
+        <span class="tag">单调递增栈</span>
+        <div class="dir">栈底 → 栈顶：值递增（底小顶大）</div>
+      </div>
+      <div class="viz">
+        <div class="stackbox">
+          <div class="slabel top-lbl">栈顶 TOP（开口）</div>
+          <div class="bucket">
+            <div class="stackmini" id="stackInc"></div>
+          </div>
+          <div class="slabel bottom-lbl">栈底 BOTTOM</div>
+        </div>
+        <div class="cmp">&lt;</div>
+        <div class="curbox">
+          <div class="cur" id="curInc">3</div>
+          <div class="curlbl">当前元素</div>
+        </div>
+      </div>
+      <div class="settle" id="settleInc">弹出栈顶，结算 ans</div>
+      <div class="info">
+        <div class="info-row"><span class="k">触发</span><span class="v"><code>当前 &lt; 栈顶</code> 就弹出</span></div>
+        <div class="info-row"><span class="k">用途</span><span class="v">找「下一个更小」/ 边界</span></div>
+        <div class="info-row"><span class="k">题目</span><span class="v">84 柱状图最大矩形</span></div>
+      </div>
+      <div class="btn-row"><button class="demo-btn" data-card="inc">模拟触发</button></div>
+    </div>
+  </div>
+
+  <div class="tpl">
+    <h2>统一代码模板（栈存索引）</h2>
+    <pre><span class="kw">Deque</span>&lt;Integer&gt; st = <span class="kw">new</span> ArrayDeque&lt;&gt;();
+<span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; n; i++) {
+    <span class="kw">while</span> (!st.isEmpty() &amp;&amp; <span class="cmt">/* 当前元素 与 栈顶 的大小关系：&gt; 或 &lt; */</span>) {
+        <span class="kw">int</span> idx = st.pop();   <span class="cmt">// 弹出并结算 idx 的答案</span>
+    }
+    st.push(i);               <span class="cmt">// 自己进栈等答案</span>
+}</pre>
+  </div>
+</div>
+
+<script>
+const DEMOS={
+  dec:{stackEl:'stackDec',curEl:'curDec',settleEl:'settleDec',stack:[9,7,5],cur:8},
+  inc:{stackEl:'stackInc',curEl:'curInc',settleEl:'settleInc',stack:[2,4,6],cur:3}
+};
+const fired={dec:false,inc:false};
+
+function renderStack(key){
+  const d=DEMOS[key];
+  const el=document.getElementById(d.stackEl);
+  // stack 为底→顶；column-reverse 会把首元素(栈底)放底部、末元素(栈顶)放顶部，无需再 reverse
+  el.innerHTML=d.stack.map((v,idx)=>{
+    const isTop=idx===d.stack.length-1;
+    const ghost=isTop&&fired[key]?' ghost':'';
+    return `<div class="el${isTop?' top':''}${ghost}">${v}</div>`;
+  }).join('');
+  document.getElementById(d.curEl).classList.toggle('fire',fired[key]);
+  document.getElementById(d.settleEl).classList.toggle('show',fired[key]);
+}
+
+document.querySelectorAll('.demo-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const key=btn.dataset.card;
+    fired[key]=!fired[key];
+    btn.textContent=fired[key]?'还原':'模拟触发';
+    renderStack(key);
+  });
+});
+
+renderStack('dec');
+renderStack('inc');
+</script>
+</body>
+</html>

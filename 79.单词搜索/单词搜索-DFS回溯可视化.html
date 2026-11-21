@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>79. 单词搜索 · DFS 回溯可视化</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --fg:#e6edf3; --muted:#8b949e;
+    --blue:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149; --purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;line-height:1.5;display:flex;flex-direction:column;overflow:hidden;
+  }
+  header{
+    display:flex;align-items:center;gap:14px;padding:10px 18px;
+    border-bottom:1px solid var(--border);background:var(--panel);flex-wrap:wrap;
+  }
+  header h1{font-size:15px;font-weight:600}
+  header .sub{color:var(--muted);font-size:12px}
+  .controls{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+  .btn{
+    background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;
+    font-family:var(--mono);transition:.15s;
+  }
+  .btn:hover{background:#272e3a;border-color:#444c56}
+  .btn.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  .btn.primary:hover{background:#388bfd}
+  .seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{
+    background:var(--panel2);color:var(--muted);border:none;padding:6px 12px;
+    cursor:pointer;font-family:var(--mono);font-size:13px;
+  }
+  .seg button.on{background:#1f6feb;color:#fff}
+  select{
+    background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    padding:6px 8px;border-radius:6px;font-family:var(--mono);
+  }
+  /* 进度条 */
+  .progress-bar{
+    display:flex;align-items:center;gap:12px;padding:7px 18px;
+    background:var(--panel);border-bottom:1px solid var(--border);
+  }
+  .progress-bar input[type=range]{flex:1;accent-color:#1f6feb;cursor:pointer;height:22px}
+  .progress-bar .pl{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:74px}
+  main{
+    flex:1;display:grid;gap:10px;padding:10px 14px;
+    grid-template-columns:1.2fr 1fr;min-height:0;
+  }
+  .panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  }
+  .panel-head{
+    padding:8px 12px;border-bottom:1px solid var(--border);
+    font-size:12px;color:var(--muted);font-family:var(--mono);
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    background:var(--panel2);
+  }
+  .board-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+  .board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:430px}
+  .cell{
+    aspect-ratio:1;background:var(--panel2);border:1.5px solid var(--border);
+    border-radius:8px;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;font-family:var(--mono);position:relative;
+    transition:all .2s;cursor:pointer;
+  }
+  .cell .ch{font-size:26px;font-weight:600;color:var(--fg)}
+  .cell .idx{font-size:10px;color:var(--muted);position:absolute;top:4px;left:7px}
+  .cell.tried::after{
+    content:'';position:absolute;top:4px;right:6px;
+    width:7px;height:7px;border-radius:50%;background:#484f58;
+  }
+  .cell.path{background:rgba(88,166,255,.18);border-color:var(--blue)}
+  .cell.path .ch{color:var(--blue)}
+  .cell.cur{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+  .cell.fail{background:rgba(248,81,73,.15);border-color:var(--red)}
+  .cell.fail .ch{color:var(--red)}
+  .cell.back{background:rgba(210,153,34,.15);border-color:var(--orange)}
+  .cell.back .ch{color:var(--orange)}
+  .cell.success{background:rgba(63,185,80,.18);border-color:var(--green)}
+  .cell.success .ch{color:var(--green)}
+  .arrow{
+    position:absolute;bottom:3px;font-size:14px;line-height:1;
+    color:var(--blue);font-family:var(--mono);
+  }
+  .arrow.bad{color:var(--red)}
+  .rightCol{display:flex;flex-direction:column;gap:10px;min-height:0}
+  .state-body{padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:10px;overflow:auto}
+  .word-progress{display:flex;gap:5px;justify-content:center}
+  .wch{
+    font-family:var(--mono);font-size:20px;width:38px;height:38px;
+    display:flex;align-items:center;justify-content:center;border-radius:6px;
+    background:var(--panel2);border:1px solid var(--border);color:var(--muted);
+  }
+  .wch.done{background:rgba(88,166,255,.18);border-color:var(--blue);color:var(--blue)}
+  .wch.cur{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  .wch span{display:inline-block}
+  .wch span.new{animation:charIn .3s ease}
+  @keyframes charIn{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .meta{
+    background:var(--panel2);border-radius:6px;padding:8px 4px;text-align:center;
+    border:1px solid var(--border);
+  }
+  .meta .lbl{font-size:10px;color:var(--muted);font-family:var(--mono)}
+  .meta .val{font-size:17px;font-weight:700;font-family:var(--mono);margin-top:2px}
+  .depth-box{background:var(--panel2);border-radius:6px;padding:8px 10px;border:1px solid var(--border)}
+  .depth-box .lbl{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:5px}
+  .depth-track{display:flex;gap:3px}
+  .depth-cell{flex:1;height:7px;border-radius:2px;background:#272e3a}
+  .depth-cell.on{background:var(--blue)}
+  /* 守门条件模块 */
+  .guard-box{background:var(--panel2);border-radius:6px;padding:8px 10px;border:1px solid var(--border)}
+  .guard-box .lbl{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:6px}
+  .guard-list{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .guard-item{
+    display:flex;justify-content:space-between;align-items:center;gap:6px;
+    padding:5px 8px;border-radius:4px;background:#161b22;
+    border:1px solid var(--border);font-family:var(--mono);
+    transition:.15s;
+  }
+  .guard-item code{font-size:11px;color:#c9d1d9;white-space:nowrap}
+  .guard-item span.t{font-size:10px;color:var(--muted);white-space:nowrap}
+  .guard-item.hit{background:rgba(248,81,73,.18);border-color:var(--red)}
+  .guard-item.hit code{color:var(--red)}
+  .guard-item.hit span.t{color:var(--red)}
+  .guard-note{
+    margin-top:6px;font-size:10.5px;color:var(--muted);line-height:1.5;
+  }
+  .desc{
+    background:var(--panel2);padding:10px 12px;border-radius:6px;
+    border-left:3px solid var(--blue);font-size:13px;line-height:1.6;
+  }
+  .desc.warn{border-left-color:var(--orange)}
+  .desc.bad{border-left-color:var(--red)}
+  .desc.ok{border-left-color:var(--green)}
+  #codeBody{padding:8px 0;font-family:var(--mono);font-size:12.5px;overflow:auto;flex:1}
+  .code-line{display:flex;padding:2px 12px;white-space:pre;min-height:19px;color:#c9d1d9}
+  .code-line .ln{width:26px;color:#484f58;user-select:none;text-align:right;margin-right:12px;flex-shrink:0}
+  .code-line.cur{background:rgba(56,139,253,.15);border-left:2px solid var(--blue);padding-left:10px}
+  .kw{color:#ff7b72}.ty{color:#ffa657}.fn{color:#d2a8ff}.nm{color:#79c0ff}
+  .stats{display:flex;gap:10px;font-family:var(--mono);font-size:11px;flex-wrap:wrap}
+  .stats b{color:var(--fg)}
+  @media(max-width:900px){
+    main{grid-template-columns:1fr;overflow:auto}
+    body{overflow:auto}
+    .panel{min-height:280px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>79. 单词搜索 <span style="color:var(--muted);font-weight:400">| 二维网格 DFS 回溯 + 剪枝</span></h1>
+    <div class="sub">点击格子跳到该起点 · 箭头=当前尝试方向 · 灰点=已试过的起点</div>
+  </div>
+  <div class="controls">
+    <div class="seg" id="wordSeg">
+      <button data-w="ABCCED" class="on">ABCCED</button>
+      <button data-w="SEE">SEE</button>
+      <button data-w="ABCB">ABCB</button>
+    </div>
+    <button class="btn" id="btnReset">⟲ 重置</button>
+    <button class="btn" id="btnPrev">◀ 上一步</button>
+    <button class="btn primary" id="btnPlay">▶ 播放</button>
+    <button class="btn" id="btnNext">下一步 ▶</button>
+    <select id="speed">
+      <option value="1300">慢</option>
+      <option value="700" selected>中</option>
+      <option value="300">快</option>
+    </select>
+  </div>
+</header>
+
+<div class="progress-bar">
+  <span class="pl" id="plLabel">步骤 0 / 0</span>
+  <input type="range" id="slider" min="0" max="1" value="0">
+</div>
+
+<main>
+  <div class="panel">
+    <div class="panel-head">
+      <span>board 网格（路径数字 = 匹配到的第几个字符）</span>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="board-wrap"><div class="board" id="board"></div></div>
+    <div class="panel-head" style="border-top:1px solid var(--border);border-bottom:none">
+      <div class="stats">
+        <span><i style="color:var(--blue)">蓝</i> 当前路径</span>
+        <span><i style="color:var(--red)">红</i> 剪枝失败</span>
+        <span><i style="color:var(--orange)">橙</i> 回溯撤销</span>
+        <span><i style="color:var(--green)">绿</i> 找到答案</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="rightCol">
+    <div class="panel" style="flex:1">
+      <div class="panel-head"><span>当前状态</span><span id="stepInfo">步骤 0 / 0</span></div>
+      <div class="state-body">
+        <div class="word-progress" id="wordProgress"></div>
+        <div class="meta-grid">
+          <div class="meta"><div class="lbl">row</div><div class="val" id="rowVal" style="color:var(--blue)">—</div></div>
+          <div class="meta"><div class="lbl">col</div><div class="val" id="colVal" style="color:var(--orange)">—</div></div>
+          <div class="meta"><div class="lbl">index</div><div class="val" id="idxVal" style="color:var(--purple)">—</div></div>
+        </div>
+        <div class="depth-box">
+          <div class="lbl">递归调用栈深度（dfs 嵌套层数）</div>
+          <div class="depth-track" id="depthTrack"></div>
+        </div>
+        <div class="guard-box">
+          <div class="lbl">守门 if · 6 个剪枝条件（客观成立的都高亮，可能同时亮多个）</div>
+          <div class="guard-list" id="guardList">
+            <div class="guard-item" data-reason="row_neg"><code>row &lt; 0</code><span class="t">超顶</span></div>
+            <div class="guard-item" data-reason="row_big"><code>row &gt;= rows</code><span class="t">超底</span></div>
+            <div class="guard-item" data-reason="col_neg"><code>col &lt; 0</code><span class="t">超左</span></div>
+            <div class="guard-item" data-reason="col_big"><code>col &gt;= cols</code><span class="t">超右</span></div>
+            <div class="guard-item" data-reason="mismatch"><code>字符 != 目标</code><span class="t">不匹配</span></div>
+            <div class="guard-item" data-reason="visited"><code>visited</code><span class="t">已使用</span></div>
+          </div>
+          <div class="guard-note">|| 短路：从左到右，先确认坐标没越界，才敢访问 board[row][col]，否则会数组越界崩溃。</div>
+        </div>
+        <div class="desc" id="desc">点击「播放」「下一步」，拖动进度条，或直接点击网格格子。</div>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1.25">
+      <div class="panel-head"><span>Solution.java · 当前执行行高亮</span></div>
+      <div id="codeBody"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ===== 固定棋盘 ===== */
+const BOARD = [
+  ['A','B','C','E'],
+  ['S','F','C','S'],
+  ['A','D','E','E']
+];
+const ROWS = 3, COLS = 4;
+const DIRS = [[1,0,'下','↓'],[0,1,'右','→'],[-1,0,'上','↑'],[0,-1,'左','←']];
+
+/* ============================================================
+   预生成 DFS 步骤
+   ============================================================ */
+function buildSteps(word){
+  const visited = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  const steps = [];
+  let path = [];
+  let failCount = 0;
+  const snap = o=>Object.assign({
+    path: path.slice(),
+    checkCell: null, success: false,
+    arrow: null
+  }, o);
+
+  function dfs(row, col, index){
+    if(index === word.length){
+      steps.push(snap({
+        action:'success', line:15, index,
+        desc:`index == word.length()=${word.length}，所有字符都匹配上了 → return true。`,
+        descType:'ok', success:true
+      }));
+      return true;
+    }
+    // 越界：坐标跑出棋盘，此时不能访问 board/visited（会崩溃）
+    if(row<0||row>=ROWS||col<0||col>=COLS){
+      failCount++;
+      const reasons = [];
+      if(row<0) reasons.push('row_neg');
+      if(row>=ROWS) reasons.push('row_big');
+      if(col<0) reasons.push('col_neg');
+      if(col>=COLS) reasons.push('col_big');
+      steps.push(snap({
+        action:'fail', line:16, row, col, index, reasons,
+        desc:`位置 (${row},${col}) 超出网格边界 → return false，这一支被剪枝。`,
+        descType:'bad'
+      }));
+      return false;
+    }
+    // 非越界：客观检查「不匹配」和「已访问」，两者可能同时成立
+    const mismatch = BOARD[row][col] !== word[index];
+    const isVisited = visited[row][col];
+    if(mismatch || isVisited){
+      failCount++;
+      const reasons = [];
+      if(mismatch) reasons.push('mismatch');
+      if(isVisited) reasons.push('visited');
+      let desc;
+      if(mismatch && isVisited){
+        desc = `格子 (${row},${col}) 同时命中两个条件：① 字符是 '${BOARD[row][col]}' 但需要 '${word[index]}'（不匹配）；② visited=true（已在路径上）。`+
+          `代码里 || 短路，从左到右先判到「不匹配」就 return false，visited 不会再执行，但客观上两个条件都成立。`;
+      } else if(mismatch){
+        desc = `格子 (${row},${col}) 是 '${BOARD[row][col]}'，但 word[${index}] 需要 '${word[index]}' → 不匹配，return false。`;
+      } else {
+        desc = `格子 (${row},${col}) 已在当前路径上（visited=true），不能重复使用 → return false。`;
+      }
+      steps.push(snap({
+        action:'fail', line:17, row, col, index, checkCell:[row,col], reasons,
+        desc, descType:'bad'
+      }));
+      return false;
+    }
+    visited[row][col] = true;
+    path.push([row,col]);
+    steps.push(snap({
+      action:'mark', line:20, row, col, index,
+      desc:`'${word[index]}' 匹配成功，visited[${row}][${col}] = true，路径长度 ${path.length}。接下来依次尝试四个方向。`,
+      descType:''
+    }));
+
+    let res = false;
+    for(const [dr,dc,name,sym] of DIRS){
+      const target = [row+dr, col+dc];
+      const out = target[0]<0||target[0]>=ROWS||target[1]<0||target[1]>=COLS;
+      steps.push(snap({
+        action:'try', line:21, row, col, index,
+        arrow:{sym, bad:out},
+        desc:`从 (${row},${col}) 向「${name}」${sym} 走到 (${target[0]},${target[1]})，递归匹配 word[${index+1}]。`,
+        descType:''
+      }));
+      if(dfs(target[0],target[1],index+1)){
+        res = true; break;
+      }
+    }
+
+    visited[row][col] = false;
+    path.pop();
+    steps.push(snap({
+      action:'unmark', line:25, row, col, index, res,
+      backCell:[row,col],
+      desc: res
+        ? `已找到答案，visited[${row}][${col}] 恢复 false 后一路向上返回 true。`
+        : `四个方向都没走通，visited[${row}][${col}] 恢复 false（撤销选择），退回上一层。`,
+      descType: res ? 'ok' : 'warn'
+    }));
+    return res;
+  }
+
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      steps.push(snap({
+        action:'start', line:6, row:r, col:c, index:0,
+        desc:`外层循环枚举起点 (${r},${c})，调用 dfs 从 index=0 开始匹配。`,
+        descType:''
+      }));
+      if(dfs(r,c,0)){
+        steps.push(snap({
+          action:'found', line:7, success:true,
+          desc:`某个起点返回 true，exist 直接 return true，搜索结束。`,
+          descType:'ok'
+        }));
+        return {steps, failCount};
+      }
+    }
+  }
+  steps.push(snap({
+    action:'not_found', line:10,
+    desc:`所有起点都试过，没有任何路径能拼出 word，return false。`,
+    descType:'bad'
+  }));
+  return {steps, failCount};
+}
+
+/* ===== Java 代码 ===== */
+const CODE = [
+ [1 , 'class Solution {'],
+ [2 , '    public boolean exist(char[][] board, String word) {'],
+ [3 , '        int rows = board.length, cols = board[0].length;'],
+ [4 , '        boolean[][] visited = new boolean[rows][cols];'],
+ [5 , '        for (int r = 0; r < rows; r++) {'],
+ [6 , '            for (int c = 0; c < cols; c++) {'],
+ [7 , '                if (dfs(board, word, r, c, 0, visited)) return true;'],
+ [8 , '            }'],
+ [9 , '        }'],
+ [10, '        return false;'],
+ [11, '    }'],
+ [12, ''],
+ [13, '    boolean dfs(char[][] board, String word, int row, int col,'],
+ [14, '                int index, boolean[][] visited) {'],
+ [15, '        if (index == word.length()) return true;'],
+ [16, '        if (row < 0 || row >= board.length || col < 0 || col >= board[0].length'],
+ [17, '                || board[row][col] != word.charAt(index) || visited[row][col]) {'],
+ [18, '            return false;'],
+ [19, '        }'],
+ [20, '        visited[row][col] = true;'],
+ [21, '        if (dfs(board, word, row + 1, col, index + 1, visited)'],
+ [22, '         || dfs(board, word, row, col + 1, index + 1, visited)'],
+ [23, '         || dfs(board, word, row - 1, col, index + 1, visited)'],
+ [24, '         || dfs(board, word, row, col - 1, index + 1, visited)) return true;'],
+ [25, '        visited[row][col] = false;'],
+ [26, '        return false;'],
+ [27, '    }'],
+ [28, '}'],
+];
+const codeBody = document.getElementById('codeBody');
+function hl(code){
+  return code
+    .replace(/\b(class|public|boolean|if|else|return|for|new|int|char)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(String|word|board|visited)\b/g,'<span class="ty">$1</span>')
+    .replace(/\b(dfs|exist|length|charAt)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(r|c|rows|cols|row|col|index)\b/g,'<span class="nm">$1</span>');
+}
+function renderCode(curLine){
+  codeBody.innerHTML = CODE.map(([ln,txt])=>{
+    const cls = ln===curLine ? 'code-line cur' : 'code-line';
+    return `<div class="${cls}"><span class="ln">${ln}</span><span>${hl(txt)||' '}</span></div>`;
+  }).join('');
+}
+
+/* ===== 状态机 ===== */
+let currentWord = 'ABCCED';
+let data = buildSteps(currentWord);
+let stepIdx = -1, timer = null;
+
+const boardEl = document.getElementById('board');
+const descEl = document.getElementById('desc');
+const statsEl = document.getElementById('stats');
+const slider = document.getElementById('slider');
+const plLabel = document.getElementById('plLabel');
+
+function renderBoard(s){
+  const path = s ? s.path : [];
+  const checkCell = s ? s.checkCell : null;
+  const backCell = s ? s.backCell : null;
+  const success = s ? s.success : false;
+  const arrow = s ? s.arrow : null;
+  const pathSet = new Set(path.map(p=>p[0]+','+p[1]));
+  // 已试过的起点（当前步骤之前的 start）
+  const tried = new Set();
+  for(let i=0;i<stepIdx;i++){
+    const st = data.steps[i];
+    if(st.action==='start') tried.add(st.row+','+st.col);
+  }
+  let html = '';
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      let cls = 'cell';
+      const key = r+','+c;
+      const pIdx = path.findIndex(p=>p[0]===r&&p[1]===c);
+      if(tried.has(key)) cls += ' tried';
+      if(pathSet.has(key)){
+        cls += success ? ' success' : ' path';
+        if(pIdx===path.length-1 && !success) cls += ' cur';
+      }
+      if(checkCell && checkCell[0]===r && checkCell[1]===c && !pathSet.has(key)) cls += ' fail';
+      if(backCell && backCell[0]===r && backCell[1]===c && !pathSet.has(key)) cls += ' back';
+      const idxLabel = pIdx>=0 ? (pIdx+1) : '';
+      // 箭头只在当前格子显示
+      let arrowHtml = '';
+      if(arrow && path.length && path[path.length-1][0]===r && path[path.length-1][1]===c){
+        arrowHtml = `<span class="arrow${arrow.bad?' bad':''}">${arrow.sym}</span>`;
+      }
+      html += `<div class="${cls}" data-r="${r}" data-c="${c}">
+        <span class="idx">${idxLabel}</span>
+        <span class="ch">${BOARD[r][c]}</span>
+        ${arrowHtml}
+      </div>`;
+    }
+  }
+  boardEl.innerHTML = html;
+}
+
+let prevIndex = -1;
+function renderWordProgress(s){
+  const index = s ? (s.index!==undefined ? s.index : 0) : -1;
+  const done = s ? s.action==='success' : false;
+  document.getElementById('wordProgress').innerHTML = currentWord.split('').map((ch,i)=>{
+    let cls='wch';
+    if(done || i<index) cls+=' done';
+    if(i===index && !done) cls+=' cur';
+    const inner = (i===index && index>prevIndex)
+      ? `<span class="new">${ch}</span>` : ch;
+    return `<div class="${cls}">${inner}</div>`;
+  }).join('');
+  prevIndex = index;
+}
+
+function render(){
+  const s = stepIdx>=0 ? data.steps[stepIdx] : null;
+  renderBoard(s);
+  renderWordProgress(s);
+  document.getElementById('rowVal').textContent = s && s.row!==undefined ? s.row : '—';
+  document.getElementById('colVal').textContent = s && s.col!==undefined ? s.col : '—';
+  document.getElementById('idxVal').textContent = s && s.index!==undefined ? s.index : '—';
+  const depth = s ? s.path.length : 0;
+  document.getElementById('depthTrack').innerHTML =
+    Array.from({length:currentWord.length},(_,i)=>
+      `<div class="depth-cell${i<depth?' on':''}"></div>`).join('');
+  // 守门条件高亮（可能同时命中多个）
+  document.querySelectorAll('#guardList .guard-item').forEach(el=>{
+    el.classList.toggle('hit',
+      !!(s && s.action==='fail' && s.reasons && s.reasons.includes(el.dataset.reason)));
+  });
+  if(s){
+    descEl.textContent = s.desc;
+    descEl.className = 'desc '+(s.descType||'');
+    renderCode(s.line);
+  } else {
+    descEl.textContent = '点击「播放」「下一步」，拖动进度条，或直接点击网格格子。';
+    descEl.className='desc'; renderCode(0);
+  }
+  document.getElementById('stepInfo').textContent =
+    `步骤 ${Math.max(stepIdx+1,0)} / ${data.steps.length}`;
+  const pathLen = s ? s.path.length : 0;
+  const triedCount = data.steps.filter((st,i)=>st.action==='start'&&i<=stepIdx).length;
+  statsEl.innerHTML =
+    `<span>当前路径 <b>${pathLen}</b></span>`+
+    `<span>已试起点 <b>${triedCount}/12</b></span>`+
+    `<span>剪枝 <b style="color:var(--red)">${data.failCount}</b></span>`;
+  slider.max = data.steps.length-1;
+  slider.value = Math.max(stepIdx,0);
+  plLabel.textContent = `步骤 ${Math.max(stepIdx+1,0)} / ${data.steps.length}`;
+}
+
+function next(){
+  if(stepIdx>=data.steps.length-1){pause();return;}
+  stepIdx++; render();
+}
+function prev(){ if(stepIdx>-1){stepIdx--;render();} }
+function reset(){ pause(); stepIdx=-1; prevIndex=-1; render(); }
+function pause(){
+  if(timer){clearInterval(timer);timer=null;}
+  document.getElementById('btnPlay').textContent='▶ 播放';
+}
+function play(){
+  if(timer){pause();return;}
+  if(stepIdx>=data.steps.length-1) stepIdx=-1;
+  document.getElementById('btnPlay').textContent='⏸ 暂停';
+  timer=setInterval(()=>{
+    if(stepIdx>=data.steps.length-1){pause();return;}
+    next();
+  },+document.getElementById('speed').value);
+}
+
+document.getElementById('btnNext').onclick=()=>{pause();next();};
+document.getElementById('btnPrev').onclick=()=>{pause();prev();};
+document.getElementById('btnPlay').onclick=play;
+document.getElementById('btnReset').onclick=reset;
+document.getElementById('speed').onchange=()=>{if(timer){pause();play();}};
+
+slider.addEventListener('input',()=>{
+  pause();
+  stepIdx = +slider.value;
+  if(stepIdx===0) stepIdx=-1;
+  render();
+});
+
+// 点击格子 → 跳到该格子作为起点的步骤
+boardEl.addEventListener('click', e=>{
+  const cell = e.target.closest('.cell');
+  if(!cell) return;
+  const r = +cell.getAttribute('data-r'), c = +cell.getAttribute('data-c');
+  const target = data.steps.findIndex(st=>
+    st.action==='start' && st.row===r && st.col===c);
+  if(target>=0){
+    pause();
+    stepIdx = target;
+    render();
+  }
+});
+
+document.querySelectorAll('#wordSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#wordSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    currentWord=b.dataset.w;
+    data=buildSteps(currentWord);
+    reset();
+  };
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){pause();next();}
+  if(e.key==='ArrowLeft'){pause();prev();}
+  if(e.key===' '){e.preventDefault();play();}
+});
+render();
+</script>
+</body>
+</html>

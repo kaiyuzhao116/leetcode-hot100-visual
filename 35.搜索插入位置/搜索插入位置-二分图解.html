@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeetCode 35 搜索插入位置：闭区间二分分步图解</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23131718'/%3E%3Ccircle cx='11' cy='11' r='4' fill='%231A5470'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%239C7412'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#EDEEE9; --paper-hi:#F8F9F5;
+  --ink:#131718; --ink-2:#4A5257; --ink-3:#7B8387;
+  --rule:rgba(19,23,24,.15); --rule-2:rgba(19,23,24,.075);
+  --blue:#1A5470; --blue-bg:#D8E6EC;
+  --gold:#9C7412; --gold-bg:rgba(156,116,18,.12);
+  --red:#9E3529; --red-bg:rgba(158,53,41,.1);
+  --green:#2F6B3A; --green-bg:rgba(47,107,58,.12);
+  --gline:rgba(19,23,24,.045);
+  --sans:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --serif:"Songti SC","SimSun","STSong","Noto Serif SC",Georgia,serif;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.8;-webkit-font-smoothing:antialiased}
+.grid-layer{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--gline)1px,transparent 1px),linear-gradient(90deg,var(--gline)1px,transparent 1px);background-size:34px 34px}
+
+.wrap{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:0 20px}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.05em;color:var(--ink-3);display:flex;align-items:center;gap:10px;margin-top:38px}
+.kicker::before{content:"";width:22px;height:1px;background:var(--ink-3)}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(27px,4.6vw,40px);line-height:1.25;margin:14px 0 0}
+.lede{margin:16px 0 0;font-size:16px;color:var(--ink-2);max-width:48em}
+.lede b{color:var(--ink)}
+
+.console{margin-top:26px;border:1px solid var(--rule);background:var(--paper-hi)}
+.console-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px;border-bottom:1px solid var(--rule-2)}
+.btn{font-family:var(--sans);font-size:14px;padding:7px 15px;border:1px solid rgba(19,23,24,.55);background:transparent;color:var(--ink);cursor:pointer;min-height:40px}
+.btn:hover{background:rgba(19,23,24,.06)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.32;cursor:default}
+.btn.primary{background:var(--ink);color:var(--paper-hi);border-color:var(--ink)}
+.btn.ghost{border-color:var(--rule);color:var(--ink-2)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule)}
+.seg button{font-family:var(--sans);font-size:12.5px;padding:8px 9px;border:0;background:transparent;color:var(--ink-2);cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper-hi)}
+.seg button+button{border-left:1px solid var(--rule)}
+.step-ind{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-left:auto}
+
+.array-wrap{padding:18px 18px 10px}
+.array-title{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-bottom:12px}
+#array{display:flex;gap:6px;flex-wrap:wrap;align-items:stretch}
+.acell{position:relative;border:1.5px solid var(--rule);background:#fff;min-width:62px;padding:20px 6px 8px;text-align:center;transition:border-color .15s,background .15s}
+.acell .v{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--ink-3);display:block;line-height:1.3}
+.acell .ix{position:absolute;bottom:2px;left:0;right:0;font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.acell .pt{position:absolute;top:2px;font-family:var(--mono);font-size:10px;font-weight:700}
+.acell .pl{left:4px;color:var(--blue)} .acell .pr{right:4px;color:var(--green)}
+.acell.range{border-color:var(--blue);background:var(--blue-bg)} .acell.range .v{color:var(--blue)}
+.acell.mid{border-color:var(--gold);background:var(--gold-bg);border-width:2.5px} .acell.mid .v{color:var(--gold)}
+.acell.mid .pm{left:50%;transform:translateX(-50%);color:var(--gold)}
+.acell.hit{border-color:var(--gold);background:var(--gold-bg);border-width:2.5px} .acell.hit .v{color:var(--gold)}
+.aslot{border:2px dashed var(--gold);background:var(--gold-bg);min-width:62px;padding:14px 6px;text-align:center;display:flex;flex-direction:column;justify-content:center}
+.aslot .sl{font-size:11px;color:var(--gold);font-weight:700} .aslot .sv{font-family:var(--mono);font-size:13px;color:var(--gold)}
+
+.console-text{padding:12px 16px 14px;font-size:14.5px;line-height:1.8;color:var(--ink-2);border-top:1px solid var(--rule-2);min-height:66px}
+.console-text b{color:var(--ink)}
+.console-text .gold{color:var(--gold);font-weight:600}
+.console-text .green{color:var(--green);font-weight:600}
+
+.stat-grid{display:grid;gap:12px;margin-top:16px}
+@media(min-width:760px){.stat-grid{grid-template-columns:repeat(3,1fr)}}
+.stat{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.stat h3{font-family:var(--mono);font-size:11.5px;font-weight:400;margin:0 0 9px;color:var(--ink-3)}
+.kv{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--blue)}
+.kv .g{color:var(--gold)} .kv .gr{color:var(--green)}
+.res-big{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--gold)}
+
+.code-panel{margin-top:22px;display:grid;gap:14px}
+@media(min-width:880px){.code-panel{grid-template-columns:1.24fr .76fr}}
+.codebox{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.codebox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px;font-weight:700}
+.code-scroll{max-height:480px;overflow:auto}
+pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.9;color:var(--ink-2);white-space:pre}
+pre .ln{display:block;padding:0 6px;margin:0 -6px;border-left:2px solid transparent}
+pre .ln.act{background:var(--gold-bg);border-left-color:var(--gold);color:var(--ink)}
+.tipbox{border:1px solid var(--rule);background:var(--paper-hi);padding:14px 16px}
+.tipbox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px}
+.tipbox ul{margin:0;padding-left:1.2em;font-size:14px;color:var(--ink-2);line-height:1.85}
+.tipbox li{margin:5px 0}
+.tipbox b{color:var(--ink)}
+
+.note{border-left:2px solid var(--gold);background:var(--gold-bg);padding:14px 16px;margin-top:22px;font-size:14.5px;color:var(--ink-2);line-height:1.8;max-width:56em}
+.note b{color:var(--ink)}
+.note.blue{border-left-color:var(--blue);background:rgba(26,84,112,.07)}
+code{font-family:var(--mono);font-size:.92em;background:rgba(19,23,24,.06);padding:1px 5px}
+
+footer{margin-top:60px;padding:26px 0 40px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink-3);line-height:1.9}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--paper-hi);font-size:14px;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.001s!important;animation-duration:.001s!important}}
+</style>
+</head>
+<body>
+<div class="grid-layer" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="kicker">LeetCode 35 · 简单 · 二分查找</div>
+  <h1>搜索插入位置：闭区间二分，<br>找不到就返回 left</h1>
+  <p class="lede">题目：给定<b>排序数组</b>和目标值，找到目标返回索引；不存在则返回它<b>按顺序应插入的位置</b>，要求 O(log n)。你的写法用 left/right 组成<b>闭区间</b>，每次取中点 mid 比较，命中返回 mid，否则收缩区间；循环结束 left 就是插入位置。</p>
+
+  <div class="console">
+    <div class="console-bar">
+      <button class="btn primary" id="btnPrev">上一步</button>
+      <button class="btn primary" id="btnNext">下一步</button>
+      <button class="btn" id="btnPlay">自动播放</button>
+      <button class="btn ghost" id="btnReset">重置</button>
+      <div class="seg" role="group" id="caseSeg"></div>
+      <span class="step-ind" id="stepInd"></span>
+    </div>
+
+    <div class="array-wrap">
+      <div class="array-title">数组与指针（蓝底＝当前闭区间，金＝mid，L/R＝左右指针）</div>
+      <div id="array"></div>
+    </div>
+
+    <div class="console-text" id="stepText"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <h3>left / right</h3>
+      <div class="kv"><span id="lVal"></span> / <span class="gr" id="rVal"></span></div>
+    </div>
+    <div class="stat">
+      <h3>mid（中点）</h3>
+      <div class="kv"><span class="g" id="mVal"></span></div>
+    </div>
+    <div class="stat">
+      <h3>返回值</h3>
+      <div class="res-big" id="resBig">-</div>
+    </div>
+  </div>
+
+  <div class="code-panel">
+    <div class="codebox">
+      <h3>你的代码（当前执行行高亮）</h3>
+      <div class="code-scroll">
+<pre id="srcCode"><span class="ln" data-l="1">class Solution {</span>
+<span class="ln" data-l="2">    public int searchInsert(int[] nums, int target) {</span>
+<span class="ln" data-l="3">        int left = 0;</span>
+<span class="ln" data-l="4">        int right = nums.length-1; </span>
+<span class="ln" data-l="5">        while(left &lt;= right){</span>
+<span class="ln" data-l="6">            int mid = left + (right - left)/2;</span>
+<span class="ln" data-l="7">            if(nums[mid] == target){</span>
+<span class="ln" data-l="8">                return mid;</span>
+<span class="ln" data-l="9">            }else if(nums[mid] &gt; target){</span>
+<span class="ln" data-l="10">               right = mid-1;</span>
+<span class="ln" data-l="11">           }else{</span>
+<span class="ln" data-l="12">               left = mid +1;</span>
+<span class="ln" data-l="13">           }</span>
+<span class="ln" data-l="14">       }</span>
+<span class="ln" data-l="15">       return left; </span>
+<span class="ln" data-l="16">   }</span>
+<span class="ln" data-l="17">}</span></pre>
+      </div>
+    </div>
+    <div class="tipbox">
+      <h3>看图抓三个点</h3>
+      <ul>
+        <li><b>闭区间 [left,right]</b>：两端都还可能是答案。</li>
+        <li><b>mid 防溢出</b>：left+(right-left)/2 不直接相加。</li>
+        <li><b>返回 left</b>：循环结束它正指向第一个 ≥ target 的位置。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note blue"><b>复杂度：</b>每次区间约减半，最多 ⌈log₂(n+1)⌉ 次比较，时间 <b>O(log n)</b>；只用固定几个指针，辅助空间 <b>O(1)</b>。</div>
+  <div class="note"><b>为什么找不到时返回 left：</b>循环条件是 left&lt;=right，退出时必有 left=right+1。整个过程中 left 左侧的元素都小于 target，right 右侧的元素都大于 target，所以 left 正好是「第一个不小于 target」的位置——命中时是目标索引，没命中时就是插入点，两种情况统一成一个返回值。</div>
+  <div class="note"><b>收缩为什么用 mid±1：</b>闭区间里 mid 已经比较过且不等于 target，新区间就不必再包含它，所以用 right=mid-1 或 left=mid+1；若写成 right=mid 会和闭区间语义冲突，可能漏判或死循环。</div>
+
+  <footer>
+    LeetCode 35 搜索插入位置 · 闭区间二分分步图解<br>
+    蓝色区间、金色中点、绿色右指针；插入位置用金色虚线槽标出。
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+var toastTimer=null;
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('on');},2200);}
+
+var N4=[1,3,5,6];
+var CASES=[
+  {n:N4,t:5},{n:N4,t:2},{n:N4,t:7},{n:N4,t:0},
+  {n:N4,t:6},{n:[1],t:0},{n:[1,3,5,7,9],t:4},{n:[1,3,5,7,9],t:7}
+];
+
+/* 帧（与 verify_35 一致）*/
+function buildSteps(nums,target){
+  var steps=[];
+  function snap(phase,line,left,right,mid,cmp,result){
+    steps.push({phase:phase,line:line,left:left,right:right,mid:mid,
+      cmp:cmp||null,result:result===undefined?null:result});
+  }
+  var left=0,right=nums.length-1;
+  snap('init',3,left,right,-1,null);
+  while(left<=right){
+    var mid=left+Math.floor((right-left)/2);
+    snap('mid',6,left,right,mid,null);
+    if(nums[mid]===target){snap('hit',8,left,right,mid,'eq',mid);return steps;}
+    if(nums[mid]>target){right=mid-1;snap('shrink',10,left,right,mid,'gt');}
+    else{left=mid+1;snap('shrink',12,left,right,mid,'lt');}
+  }
+  snap('end',15,left,right,-1,null,left);
+  return steps;
+}
+
+var curNums=CASES[0].n,curT=CASES[0].t,steps=null,step=0;
+function render(){
+  var f=steps[step];
+  renderArray(f);renderStats(f);renderText(f);renderCode(f);
+  document.getElementById('stepInd').textContent='步骤 '+(step+1)+' / '+steps.length;
+  document.getElementById('btnPrev').disabled=step===0;
+  document.getElementById('btnNext').disabled=step===steps.length-1;
+}
+function renderArray(f){
+  var host=document.getElementById('array');
+  var html='';
+  // end 帧：在插入位置前先放前面的格子，再插入虚线槽，再放剩余格子
+  var showSlot=(f.phase==='end');
+  for(var k=0;k<curNums.length;k++){
+    if(showSlot&&k===f.result){
+      html+='<div class="aslot"><span class="sl">插入位置</span><span class="sv">index='+f.result+'</span></div>';
+    }
+    var cls='acell';
+    var inRange=(k>=f.left&&k<=f.right);
+    if(f.phase==='hit'&&k===f.mid)cls+=' hit';
+    else if(f.mid===k)cls+=' mid';
+    else if(inRange)cls+=' range';
+    var pts='';
+    if(k===f.left)pts+='<span class="pt pl">L</span>';
+    if(k===f.right)pts+='<span class="pt pr">R</span>';
+    if(f.mid===k&&f.phase!=='hit')pts+='<span class="pt pm">M</span>';
+    html+='<div class="'+cls+'">'+pts+'<span class="v">'+curNums[k]+'</span><span class="ix">'+k+'</span></div>';
+  }
+  if(showSlot&&f.result===curNums.length){
+    html+='<div class="aslot"><span class="sl">插入位置</span><span class="sv">index='+f.result+'</span></div>';
+  }
+  host.innerHTML=html;
+}
+function renderStats(f){
+  document.getElementById('lVal').textContent=f.left;
+  document.getElementById('rVal').textContent=f.right;
+  document.getElementById('mVal').textContent=f.mid>=0?f.mid:'-';
+  var big=document.getElementById('resBig');
+  if(f.result!==null){big.textContent=f.result;}
+  else{big.textContent='-';}
+}
+function renderText(f){
+  var host=document.getElementById('stepText'),s;
+  switch(f.phase){
+    case 'init':
+      s='初始化闭区间 left=0 right='+f.right+'，目标 target='+curT;break;
+    case 'mid':
+      s='计算 mid='+f.mid+'，nums[mid]='+curNums[f.mid]+'，与 target 比较';break;
+    case 'hit':
+      s='<span class="gold">nums[mid] 等于 target，命中，返回索引 '+f.mid+'</span>';break;
+    case 'shrink':
+      if(f.cmp==='gt')s='nums[mid] &gt; target，目标在左半，right='+f.right;
+      else s='nums[mid] &lt; target，目标在右半，left='+f.left;
+      break;
+    case 'end':
+      s='区间为空，<span class="gold">left='+f.result+' 即插入位置，返回</span>';break;
+  }
+  host.innerHTML=s+'。';
+}
+function renderCode(f){
+  document.querySelectorAll('#srcCode .ln').forEach(function(ln){
+    ln.classList.toggle('act',Number(ln.getAttribute('data-l'))===f.line);
+  });
+}
+
+var playTimer=null;
+function stopPlay(){if(playTimer){clearInterval(playTimer);playTimer=null;}document.getElementById('btnPlay').textContent='自动播放';}
+document.getElementById('btnNext').addEventListener('click',function(){stopPlay();if(step<steps.length-1){step++;render();}});
+document.getElementById('btnPrev').addEventListener('click',function(){stopPlay();if(step>0){step--;render();}});
+document.getElementById('btnReset').addEventListener('click',function(){stopPlay();step=0;render();});
+document.getElementById('btnPlay').addEventListener('click',function(){
+  if(playTimer){stopPlay();return;}
+  if(step===steps.length-1){step=0;render();}
+  document.getElementById('btnPlay').textContent='暂停';
+  playTimer=setInterval(function(){
+    if(step>=steps.length-1){stopPlay();toast('演示结束：返回 '+steps[steps.length-1].result);return;}
+    step++;render();
+  },800);
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'){e.preventDefault();stopPlay();if(step<steps.length-1){step++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();stopPlay();if(step>0){step--;render();}}
+  else if(e.key===' '){e.preventDefault();document.getElementById('btnPlay').click();}
+  else if(e.key==='Home'){e.preventDefault();stopPlay();step=0;render();}
+  else if(e.key==='End'){e.preventDefault();stopPlay();step=steps.length-1;render();}
+});
+
+var seg=document.getElementById('caseSeg');
+CASES.forEach(function(cs,i){
+  var b=document.createElement('button');
+  b.setAttribute('aria-pressed',i===0?'true':'false');
+  b.textContent='['+cs.n.join(',')+'] t='+cs.t;
+  b.addEventListener('click',function(){switchCase(i);});
+  seg.appendChild(b);
+});
+function switchCase(i){
+  stopPlay();step=0;
+  var cs=CASES[i];curNums=cs.n;curT=cs.t;
+  steps=buildSteps(curNums,curT);render();
+  document.querySelectorAll('#caseSeg button').forEach(function(b,j){
+    b.setAttribute('aria-pressed',j===i?'true':'false');
+  });
+}
+
+steps=buildSteps(curNums,curT);render();
+</script>
+</body>
+</html>

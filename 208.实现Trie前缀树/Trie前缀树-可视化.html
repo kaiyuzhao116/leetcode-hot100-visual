@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>208 实现 Trie 前缀树 · 互动可视化</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#30363d;
+    --fg:#e6edf3;--muted:#8b949e;--mono:'Consolas','Courier New',monospace;
+    --blue:#58a6ff;--green:#3fb950;--red:#f85149;--orange:#e3a008;--purple:#bc8cff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);font-family:-apple-system,'Segoe UI',sans-serif;padding:28px;line-height:1.5}
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:6px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .casebar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px}
+  .casebtn.active{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.1)}
+  .controls{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .ctl{width:38px;height:38px;border-radius:8px;background:var(--panel);border:1px solid var(--border);color:var(--fg);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .ctl.play{width:auto;padding:0 18px;gap:6px;font-size:13px}
+  input[type=range]{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:64px}
+  .msg{background:var(--panel);border-left:3px solid var(--blue);border-radius:6px;padding:11px 14px;font-size:13px;margin-bottom:16px}
+  .infobar{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+  .icard{flex:1;min-width:130px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:13px 16px}
+  .icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .icard .val{font-size:20px;font-weight:700;font-family:var(--mono)}
+  .icard.res .val.t{color:var(--green)}.icard.res .val.f{color:var(--red)}
+  .opnav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .opseg{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:1px;min-width:84px}
+  .opseg .k{font-size:10px;color:var(--muted);font-family:var(--mono)}
+  .opseg .w{font-size:13px;font-weight:700;font-family:var(--mono)}
+  .opseg.active{border-color:var(--blue);background:rgba(88,166,255,.1)}
+  .opseg.active .k{color:var(--blue)}
+  .tnode.born{animation:popIn .3s ease}
+  @keyframes popIn{from{opacity:0;transform:translate(-50%,-50%) scale(.4)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  .miss{position:absolute;width:44px;height:44px;border-radius:50%;border:1.5px dashed var(--red);display:flex;align-items:center;justify-content:center;color:var(--red);font-family:var(--mono);font-weight:700;transform:translate(-50%,-50%)}
+  .wordbar{display:flex;gap:6px;min-height:38px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .wordbar .tip{font-size:11px;color:var(--muted);font-family:var(--mono);margin-right:6px}
+  .wc{width:34px;height:34px;border-radius:7px;background:var(--panel2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:14px;transition:all .2s}
+  .wc.done{border-color:var(--blue);color:var(--blue)}
+  .wc.cur{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange);color:var(--orange)}
+  .speed{display:flex;gap:4px;margin-left:auto}
+  .spd{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;font-family:var(--mono);font-size:11px}
+  .spd.active{border-color:var(--green);color:var(--green)}
+  .treewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto;margin-bottom:16px}
+  .treewrap h2{font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
+  .treecanvas{position:relative;height:300px}
+  .treecanvas svg{position:absolute;top:0;left:0}
+  .tnode{position:absolute;width:44px;height:44px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:14px;transform:translate(-50%,-50%);transition:border .2s,box-shadow .2s}
+  .tnode.root{width:52px;height:34px;border-radius:17px;color:var(--muted);font-size:12px}
+  .tnode.path{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue)}
+  .tnode.end{border-color:var(--green)}
+  .tnode.end.path{box-shadow:0 0 0 2px var(--green)}
+  .endtag{position:absolute;font-family:var(--mono);font-size:10px;color:var(--green);transform:translate(-50%,0);white-space:nowrap}
+  .codebox{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:auto}
+  .codebox h2{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.7;white-space:pre}
+  .ln{display:block;padding:0 8px;border-radius:4px}
+  .ln.on{background:rgba(88,166,255,.13)}
+  .kw{color:#ff7b72}.cmt{color:#8b949e;font-style:italic}.str{color:#a5d6ff}
+  @media(max-width:760px){body{padding:14px}.icard{min-width:100px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>208 实现 Trie 前缀树 · 互动可视化</h1>
+  <div class="sub">insert 让树逐字符生长并标记 isEnd；search 必须命中完整单词（看 isEnd）；startsWith 命中前缀即可。共用前缀的单词共享路径。</div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="controls">
+    <button class="ctl" id="reset">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="ctl play" id="play">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <span id="playtxt">播放</span>
+    </button>
+    <button class="ctl" id="prev">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="ctl" id="next">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
+    <input type="range" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar">
+    <div class="icard"><div class="lab">当前操作</div><div class="val" id="curOp" style="color:var(--purple)">—</div></div>
+    <div class="icard"><div class="lab">已建节点数</div><div class="val" id="nodeCount" style="color:var(--blue)">1</div></div>
+    <div class="icard res"><div class="lab">返回结果</div><div class="val" id="resVal">—</div></div>
+  </div>
+
+  <div class="opnav" id="opnav"></div>
+
+  <div class="treewrap">
+    <h2>前缀树（绿色节点 = 单词结尾 isEnd，蓝色 = 当前路径）</h2>
+    <div class="wordbar">
+      <div id="wcchars" style="display:flex;gap:6px;align-items:center"></div>
+      <div class="speed">
+        <button class="spd" data-ms="1100">0.5x</button>
+        <button class="spd active" data-ms="750">1x</button>
+        <button class="spd" data-ms="380">2x</button>
+      </div>
+    </div>
+    <div class="treecanvas" id="treecanvas">
+      <svg id="lines"></svg>
+      <div id="nodes"></div>
+    </div>
+  </div>
+
+  <div class="codebox">
+    <h2>Java 代码</h2>
+    <pre id="code"></pre>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const CASES=[
+  {ops:[['i','apple'],['s','apple'],['s','app'],['p','app'],['i','app'],['s','app']]},
+  {ops:[['i','cat'],['i','car'],['i','card'],['s','car'],['p','ca'],['s','can']]},
+  {ops:[['i','the'],['i','there'],['i','they'],['s','the'],['p','th'],['s','that']]}
+];
+let steps=[],posIdx=0,curCase=0,timer=null,posMap=null,canvasW=0,canvasH=0,opMarks=[],playMs=750;
+
+// 构建最终树（所有 insert 完成后），用于固定布局
+function buildFinal(ops){
+  const root={key:'',children:{},isEnd:false};
+  for(const [op,w] of ops){
+    if(op!=='i')continue;
+    let cur=root;
+    for(let i=0;i<w.length;i++){
+      const ch=w[i],key=w.substring(0,i+1);
+      if(!cur.children[ch])cur.children[ch]={key,children:{},isEnd:false};
+      cur=cur.children[ch];
+    }
+    cur.isEnd=true;
+  }
+  return root;
+}
+const LEAFW=82,LEVELH=72;
+let leafCounter=0;
+function layout(node,depth){
+  const kids=Object.keys(node.children).sort().map(k=>node.children[k]);
+  node.depth=depth;
+  if(kids.length===0){
+    node.x=leafCounter*LEAFW+LEAFW/2;leafCounter++;
+  }else{
+    kids.forEach(k=>layout(k,depth+1));
+    node.x=(kids[0].x+kids[kids.length-1].x)/2;
+  }
+  node.y=depth*LEVELH+34;
+}
+function makeLayout(ops){
+  const root=buildFinal(ops);
+  leafCounter=0;layout(root,0);
+  const map={};
+  (function walk(n){map[n.key]=n;Object.values(n.children).forEach(walk);})(root);
+  canvasW=leafCounter*LEAFW+20;
+  let maxD=0;Object.values(map).forEach(n=>{if(n.depth>maxD)maxD=n.depth;});
+  canvasH=maxD*LEVELH+90;
+  return map;
+}
+
+function buildSteps(ops){
+  const out=[];
+  const exist=new Set(['']),ends=new Set();
+  let path=[''],currentOp=-1;
+  const snap=e=>Object.assign({exist:Array.from(exist),ends:Array.from(ends),path:path.slice(),opLabel:'',result:null,line:0,opIdx:currentOp,miss:null},e);
+  const push=e=>out.push(snap(e));
+  push({msg:'空树，只有根节点',opLabel:'init',line:1});
+  let opSeq=-1;
+  for(const [op,word] of ops){
+    opSeq++;currentOp=opSeq;
+    opMarks.push({start:out.length,kind:op,word});
+    path=[''];
+    if(op==='i'){
+      push({msg:`insert "${word}"，cur 指向根`,opLabel:`insert "${word}"`,line:9});
+      for(let i=0;i<word.length;i++){
+        const ch=word[i],key=word.substring(0,i+1);
+        if(!exist.has(key)){
+          exist.add(key);
+          push({msg:`'${ch}' 的孩子槽为空，new 一个新节点`,opLabel:`insert "${word}"`,line:14});
+        }else{
+          push({msg:`'${ch}' 节点已存在（前缀共享），复用`,opLabel:`insert "${word}"`,line:13});
+        }
+        path.push(key);
+        push({msg:`cur 移到 '${ch}'`,opLabel:`insert "${word}"`,line:16});
+      }
+      ends.add(word);
+      push({msg:`单词走完，cur.isEnd = true`,opLabel:`insert "${word}"`,line:18});
+    }else{
+      const isS=op==='s';
+      push({msg:`${isS?'search':'startsWith'} "${word}"，cur 指向根`,opLabel:`${isS?'search':'startsWith'} "${word}"`,line:isS?20:29});
+      let ok=true;
+      for(let i=0;i<word.length;i++){
+        const ch=word[i],key=word.substring(0,i+1);
+        if(!exist.has(key)){
+          push({msg:`'${ch}' 孩子槽为空，返回 false`,opLabel:`${isS?'search':'startsWith'} "${word}"`,result:false,miss:{parent:key.substring(0,key.length-1),ch},line:isS?24:33});
+          ok=false;break;
+        }
+        path.push(key);
+        push({msg:`cur 移到 '${ch}'`,opLabel:`${isS?'search':'startsWith'} "${word}"`,line:isS?25:34});
+      }
+      if(ok){
+        if(isS){
+          const r=ends.has(word);
+          push({msg:`字符走完，返回 cur.isEnd = ${r}`,opLabel:`search "${word}"`,result:r,line:27});
+        }else{
+          push({msg:`前缀走完，直接返回 true`,opLabel:`startsWith "${word}"`,result:true,line:36});
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function render(){
+  const s=steps[posIdx];
+  const prevExist=posIdx>0?new Set(steps[posIdx-1].exist):new Set();
+  $('msg').textContent=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('curOp').textContent=s.opLabel;
+  $('nodeCount').textContent=s.exist.length;
+  const rv=$('resVal');
+  if(s.result===null){rv.textContent='—';rv.className='val';}
+  else{rv.textContent=String(s.result);rv.className='val '+(s.result?'t':'f');}
+  const tc=$('treecanvas');tc.style.width=canvasW+'px';tc.style.height=canvasH+'px';
+  const svg=$('lines');svg.setAttribute('viewBox',`0 0 ${canvasW} ${canvasH}`);svg.setAttribute('width',canvasW);svg.setAttribute('height',canvasH);
+  let lh='',nh='';
+  for(const key of s.exist){
+    if(key!==''){
+      const n=posMap[key],p=posMap[key.substring(0,key.length-1)];
+      const on=s.path.includes(key);
+      lh+=`<line x1="${p.x}" y1="${p.y}" x2="${n.x}" y2="${n.y}" stroke="${on?'#58a6ff':'#30363d'}" stroke-width="${on?2.5:1.5}"/>`;
+    }
+  }
+  for(const key of s.exist){
+    const n=posMap[key],on=s.path.includes(key),isEnd=s.ends.includes(key);
+    let cls='tnode';
+    if(!prevExist.has(key))cls+=' born';
+    if(key==='')cls+=' root';
+    if(isEnd)cls+=' end';
+    if(on)cls+=' path';
+    const label=key===''?'root':key[key.length-1];
+    const tip=key===''?'根节点':'前缀 "'+key+'"';
+    nh+=`<div class="${cls}" title="${tip}" style="left:${n.x}px;top:${n.y}px">${label}</div>`;
+    if(isEnd)nh+=`<div class="endtag" style="left:${n.x}px;top:${n.y+24}px">end</div>`;
+  }
+  if(s.miss){
+    const p=posMap[s.miss.parent];
+    const mx=p.x,my=p.y+LEVELH;
+    lh+=`<line x1="${p.x}" y1="${p.y}" x2="${mx}" y2="${my}" stroke="#f85149" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    nh+=`<div class="miss" style="left:${mx}px;top:${my}px">${s.miss.ch}</div>`;
+  }
+  svg.innerHTML=lh;$('nodes').innerHTML=nh;
+  let ch='';
+  if(s.opIdx>=0){
+    const w=opMarks[s.opIdx].word,done=s.path.length-1;
+    ch=`<span class="tip">当前单词</span>`+w.split('').map((c,i)=>{
+      let cls='wc';
+      if(i<done)cls+=' done';
+      if(i===done&&s.miss===null)cls+=' cur';
+      return `<span class="${cls}">${c}</span>`;
+    }).join('');
+  }else{ch='<span class="tip">空树，等待操作</span>';}
+  $('wcchars').innerHTML=ch;
+  document.querySelectorAll('.opseg').forEach((el,j)=>el.classList.toggle('active',j===s.opIdx));
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+
+const CODE=[
+  '<span class="kw">class</span> Trie {',
+  '  <span class="kw">private</span> TrieNode root;',
+  '  <span class="kw">class</span> TrieNode {',
+  '      TrieNode[] children = <span class="kw">new</span> TrieNode[26];',
+  '      <span class="kw">boolean</span> isEnd = <span class="kw">false</span>;',
+  '  }',
+  '  <span class="kw">public</span> Trie() {',
+  '      root = <span class="kw">new</span> TrieNode();',
+  '  }',
+  '  <span class="kw">public void</span> insert(String word) {',
+  '      TrieNode cur = root;',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i=0;i&lt;word.length();i++){',
+  '          <span class="kw">int</span> c = word.charAt(i)-<span class="str">\'a\'</span>;',
+  '          <span class="kw">if</span> (cur.children[c]==<span class="kw">null</span>){',
+  '              cur.children[c]=<span class="kw">new</span> TrieNode();',
+  '          }',
+  '          cur = cur.children[c];',
+  '      }',
+  '      cur.isEnd = <span class="kw">true</span>;',
+  '  }',
+  '  <span class="kw">public boolean</span> search(String word) {',
+  '      TrieNode cur = root;',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i=0;i&lt;word.length();i++){',
+  '          <span class="kw">int</span> c = word.charAt(i)-<span class="str">\'a\'</span>;',
+  '          <span class="kw">if</span> (cur.children[c]==<span class="kw">null</span>) <span class="kw">return false</span>;',
+  '          cur = cur.children[c];',
+  '      }',
+  '      <span class="kw">return</span> cur.isEnd;',
+  '  }',
+  '  <span class="kw">public boolean</span> startsWith(String prefix) {',
+  '      TrieNode cur = root;',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i=0;i&lt;prefix.length();i++){',
+  '          <span class="kw">int</span> c = prefix.charAt(i)-<span class="str">\'a\'</span>;',
+  '          <span class="kw">if</span> (cur.children[c]==<span class="kw">null</span>) <span class="kw">return false</span>;',
+  '          cur = cur.children[c];',
+  '      }',
+  '      <span class="kw">return true</span>;',
+  '  }',
+  '}'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;
+  posMap=makeLayout(CASES[i].ops);
+  opMarks=[];
+  steps=buildSteps(CASES[i].ops);posIdx=0;
+  $('slider').max=steps.length-1;
+  buildOpNav();
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+function buildOpNav(){
+  const kindName={i:'insert',s:'search',p:'startsWith'};
+  $('opnav').innerHTML=opMarks.map((m,j)=>
+    `<button class="opseg" data-j="${j}"><span class="k">${kindName[m.kind]}</span><span class="w">${m.word}</span></button>`).join('');
+  document.querySelectorAll('.opseg').forEach(el=>el.onclick=()=>{
+    stopPlay();posIdx=opMarks[+el.dataset.j].start;render();
+  });
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">用例 ${i+1}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

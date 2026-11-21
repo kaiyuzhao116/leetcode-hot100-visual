@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>53. 最大子数组和 - 动态规划可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%2358a6ff'/><path d='M7 15l3-6 3 4 4-7' stroke='%230d1117' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.mono{font-family:"Cascadia Code",Consolas,"Courier New",monospace}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 22px 60px}
+
+/* 标题 */
+.head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.head h1{font-size:26px;font-weight:700;letter-spacing:.3px}
+.tag{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--border)}
+.tag.mid{color:var(--orange);border-color:rgba(227,179,65,.45);background:rgba(227,179,65,.1)}
+.sub{color:var(--muted);font-size:13.5px;margin-bottom:18px}
+.idea{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);
+  border-radius:8px;padding:14px 16px;font-size:14px;margin-bottom:18px;line-height:1.7}
+.idea b{color:var(--blue)}
+.idea .kw{color:var(--purple);font-weight:600}
+
+/* 用例 */
+.cases{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px}
+.case-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);
+  padding:7px 14px;border-radius:7px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+.case-btn:hover{border-color:var(--blue);color:var(--text)}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+/* 主网格 */
+.grid{display:grid;grid-template-columns:1fr;gap:18px}
+@media(min-width:980px){.grid{grid-template-columns:1.55fr 1fr}}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px}
+.panel h3{font-size:14px;color:var(--muted);font-weight:600;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;letter-spacing:.3px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+/* 数组格子 */
+.nums-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.cell{position:relative;min-width:54px;flex:1;max-width:78px;background:var(--panel2);
+  border:1.5px solid var(--border);border-radius:8px;padding:10px 6px 8px;text-align:center;
+  transition:all .25s ease}
+.cell .v{font-size:19px;font-weight:700;font-family:Consolas,monospace}
+.cell .idx{font-size:11px;color:var(--muted);margin-top:3px;font-family:Consolas,monospace}
+.cell.in-cur{background:rgba(188,140,255,.13)}
+.cell.in-best{border-color:var(--green);box-shadow:0 0 0 1px rgba(63,185,80,.5)}
+.cell.at-i{border-color:var(--orange);box-shadow:0 0 0 1px rgba(227,179,65,.55)}
+.cell.neg .v{color:var(--red)}
+.cell .flag{position:absolute;top:-11px;font-size:10px;font-weight:700;padding:1px 6px;
+  border-radius:8px;white-space:nowrap;font-family:Consolas,monospace}
+.flag.lf{left:4px;background:var(--purple);color:#0d1117}
+.flag.rt{right:4px;background:var(--orange);color:#0d1117}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:14px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+/* dp 数组 */
+.dp-row{display:flex;flex-wrap:wrap;gap:8px}
+.dp-cell{min-width:54px;flex:1;max-width:78px;background:var(--panel2);border:1.5px solid var(--border);
+  border-radius:8px;padding:9px 6px;text-align:center;transition:all .25s}
+.dp-cell .lab{font-size:10.5px;color:var(--muted);font-family:Consolas,monospace}
+.dp-cell .dv{font-size:18px;font-weight:700;font-family:Consolas,monospace;margin-top:2px}
+.dp-cell.empty{opacity:.4}
+.dp-cell.empty .dv{color:var(--muted)}
+.dp-cell.cur{border-color:var(--orange);background:rgba(227,179,65,.12)}
+.dp-cell.best{border-color:var(--green);background:rgba(63,185,80,.12)}
+.dp-cell.best .dv{color:var(--green)}
+.dp-cell.pop{animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(.8);opacity:.3}100%{transform:scale(1);opacity:1}}
+
+/* 决策面板 */
+.decide{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.opt{border:1.5px solid var(--border);border-radius:9px;padding:13px 12px;background:var(--panel2);
+  transition:all .25s;min-width:0}
+.opt .ot{font-size:12.5px;font-weight:600;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.opt .of{font-size:12px;color:var(--muted);font-family:Consolas,monospace;word-break:break-all;line-height:1.5}
+.opt .ov{font-size:22px;font-weight:700;margin-top:7px;font-family:Consolas,monospace}
+.opt.A .ot{color:var(--purple)}
+.opt.B .ot{color:var(--blue)}
+.opt.wait{opacity:.55}
+.opt.win{border-color:var(--green);background:rgba(63,185,80,.1);box-shadow:0 0 0 1px rgba(63,185,80,.4)}
+.opt.lose{opacity:.4}
+.opt.win .ov{color:var(--green)}
+.decide-hint{font-size:12.5px;color:var(--muted);min-height:20px}
+
+/* 信息卡 */
+.infos{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.info{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;min-width:0}
+.info .il{font-size:11.5px;color:var(--muted);margin-bottom:3px}
+.info .iv{font-size:17px;font-weight:700;font-family:Consolas,monospace;word-break:break-all}
+.info .iv.g{color:var(--green)}
+.info .iv.o{color:var(--orange)}
+
+/* 代码面板 */
+.code-wrap{background:#0b0f16;border:1px solid var(--border);border-radius:10px;overflow:hidden;
+  display:flex;flex-direction:column;height:100%}
+.code-bar{background:var(--panel2);padding:9px 14px;display:flex;gap:7px;align-items:center;
+  border-bottom:1px solid var(--border)}
+.code-bar .bd{width:12px;height:12px;border-radius:50%}
+.code-title{font-size:12.5px;color:var(--muted);margin-left:6px;font-family:Consolas,monospace}
+.code-body{padding:12px 0;overflow:auto;flex:1}
+.code-line{display:flex;align-items:flex-start;padding:1.5px 14px;font-family:Consolas,monospace;
+  font-size:13.5px;line-height:1.7;white-space:pre;transition:background .15s}
+.code-line .ln{width:26px;text-align:right;color:#48505c;margin-right:14px;flex-shrink:0;user-select:none}
+.code-line.hl{background:rgba(88,166,255,.16)}
+.code-line.hl .ln{color:var(--blue)}
+.t-kw{color:#ff7b72}.t-type{color:#ffa657}.t-num{color:#79c0ff}.t-cm{color:#8b949e}
+.t-id{color:#d2a8ff}.t-meth{color:#d2a8ff}
+
+/* 控制条 */
+.controls{position:sticky;bottom:0;background:rgba(22,27,34,.96);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-top:18px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 24px rgba(0,0,0,.35)}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:42px;height:42px;
+  border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.play{width:auto;padding:0 18px;gap:8px;font-weight:600;font-size:14px;background:var(--blue);
+  border-color:var(--blue);color:#0d1117}
+.btn.play:hover{opacity:.9;color:#0d1117}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.scrub{flex:1;min-width:160px;display:flex;align-items:center;gap:11px}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:5px;border-radius:3px;
+  background:var(--border);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--blue);cursor:pointer;border:2px solid var(--bg)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--blue);
+  cursor:pointer;border:2px solid var(--bg)}
+.step-txt{font-size:12.5px;color:var(--muted);font-family:Consolas,monospace;white-space:nowrap}
+.speed{background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:8px;
+  padding:8px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+.msg-line{width:100%;font-size:13.5px;color:var(--text);padding-top:2px;min-height:22px;
+  border-top:1px solid var(--border);padding-top:10px}
+.msg-line .act{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;
+  margin-right:9px;font-family:Consolas,monospace;vertical-align:1px}
+.act-init{background:rgba(88,166,255,.2);color:var(--blue)}
+.act-loop{background:rgba(139,148,158,.2);color:var(--muted)}
+.act-compare{background:rgba(227,179,65,.2);color:var(--orange)}
+.act-select{background:rgba(188,140,255,.2);color:var(--purple)}
+.act-updatemax{background:rgba(63,185,80,.2);color:var(--green)}
+.act-keepmax{background:rgba(139,148,158,.2);color:var(--muted)}
+.act-end{background:rgba(88,166,255,.2);color:var(--blue)}
+@media(max-width:600px){
+  .wrap{padding:18px 13px 50px}
+  .cell,.dp-cell{min-width:46px}
+  .decide{grid-template-columns:1fr}
+  .controls{gap:9px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>53. 最大子数组和</h1>
+    <span class="tag mid">中等</span>
+  </div>
+  <div class="sub">动态规划 · 时间 O(n) 一趟遍历 · 空间 O(n) 存 dp（可优化到 O(1)）</div>
+
+  <div class="idea">
+    <b>dp[i]</b> 表示<span class="kw">以 nums[i] 结尾</span>的最大子数组和。到第 i 个元素只有两种选择：
+    把它<span class="kw">接在前面子数组后面</span>（dp[i-1]+nums[i]），或<span class="kw">从这里重新开始</span>（nums[i]），取较大者。
+    再用一个 <b>max</b> 随时记住所有 dp 里的最大值，就是答案。
+  </div>
+
+  <div class="cases" id="cases"></div>
+
+  <div class="grid">
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <!-- 数组 -->
+      <div class="panel">
+        <h3><span class="dot" style="background:var(--orange)"></span>原数组 nums 与当前子数组</h3>
+        <div class="nums-row" id="numsRow"></div>
+        <div class="legend">
+          <span><i style="background:rgba(188,140,255,.4)"></i>当前子数组（以 i 结尾的最优）</span>
+          <span><i style="background:var(--green)"></i>全局最佳子数组</span>
+          <span><i style="background:var(--orange)"></i>当前处理 i</span>
+        </div>
+      </div>
+      <!-- dp -->
+      <div class="panel">
+        <h3><span class="dot" style="background:var(--purple)"></span>dp 数组（逐个填充）</h3>
+        <div class="dp-row" id="dpRow"></div>
+      </div>
+      <!-- 决策 -->
+      <div class="panel">
+        <h3><span class="dot" style="background:var(--blue)"></span>第 i 步的两个选择</h3>
+        <div class="decide" id="decide">
+          <div class="opt A" id="optA">
+            <div class="ot">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              接在前面后面
+            </div>
+            <div class="of" id="ofA"></div>
+            <div class="ov" id="ovA"></div>
+          </div>
+          <div class="opt B" id="optB">
+            <div class="ot">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+              从这里重新开始
+            </div>
+            <div class="of" id="ofB"></div>
+            <div class="ov" id="ovB"></div>
+          </div>
+        </div>
+        <div class="decide-hint" id="decideHint"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <!-- 信息 -->
+      <div class="panel">
+        <h3><span class="dot" style="background:var(--green)"></span>状态信息</h3>
+        <div class="infos">
+          <div class="info"><div class="il">当前下标 i</div><div class="iv o" id="infoI">—</div></div>
+          <div class="info"><div class="il">dp[i] 当前结尾最大和</div><div class="iv" id="infoDp">—</div></div>
+          <div class="info"><div class="il">当前子数组 [起..i]</div><div class="iv" id="infoCur">—</div></div>
+          <div class="info"><div class="il">全局最大 max</div><div class="iv g" id="infoMax">—</div></div>
+          <div class="info" style="grid-column:1/-1"><div class="il">全局最佳子数组 [起..止]</div><div class="iv g" id="infoBest">—</div></div>
+        </div>
+      </div>
+      <!-- 代码 -->
+      <div class="code-wrap">
+        <div class="code-bar">
+          <span class="bd" style="background:#ff5f56"></span>
+          <span class="bd" style="background:#ffbd2e"></span>
+          <span class="bd" style="background:#27c93f"></span>
+          <span class="code-title">Solution.java</span>
+        </div>
+        <div class="code-body" id="codeBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 控制条 -->
+  <div class="controls">
+    <button class="btn play" id="playBtn">
+      <svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+      <span id="playLabel">播放</span>
+    </button>
+    <button class="btn" id="prevBtn" title="上一步（←）">
+      <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+    </button>
+    <button class="btn" id="nextBtn" title="下一步（→）">
+      <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
+    <button class="btn" id="resetBtn" title="重置">
+      <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
+    </button>
+    <div class="scrub">
+      <input type="range" id="scrubber" min="0" value="0" step="1">
+      <span class="step-txt" id="stepTxt">0 / 0</span>
+    </div>
+    <select class="speed" id="speedSel">
+      <option value="1400">0.5x</option>
+      <option value="900" selected>1x</option>
+      <option value="550">1.5x</option>
+      <option value="300">2x</option>
+    </select>
+    <div class="msg-line" id="msgLine"></div>
+  </div>
+</div>
+
+<script>
+/* ===== 数据 ===== */
+const CASES = [
+  {nums:[-2,1,-3,4,-1,2,1,-5,4]},
+  {nums:[1]},
+  {nums:[5,4,-1,7,8]},
+  {nums:[-1]},
+  {nums:[-3,-2,-1]}
+];
+
+const CODE_HTML = [
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '  <span class="t-kw">public</span> <span class="t-kw">int</span> <span class="t-meth">maxSubArray</span>(<span class="t-kw">int</span>[] nums) {',
+  '    <span class="t-kw">int</span> n = nums.length;',
+  '    <span class="t-kw">int</span> max = nums[<span class="t-num">0</span>];',
+  '',
+  '    <span class="t-kw">int</span>[] dp = <span class="t-kw">new</span> <span class="t-kw">int</span>[n];',
+  '    dp[<span class="t-num">0</span>] = nums[<span class="t-num">0</span>];',
+  '    max = dp[<span class="t-num">0</span>];',
+  '    <span class="t-kw">for</span>(<span class="t-kw">int</span> i=<span class="t-num">1</span>;i&lt;n;i++){',
+  '      dp[i] = <span class="t-type">Math</span>.<span class="t-meth">max</span>(dp[i-<span class="t-num">1</span>]+nums[i], nums[i]);',
+  '      <span class="t-kw">if</span>(max&lt;dp[i]) max = dp[i];',
+  '    }',
+  '',
+  '    <span class="t-kw">return</span> max;',
+  '  }',
+  '}'
+];
+
+const ACT_NAME = {init:'初始化', loop:'进入循环', compare:'比较候选', select:'确定 dp',
+  updatemax:'更新 max', keepmax:'max 不变', end:'结束'};
+
+/* ===== 构建步骤 ===== */
+function buildSteps(nums){
+  const n = nums.length;
+  const steps = [];
+  const dp = new Array(n).fill(null);
+  dp[0] = nums[0];
+  let max = dp[0], maxPos = 0, curStart = 0, bestStart = 0;
+  const snap = (extra)=>Object.assign({
+    i:0, dp:dp.slice(), curStart, bestStart, max, maxPos,
+    candA:null, candB:null, pick:null, line:0, action:'', msg:''
+  }, extra);
+
+  steps.push(snap({i:0, line:7, action:'init',
+    msg:'dp[0] = nums[0] = '+nums[0]+'，以第 0 个元素结尾，子数组只有它自己'}));
+  steps.push(snap({i:0, line:8, action:'init',
+    msg:'全局最大 max 初始化为 dp[0] = '+max}));
+
+  for(let i=1;i<n;i++){
+    steps.push(snap({i, line:9, action:'loop',
+      msg:'处理 i = '+i+'，当前元素 nums['+i+'] = '+nums[i]}));
+    const candA = dp[i-1] + nums[i];
+    const candB = nums[i];
+    steps.push(snap({i, line:10, action:'compare', candA, candB,
+      msg:'两个选择：接上 dp['+(i-1)+']+nums['+i+'] = '+candA+'；重开 nums['+i+'] = '+candB}));
+    const chooseA = candA >= candB;
+    const val = Math.max(candA, candB);
+    dp[i] = val;
+    if(!chooseA) curStart = i;
+    steps.push(snap({i, line:10, action:'select', candA, candB, pick:chooseA?'A':'B',
+      msg: chooseA
+        ? '接上更优（'+candA+' ≥ '+candB+'），dp['+i+'] = '+val+'，当前子数组从 '+curStart+' 延续'
+        : '重开更优（'+candB+' > '+candA+'），dp['+i+'] = '+val+'，起点移到 '+i}));
+    if(max < val){
+      max = val; maxPos = i; bestStart = curStart;
+      steps.push(snap({i, line:11, action:'updatemax', candA, candB, pick:chooseA?'A':'B',
+        msg:val+' 大于原 max，更新全局最大 max = '+max+'，最佳子数组 ['+bestStart+'..'+maxPos+']'}));
+    }else{
+      steps.push(snap({i, line:11, action:'keepmax', candA, candB, pick:chooseA?'A':'B',
+        msg:val+' 不超过当前 max = '+max+'，全局最大保持不变'}));
+    }
+  }
+  steps.push(snap({i:n-1, line:14, action:'end',
+    msg:'遍历结束，返回全局最大子数组和 max = '+max}));
+  return steps;
+}
+
+/* ===== 状态与元素 ===== */
+let caseIdx = 0, steps = [], posIdx = 0, timer = null, playing = false;
+const $ = (id)=>document.getElementById(id);
+const numsRow=$('numsRow'), dpRow=$('dpRow'), optA=$('optA'), optB=$('optB'),
+  ofA=$('ofA'), ofB=$('ofB'), ovA=$('ovA'), ovB=$('ovB'),
+  decideHint=$('decideHint'), codeBody=$('codeBody'), msgLine=$('msgLine'),
+  scrubber=$('scrubber'), stepTxt=$('stepTxt'), speedSel=$('speedSel'),
+  playBtn=$('playBtn'), playIcon=$('playIcon'), playLabel=$('playLabel');
+
+/* 用例按钮 */
+function renderCaseButtons(){
+  $('cases').innerHTML = CASES.map((c,k)=>
+    '<button class="case-btn'+(k===caseIdx?' active':'')+'" data-k="'+k+'">用例 '+(k+1)+': ['+c.nums.join(',')+']</button>'
+  ).join('');
+  document.querySelectorAll('.case-btn').forEach(b=>{
+    b.addEventListener('click',()=>loadCase(parseInt(b.dataset.k,10)));
+  });
+}
+
+/* 代码面板 */
+function renderCode(){
+  codeBody.innerHTML = CODE_HTML.map((h,k)=>
+    '<div class="code-line" data-line="'+(k+1)+'"><span class="ln">'+(k+1)+'</span><span>'+h+'</span></div>'
+  ).join('');
+}
+function codeLines(){ return codeBody.querySelectorAll('.code-line'); }
+
+/* 数组格子 */
+function renderNums(snap){
+  const nums = CASES[caseIdx].nums;
+  numsRow.innerHTML = nums.map((v,idx)=>{
+    const cls=['cell'];
+    if(v<0) cls.push('neg');
+    if(idx>=snap.curStart && idx<=snap.i) cls.push('in-cur');
+    if(idx>=snap.bestStart && idx<=snap.maxPos) cls.push('in-best');
+    if(idx===snap.i) cls.push('at-i');
+    let flag='';
+    if(idx===snap.curStart) flag='<span class="flag lf">起</span>';
+    else if(idx===snap.i) flag='<span class="flag rt">i</span>';
+    return '<div class="'+cls.join(' ')+'">'+flag+'<div class="v">'+v+'</div><div class="idx">'+idx+'</div></div>';
+  }).join('');
+}
+
+/* dp 格子 */
+function renderDp(snap){
+  dpRow.innerHTML = snap.dp.map((d,idx)=>{
+    const cls=['dp-cell'];
+    if(d===null) cls.push('empty');
+    if(idx===snap.maxPos) cls.push('best');
+    if(idx===snap.i && d!==null) cls.push('cur');
+    if(idx===snap.i && snap.action==='select') cls.push('pop');
+    return '<div class="'+cls.join(' ')+'"><div class="lab">dp['+idx+']</div><div class="dv">'+(d===null?'—':d)+'</div></div>';
+  }).join('');
+}
+
+/* 决策面板 */
+function renderDecide(snap){
+  if(snap.candA===null){
+    optA.className='opt A wait'; optB.className='opt B wait';
+    ofA.textContent=''; ofB.textContent=''; ovA.textContent='—'; ovB.textContent='—';
+    decideHint.textContent = snap.action==='end' ? '全部处理完成，max 即最终答案' : '等待进入下一个下标…';
+    return;
+  }
+  ofA.textContent='dp['+(snap.i-1)+']+nums['+snap.i+']';
+  ofB.textContent='nums['+snap.i+']';
+  ovA.textContent=snap.candA; ovB.textContent=snap.candB;
+  if(snap.pick===null){
+    optA.className='opt A wait'; optB.className='opt B wait';
+    decideHint.textContent='两个候选并列展示，取较大者';
+  }else if(snap.pick==='A'){
+    optA.className='opt A win'; optB.className='opt B lose';
+    decideHint.textContent='接上前面的值更大（或相等），当前子数组延续';
+  }else{
+    optB.className='opt B win'; optA.className='opt A lose';
+    decideHint.textContent='重新开始更划算，当前子数组起点移到 i';
+  }
+}
+
+/* 信息卡 */
+function renderInfos(snap){
+  $('infoI').textContent=snap.i;
+  $('infoDp').textContent=snap.dp[snap.i]===null?'—':snap.dp[snap.i];
+  $('infoCur').textContent='['+snap.curStart+' .. '+snap.i+']';
+  $('infoMax').textContent=snap.max;
+  $('infoBest').textContent='['+snap.bestStart+' .. '+snap.maxPos+']';
+}
+
+/* 总渲染 */
+function render(){
+  const snap = steps[posIdx];
+  renderNums(snap);
+  renderDp(snap);
+  renderDecide(snap);
+  renderInfos(snap);
+  codeLines().forEach(el=>el.classList.toggle('hl', parseInt(el.dataset.line,10)===snap.line));
+  msgLine.innerHTML='<span class="act act-'+snap.action+'">'+ACT_NAME[snap.action]+'</span>'+snap.msg;
+  scrubber.max=steps.length-1;
+  scrubber.value=posIdx;
+  stepTxt.textContent=posIdx+' / '+(steps.length-1);
+}
+
+/* ===== 播放控制 ===== */
+function updatePlayUI(){
+  if(playing){
+    playIcon.innerHTML='<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
+    playLabel.textContent='暂停';
+  }else{
+    playIcon.innerHTML='<path d="M8 5v14l11-7z"/>';
+    playLabel.textContent='播放';
+  }
+}
+function play(){
+  if(posIdx>=steps.length-1){posIdx=0;render();}
+  playing=true; updatePlayUI();
+  const speed=parseInt(speedSel.value,10);
+  timer=setInterval(()=>{
+    if(posIdx>=steps.length-1){pause();return;}
+    posIdx++; render();
+  },speed);
+}
+function pause(){
+  playing=false; clearInterval(timer); timer=null; updatePlayUI();
+}
+function loadCase(k){
+  pause();
+  caseIdx=k; posIdx=0;
+  steps=buildSteps(CASES[k].nums);
+  renderCaseButtons();
+  render();
+}
+
+/* 事件绑定 */
+playBtn.addEventListener('click',()=>playing?pause():play());
+$('prevBtn').addEventListener('click',()=>{pause();if(posIdx>0){posIdx--;render();}});
+$('nextBtn').addEventListener('click',()=>{pause();if(posIdx<steps.length-1){posIdx++;render();}});
+$('resetBtn').addEventListener('click',()=>{pause();posIdx=0;render();});
+scrubber.addEventListener('input',()=>{pause();posIdx=parseInt(scrubber.value,10);render();});
+speedSel.addEventListener('change',()=>{if(playing){pause();play();}});
+document.addEventListener('keydown',(e)=>{
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();if(posIdx<steps.length-1){posIdx++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(posIdx>0){posIdx--;render();}}
+  else if(e.key===' '){e.preventDefault();playing?pause():play();}
+});
+
+/* 初始化 */
+renderCaseButtons();
+renderCode();
+steps=buildSteps(CASES[0].nums);
+render();
+
+</script>
+</body>
+</html>

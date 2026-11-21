@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>insert(0) + pop 动作图解</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --fg:#e6edf3; --muted:#8b949e;
+    --blue:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149; --purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;line-height:1.5;display:flex;flex-direction:column;min-height:100vh;
+  }
+  header{
+    padding:14px 20px;border-bottom:1px solid var(--border);background:var(--panel);
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  h1{font-size:16px}
+  .controls{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+  .btn{
+    background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    padding:7px 14px;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:13px;
+  }
+  .btn:hover{background:#272e3a}
+  .btn.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  .seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{
+    background:var(--panel2);color:var(--muted);border:none;padding:7px 13px;
+    cursor:pointer;font-family:var(--mono);font-size:12.5px;
+  }
+  .seg button.on{background:#1f6feb;color:#fff}
+  select{
+    background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    padding:7px;border-radius:6px;font-family:var(--mono);
+  }
+  main{flex:1;display:flex;flex-direction:column;padding:24px 20px;gap:20px;overflow:auto}
+  .stage{
+    display:grid;grid-template-columns:1fr 90px 1fr;gap:16px;align-items:start;
+    max-width:900px;width:100%;margin:0 auto;
+  }
+  .col-lbl{
+    font-family:var(--mono);font-size:12px;color:var(--muted);
+    margin-bottom:10px;text-align:center;
+  }
+  /* 栈：垂直，栈顶在上 */
+  .stack{
+    display:flex;flex-direction:column-reverse;gap:6px;min-height:240px;
+    justify-content:flex-start;align-items:center;
+  }
+  .box{
+    font-family:var(--mono);font-size:18px;font-weight:600;width:64px;height:52px;
+    display:flex;align-items:center;justify-content:center;border-radius:7px;
+    border:1px solid;transition:all .3s;
+  }
+  .box.letter{background:rgba(88,166,255,.15);color:var(--blue);border-color:rgba(88,166,255,.45)}
+  .box.bracket{background:rgba(248,81,73,.15);color:var(--red);border-color:rgba(248,81,73,.5)}
+  .box.popped{background:var(--orange);color:#1a1a1a;border-color:var(--orange);
+    box-shadow:0 0 16px rgba(210,153,34,.7);animation:pulse .5s ease}
+  @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .stack-base{width:80px;height:5px;background:var(--border);border-radius:3px;margin:0 auto}
+  /* 中间箭头 */
+  .arrow-col{display:flex;flex-direction:column;align-items:center;padding-top:60px;gap:8px}
+  .arrow{font-size:30px;color:var(--orange)}
+  .arrow-txt{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-align:center;line-height:1.4}
+  /* tmp：水平，新元素插入位置 0（最左） */
+  .tmp{display:flex;gap:6px;min-height:52px;justify-content:center;flex-wrap:wrap}
+  .tmp .box.new{animation:slidein .4s ease}
+  @keyframes slidein{from{transform:translateX(-20px);opacity:0}to{transform:translateX(0);opacity:1}}
+  .tmp-empty{color:#484f58;font-family:var(--mono);align-self:center}
+  .desc-box{
+    max-width:900px;width:100%;margin:0 auto;background:var(--panel2);
+    border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+  }
+  .desc-box .step-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px}
+  .desc-box p{font-size:14px;line-height:1.7}
+  .code-tag{
+    font-family:var(--mono);background:#0d1117;border:1px solid var(--border);
+    padding:2px 8px;border-radius:5px;color:var(--purple);font-size:13px;
+  }
+  .result{
+    max-width:900px;width:100%;margin:0 auto;display:grid;
+    grid-template-columns:1fr 1fr;gap:14px;
+  }
+  .res-card{border-radius:8px;padding:14px;border:1px solid}
+  .res-card.good{background:rgba(63,185,80,.1);border-color:var(--green)}
+  .res-card.bad{background:rgba(248,81,73,.1);border-color:var(--red)}
+  .res-card .t{font-family:var(--mono);font-size:12px;margin-bottom:8px}
+  .res-card .big{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:2px}
+  @media(max-width:760px){
+    .stage{grid-template-columns:1fr}
+    .arrow-col{flex-direction:row;padding-top:0}
+    .result{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>tmp.insert(0, st.pop()) 动作图解</h1>
+  <div class="controls">
+    <select id="example">
+      <option value="abc">括号内 abc</option>
+      <option value="xy">括号内 xy</option>
+      <option value="cat">括号内 cat</option>
+    </select>
+    <div class="seg" id="modeSeg">
+      <button data-m="insert" class="on">insert(0) 正确</button>
+      <button data-m="append">append 错误对比</button>
+    </div>
+    <button class="btn" id="btnReset">重置</button>
+    <button class="btn primary" id="btnPlay">播放</button>
+    <button class="btn" id="btnNext">下一步</button>
+  </div>
+</header>
+
+<main>
+  <div class="stage">
+    <div>
+      <div class="col-lbl">栈 st（栈顶在上）</div>
+      <div class="stack" id="stack"></div>
+      <div class="stack-base"></div>
+    </div>
+    <div class="arrow-col">
+      <div class="arrow">→</div>
+      <div class="arrow-txt" id="arrowTxt">pop 弹出<br>等待开始</div>
+    </div>
+    <div>
+      <div class="col-lbl" id="tmpLbl">tmp · insert(0) 插到最前面</div>
+      <div class="tmp" id="tmp"><span class="tmp-empty">空</span></div>
+    </div>
+  </div>
+
+  <div class="desc-box">
+    <div class="step-lbl" id="stepLbl">步骤 0</div>
+    <p id="desc">点「播放」或「下一步」，观察栈顶元素被弹出，并插到 tmp 的最前面。</p>
+  </div>
+
+  <div class="result">
+    <div class="res-card good">
+      <div class="t">insert(0) 每次往前插</div>
+      <div class="big" id="goodRes" style="color:var(--green)">—</div>
+    </div>
+    <div class="res-card bad">
+      <div class="t">append 每次往后加（顺序反）</div>
+      <div class="big" id="badRes" style="color:var(--red)">—</div>
+    </div>
+  </div>
+</main>
+
+<script>
+let word = 'abc';
+let mode = 'insert';
+let frames = [];
+let fi = -1, timer = null;
+const stackEl = document.getElementById('stack');
+const tmpEl = document.getElementById('tmp');
+const desc = document.getElementById('desc');
+const arrowTxt = document.getElementById('arrowTxt');
+
+function buildFrames(){
+  // 栈：底部是 [，上面是 word 的字符（正序），栈顶 = 最后一个字符
+  const stack = ['[', ...word];
+  const tmp = [];
+  frames = [];
+  frames.push({stack:stack.slice(), tmp:[], popped:null,
+    desc:"初始：栈里 [ 在最下面，字母在上面，栈顶是最后一个字符。tmp 为空。"});
+  while(stack[stack.length-1] !== '['){
+    const v = stack[stack.length-1];
+    stack.pop();
+    if(mode==='insert') tmp.unshift(v); else tmp.push(v);
+    const where = mode==='insert' ? '位置 0（最前面），原有字符后移' : '末尾';
+    frames.push({
+      stack: stack.slice(), tmp: tmp.slice(), popped:v,
+      desc:`pop 弹出 '${v}'，${mode==='insert'?'insert(0)':'append'} 把它插到 tmp 的${where}，tmp = "${tmp.join('')}"。`
+    });
+  }
+  // 弹出 [
+  stack.pop();
+  frames.push({stack:stack.slice(), tmp:tmp.slice(), popped:null,
+    desc:`遇到 '['，把它弹出（不参与拼接），括号内字符串还原为 "${tmp.join('')}"。`});
+}
+
+function render(){
+  const f = frames[fi];
+  // 栈
+  stackEl.innerHTML = f.stack.map(v=>{
+    const cls = v==='[' ? 'box bracket' :
+      (v===f.popped ? 'box letter popped' : 'box letter');
+    return `<div class="${cls}">${v}</div>`;
+  }).join('');
+  // tmp
+  if(f.tmp.length===0){
+    tmpEl.innerHTML='<span class="tmp-empty">空</span>';
+  } else {
+    tmpEl.innerHTML = f.tmp.map((v,i)=>
+      `<div class="box letter ${v===f.popped?'new':''}">${v}</div>`).join('');
+  }
+  desc.textContent = f.desc;
+  document.getElementById('stepLbl').textContent = `步骤 ${fi} / ${frames.length-1}`;
+  arrowTxt.innerHTML = f.popped ? `pop '${f.popped}'` : 'pop 弹出';
+  // 结果（两种模式都算）
+  const good = [...word].map((_,i)=>word[i]).join('');
+  const bad = [...word].reverse().join('');
+  document.getElementById('goodRes').textContent = good;
+  document.getElementById('badRes').textContent = bad;
+}
+function next(){
+  if(fi>=frames.length-1){pause();return;}
+  fi++; render();
+}
+function reset(){pause();fi=-1;buildFrames();render();}
+function pause(){
+  if(timer){clearInterval(timer);timer=null;}
+  document.getElementById('btnPlay').textContent='播放';
+}
+function play(){
+  if(timer){pause();return;}
+  if(fi>=frames.length-1) fi=-1;
+  document.getElementById('btnPlay').textContent='暂停';
+  timer=setInterval(()=>{if(fi>=frames.length-1){pause();return;}next();},1100);
+}
+document.getElementById('btnNext').onclick=()=>{pause();next();};
+document.getElementById('btnPlay').onclick=play;
+document.getElementById('btnReset').onclick=reset;
+document.getElementById('example').onchange=e=>{
+  word=e.target.value;reset();
+};
+document.querySelectorAll('#modeSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    mode=b.dataset.m;
+    document.getElementById('tmpLbl').textContent =
+      mode==='insert' ? 'tmp · insert(0) 插到最前面' : 'tmp · append 插到末尾';
+    reset();
+  };
+});
+buildFrames();render();
+</script>
+</body>
+</html>

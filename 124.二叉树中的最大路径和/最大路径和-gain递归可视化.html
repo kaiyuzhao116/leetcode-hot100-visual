@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>124. 二叉树中的最大路径和 · gain 递归可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='%23e3b341'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.6;}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 26px 40px;}
+h1{font-size:27px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:12px;background:rgba(248,81,73,.15);color:var(--red);}
+.subtitle{color:var(--muted);margin:0 0 22px;font-size:14.5px;}
+.info-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:20px;}
+.info-panel p{margin:0 0 14px;color:var(--muted);font-size:14px;}
+.info-panel b{color:var(--text);font-weight:600;}
+.info-panel .hl-b{color:var(--blue);font-weight:600;}
+.info-panel .hl-o{color:var(--orange);font-weight:600;}
+.info-panel .hl-g{color:var(--green);font-weight:600;}
+#cases{display:flex;flex-wrap:wrap;gap:8px;}
+.case-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:7px 13px;font-size:13.5px;cursor:pointer;transition:border-color .15s,background .15s;}
+.case-btn:hover{border-color:var(--blue);}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);}
+.main-grid{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:20px;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.card-head{padding:11px 16px;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--muted);
+  font-weight:600;letter-spacing:.3px;display:flex;align-items:center;gap:8px;}
+#stage{position:relative;height:380px;}
+.legend{position:absolute;left:16px;bottom:6px;display:flex;gap:13px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap;}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-1px;}
+.dot.a{background:var(--blue);} .dot.g{background:var(--green);} .dot.o{background:var(--orange);} .dot.r{background:var(--red);}
+
+.tnode{position:absolute;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13.5px;font-weight:600;background:var(--panel2);border:2px solid var(--border);color:var(--muted);
+  transition:border-color .16s,background .16s,color .16s;z-index:3;}
+.tnode.active{border-color:var(--blue);background:rgba(88,166,255,.17);color:var(--blue);}
+.tnode.onpath{border-color:var(--blue);background:rgba(88,166,255,.1);color:var(--blue);}
+.tnode.gain{border-color:var(--green);background:rgba(63,185,80,.15);color:var(--green);}
+.tnode.best{border-color:var(--orange);background:rgba(227,179,65,.2);color:var(--orange);
+  box-shadow:0 0 0 3px rgba(227,179,65,.14);}
+.gain-label{position:absolute;top:38px;left:50%;transform:translateX(-50%);font-size:11.5px;
+  font-family:Consolas,monospace;color:var(--green);white-space:nowrap;opacity:0;transition:opacity .15s;}
+.gain-label.show{opacity:1;}
+.edge{position:absolute;height:2px;background:var(--border);transform-origin:0 50%;border-radius:1px;z-index:1;}
+.edge.onpath{background:var(--blue);}
+.edge.gain{background:var(--green);height:2.5px;box-shadow:0 0 5px rgba(63,185,80,.45);}
+.edge.best{background:var(--orange);height:2.5px;box-shadow:0 0 6px rgba(227,179,65,.55);}
+.edge.cut{background:repeating-linear-gradient(90deg,var(--red) 0 5px,transparent 5px 9px);height:2px;}
+.pill{position:absolute;font-size:13px;color:var(--muted);font-family:Consolas,monospace;}
+.pill b{font-weight:700;font-size:14px;}
+.pill b.orange{color:var(--orange);}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 16px;border-top:1px solid var(--border);}
+.stat{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;min-width:0;}
+.stat .k{font-size:12px;color:var(--muted);margin-bottom:3px;}
+.stat .val{font-size:13.5px;font-weight:600;font-family:Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.val.blue{color:var(--blue);} .val.green{color:var(--green);} .val.orange{color:var(--orange);}
+
+.controls{display:flex;align-items:center;gap:10px;padding:13px 16px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.ctrl-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;
+  width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ctrl-btn:hover:not(:disabled){border-color:var(--blue);}
+.ctrl-btn:disabled{opacity:.4;cursor:not-allowed;}
+.ctrl-btn.wide{width:auto;padding:0 16px;gap:7px;font-size:14px;}
+.ctrl-btn svg{width:18px;height:18px;fill:var(--text);}
+#slider{flex:1;min-width:120px;height:5px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:3px;outline:none;}
+#slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--blue);cursor:pointer;}
+#pcount{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:56px;text-align:center;}
+#speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 8px;font-size:13.5px;cursor:pointer;}
+.kbd-hint{padding:0 16px 13px;font-size:12.5px;color:var(--muted);}
+
+#codeCard{display:flex;flex-direction:column;}
+.code-wrap{flex:1;overflow:auto;padding:14px 0;}
+.code-inner{display:flex;min-width:max-content;}
+.line-nums{padding:0 12px 0 16px;text-align:right;color:var(--muted);font-size:13.5px;line-height:1.7;
+  font-family:Consolas,monospace;user-select:none;border-right:1px solid var(--border);}
+.code-lines{padding:0 16px 0 12px;font-family:Consolas,monospace;font-size:13.5px;line-height:1.7;min-width:0;}
+.code-line{white-space:pre;border-radius:4px;padding:0 6px;margin:0 -6px;}
+.code-line.hl{background:rgba(88,166,255,.13);box-shadow:inset 3px 0 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;} .t-cmt{color:#8b949e;}
+#msg{padding:11px 16px;border-top:1px solid var(--border);font-size:13.5px;color:var(--text);background:var(--panel2);min-height:44px;}
+@media (max-width:980px){.main-grid{grid-template-columns:1fr;}#codeCard{max-height:520px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>124. 二叉树中的最大路径和 <span class="badge">困难</span></h1>
+  <p class="subtitle">gain 单边贡献向上交，节点处左右都接形成拐弯路径，更新全局最大和</p>
+
+  <div class="info-panel">
+    <p><span class="hl-g">gain(node)</span> 返回以 node 为起点向下的最大<span class="hl-g">单边贡献</span>（只选一条边）；负贡献用 <span class="hl-b">Math.max(..., 0)</span> 截断，相当于不接那条边。在每个节点，经过它的路径可以左右都接（在此拐弯），和为 <span class="hl-o">val + left + right</span>，用它更新全局 res；而向上只返回单边 <span class="hl-g">val + max(left, right)</span>。</p>
+    <div id="cases"></div>
+  </div>
+
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="var(--muted)"><path d="M12 3v10m0 0l-4-4m4 4l4-4M5 19h14"/></svg>
+        gain 递归与拐弯路径
+      </div>
+      <div id="stage">
+        <div class="pill" style="left:18px;top:14px;" id="arrPill">节点数 = <b>3</b></div>
+        <div class="pill" style="right:18px;top:14px;" id="resPill">全局 res = <b class="orange">—</b></div>
+        <div class="legend">
+          <span><span class="dot a"></span>递归调用栈</span>
+          <span><span class="dot g"></span>单边贡献</span>
+          <span><span class="dot o"></span>拐弯路径 / res</span>
+          <span><span class="dot r"></span>负贡献截断</span>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="k">当前节点</div><div class="val blue" id="i-node">&mdash;</div></div>
+        <div class="stat"><div class="k">左贡献 left</div><div class="val green" id="i-left">0</div></div>
+        <div class="stat"><div class="k">右贡献 right</div><div class="val green" id="i-right">0</div></div>
+        <div class="stat"><div class="k">单边返回</div><div class="val orange" id="i-ret">0</div></div>
+      </div>
+      <div class="controls">
+        <button class="ctrl-btn wide" id="btnPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playLabel">播放</span></button>
+        <button class="ctrl-btn" id="btnPrev" title="上一步（←）"><svg viewBox="0 0 24 24"><path d="M16 6l-8 6 8 6z"/></svg></button>
+        <button class="ctrl-btn" id="btnNext" title="下一步（→）"><svg viewBox="0 0 24 24"><path d="M8 6l-8 6-8 6z"/></svg></button>
+        <button class="ctrl-btn" id="btnReset" title="重置（Home）"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+        <input type="range" id="slider" min="0" value="0">
+        <span id="pcount">1 / 1</span>
+        <select id="speed">
+          <option value="1200">0.8x</option>
+          <option value="850" selected>1x</option>
+          <option value="500">1.5x</option>
+          <option value="280">2.5x</option>
+        </select>
+      </div>
+      <div class="kbd-hint">键盘：← / → 单步 · 空格 播放暂停 · Home / End 首末</div>
+    </div>
+
+    <div class="card" id="codeCard">
+      <div class="card-head">Solution.java</div>
+      <div class="code-wrap">
+        <div class="code-inner">
+          <div class="line-nums" id="lineNums"></div>
+          <div class="code-lines" id="codeLines"></div>
+        </div>
+      </div>
+      <div id="msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 用例（不同树）=====
+var CASES = [
+  { arr: [1, 2, 3], expect: 6 },
+  { arr: [-10, 9, 20, null, null, 15, 7], expect: 42 },
+  { arr: [5], expect: 5 },
+  { arr: [-3], expect: -3 },
+  { arr: [-1, -2, -3], expect: -1 },
+  { arr: [2, -1], expect: 2 },
+  { arr: [1, -2, 3], expect: 4 },
+  { arr: [3, -5, 1], expect: 4 }
+];
+
+var NODE_R = 18;
+function stageW() { return document.getElementById('stage').clientWidth; }
+function rowY(d) { return 78 + d * 36; }
+
+function buildTreeFromArr(arr) {
+  if (!arr.length) return null;
+  var root = { id: 0, val: arr[0], left: null, right: null, parent: null };
+  var q = [root], i = 1;
+  while (q.length && i < arr.length) {
+    var n = q.shift();
+    if (i < arr.length) {
+      var lv = arr[i++];
+      if (lv !== null) { n.left = { id: i - 1, val: lv, left: null, right: null, parent: n.id }; q.push(n.left); }
+    }
+    if (i < arr.length) {
+      var rv = arr[i++];
+      if (rv !== null) { n.right = { id: i - 1, val: rv, left: null, right: null, parent: n.id }; q.push(n.right); }
+    }
+  }
+  return root;
+}
+function collect(root) {
+  var all = {};
+  (function walk(n, d, p) {
+    if (!n) return;
+    n.depth = d; n.path = p.slice(); all[n.id] = n;
+    walk(n.left, d + 1, p.concat(['L']));
+    walk(n.right, d + 1, p.concat(['R']));
+  })(root, 0, []);
+  return all;
+}
+function slotX(node) {
+  var k = 0;
+  for (var j = 0; j < node.path.length; j++) k = (k << 1) | (node.path[j] === 'R' ? 1 : 0);
+  return (k + 0.5) * stageW() / Math.pow(2, node.depth);
+}
+
+// ===== 代码（17 行）=====
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-id">Solution</span> {',
+  '    <span class="t-type">int</span> <span class="t-id">res</span> = <span class="t-type">Integer</span>.MIN_VALUE;',
+  '',
+  '    <span class="t-kw">public</span> <span class="t-type">int</span> <span class="t-fn">maxPathSum</span>(<span class="t-type">TreeNode</span> <span class="t-id">root</span>) {',
+  '        <span class="t-fn">gain</span>(<span class="t-id">root</span>);',
+  '        <span class="t-kw">return</span> <span class="t-id">res</span>;',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-type">int</span> <span class="t-fn">gain</span>(<span class="t-type">TreeNode</span> <span class="t-id">root</span>){',
+  '        <span class="t-kw">if</span>(<span class="t-id">root</span> == <span class="t-bool">null</span>){',
+  '            <span class="t-kw">return</span> <span class="t-num">0</span>;',
+  '        }',
+  '        <span class="t-type">int</span> <span class="t-id">left</span> = <span class="t-type">Math</span>.<span class="t-fn">max</span>(<span class="t-fn">gain</span>(<span class="t-id">root</span>.left),<span class="t-num">0</span>);',
+  '        <span class="t-type">int</span> <span class="t-id">right</span> = <span class="t-type">Math</span>.<span class="t-fn">max</span>(<span class="t-fn">gain</span>(<span class="t-id">root</span>.right),<span class="t-num">0</span>);',
+  '        <span class="t-id">res</span> = <span class="t-type">Math</span>.<span class="t-fn">max</span>(<span class="t-id">res</span>,<span class="t-id">root</span>.val+<span class="t-id">left</span>+<span class="t-id">right</span>);',
+  '        <span class="t-kw">return</span> <span class="t-id">root</span>.val + <span class="t-type">Math</span>.<span class="t-fn">max</span>(<span class="t-id">left</span>,<span class="t-id">right</span>);',
+  '    }',
+  '}'
+];
+
+// ===== 帧生成（后序 gain，snap 显式传当前实例状态）=====
+function buildSteps(root) {
+  var steps = [], path = [], activeId = null, res = -Infinity, bestPath = [], knownGains = {};
+  function snap(phase, line, o) {
+    o = o || {};
+    steps.push({
+      phase: phase, line: line, path: path.slice(), activeId: activeId,
+      leftUse: o.leftUse === undefined ? null : o.leftUse,
+      rightUse: o.rightUse === undefined ? null : o.rightUse,
+      fullSum: o.fullSum === undefined ? null : o.fullSum,
+      retVal: o.retVal === undefined ? null : o.retVal,
+      res: res,
+      fullPath: o.fullPath ? o.fullPath.slice() : [],
+      bestPath: bestPath.slice(),
+      gainPath: o.gainPath ? o.gainPath.slice() : [],
+      cutKeys: o.cutKeys ? o.cutKeys.slice() : [],
+      knownGains: Object.assign({}, knownGains)
+    });
+  }
+  snap('start', 5);
+  if (root === null) { snap('done', 6); return steps; }
+
+  function dfs(n) {
+    if (n === null) { activeId = null; snap('null', 10); return { value: 0, gp: [] }; }
+    path.push(n.id); activeId = n.id;
+    snap('enter', 8);
+
+    activeId = n.id; snap('goleft', 12);
+    var L = dfs(n.left);
+    activeId = n.id;
+    var leftUse = Math.max(L.value, 0);
+    var leftSeg = L.value > 0 ? L.gp : [];
+    snap('goright', 13, { leftUse: leftUse });
+
+    var R = dfs(n.right);
+    activeId = n.id;
+    var rightUse = Math.max(R.value, 0);
+    var rightSeg = R.value > 0 ? R.gp : [];
+
+    var cutKeys = [];
+    if (L.value < 0) cutKeys.push(n.id + '-' + n.left.id);
+    if (R.value < 0) cutKeys.push(n.id + '-' + n.right.id);
+
+    var fullSum = n.val + leftUse + rightUse;
+    var fullPath = leftSeg.concat([n.id], rightSeg);
+    var improved = fullSum > res;
+    if (improved) { res = fullSum; bestPath = fullPath.slice(); }
+    snap('update', 14, {
+      leftUse: leftUse, rightUse: rightUse, fullSum: fullSum,
+      fullPath: fullPath, cutKeys: cutKeys
+    });
+
+    var retVal, gainPath;
+    if (leftUse >= rightUse) { retVal = n.val + leftUse; gainPath = [n.id].concat(leftSeg); }
+    else { retVal = n.val + rightUse; gainPath = [n.id].concat(rightSeg); }
+    snap('ret', 15, {
+      leftUse: leftUse, rightUse: rightUse, retVal: retVal,
+      gainPath: gainPath, cutKeys: cutKeys
+    });
+    knownGains[n.id] = retVal;
+
+    path.pop();
+    return { value: retVal, gp: gainPath };
+  }
+  dfs(root);
+  activeId = null;
+  snap('done', 6);
+  return steps;
+}
+
+function makeMsg(fr) {
+  switch (fr.phase) {
+    case 'start': return '开始 gain 递归，res 初始为负无穷';
+    case 'enter': return '进入节点 ' + all[fr.activeId].val + '，先求左右单边贡献';
+    case 'null': return '空节点，贡献为 0';
+    case 'goleft': return '递归计算节点 ' + all[fr.activeId].val + ' 的左子树贡献';
+    case 'goright': return '左贡献（截断后）= ' + fr.leftUse + '，继续递归右子树';
+    case 'update':
+      return '经过 ' + all[fr.activeId].val + ' 的拐弯路径 = ' + all[fr.activeId].val +
+        ' + ' + fr.leftUse + ' + ' + fr.rightUse + ' = ' + fr.fullSum +
+        (fr.fullSum > fr.res || (fr.fullPath.length && fr.fullSum === fr.res) ? '，刷新 res' : '，未超过当前 res');
+    case 'ret':
+      return '向上只交单边：' + all[fr.activeId].val + ' + max(' + fr.leftUse + ',' +
+        fr.rightUse + ') = ' + fr.retVal;
+    case 'done': return '递归结束，最大路径和 res = ' + fr.res;
+  }
+}
+
+// 把有序节点路径转成 节点集合 + 边集合（边 key 统一 parent-child）
+function pathSets(ids) {
+  var nodes = {}, edges = {};
+  ids.forEach(function (id) { nodes[id] = true; });
+  ids.forEach(function (id) {
+    var par = all[id].parent;
+    if (par !== null && nodes[par]) edges[par + '-' + id] = true;
+  });
+  return { nodes: nodes, edges: edges };
+}
+
+function setupTree() {
+  Object.keys(all).forEach(function (key) {
+    var id = Number(key), n = all[id];
+    if (n.left) {
+      var e = document.createElement('div');
+      placeEdge(e, nodeCenter(id), nodeCenter(n.left.id), 'edge');
+      edgeEls[id + '-' + n.left.id] = e; stage.appendChild(e);
+    }
+    if (n.right) {
+      var e2 = document.createElement('div');
+      placeEdge(e2, nodeCenter(id), nodeCenter(n.right.id), 'edge');
+      edgeEls[id + '-' + n.right.id] = e2; stage.appendChild(e2);
+    }
+  });
+  Object.keys(all).forEach(function (key) {
+    var id = Number(key), p = nodeCenter(id);
+    var d = document.createElement('div');
+    d.style.left = (p.x - NODE_R) + 'px'; d.style.top = (p.y - NODE_R) + 'px';
+    d.textContent = all[id].val; d.className = 'tnode';
+    var gl = document.createElement('span');
+    gl.className = 'gain-label'; gl.id = 'gl-' + id;
+    d.appendChild(gl);
+    nodeEls[id] = d; stage.appendChild(d);
+  });
+}
+
+function renderFrame() {
+  var fr = frameList[cur];
+  var best = pathSets(fr.bestPath);
+  var gain = pathSets(fr.gainPath);
+  var full = pathSets(fr.fullPath);
+  var cutMap = {};
+  fr.cutKeys.forEach(function (k) { cutMap[k] = true; });
+
+  var pathEdgeKeys = {};
+  for (var k = 1; k < fr.path.length; k++) pathEdgeKeys[fr.path[k - 1] + '-' + fr.path[k]] = true;
+
+  Object.keys(edgeEls).forEach(function (ek) {
+    var cls = 'edge';
+    if (cutMap[ek]) cls = 'edge cut';
+    else if (fr.phase === 'ret' && gain.edges[ek]) cls = 'edge gain';
+    else if (fr.phase === 'update' && full.edges[ek]) cls = 'edge best';
+    else if (best.edges[ek]) cls = 'edge best';
+    else if (pathEdgeKeys[ek]) cls = 'edge onpath';
+    edgeEls[ek].className = cls;
+  });
+
+  Object.keys(nodeEls).forEach(function (key) {
+    var id = Number(key), cls = 'tnode';
+    if (fr.activeId === id) cls = 'tnode active';
+    else if (fr.phase === 'ret' && gain.nodes[id]) cls = 'tnode gain';
+    else if (fr.phase === 'update' && full.nodes[id]) cls = 'tnode best';
+    else if (best.nodes[id]) cls = 'tnode best';
+    else if (fr.path.indexOf(id) >= 0) cls = 'tnode onpath';
+    nodeEls[id].className = cls;
+
+    var lab = document.getElementById('gl-' + id);
+    if (fr.knownGains[id] !== undefined) { lab.textContent = 'gain ' + fr.knownGains[id]; lab.classList.add('show'); }
+    else { lab.classList.remove('show'); lab.textContent = ''; }
+  });
+
+  document.getElementById('arrPill').innerHTML = '节点数 = <b>' + Object.keys(all).length + '</b>';
+  document.getElementById('resPill').innerHTML = '全局 res = <b class="orange">' +
+    (fr.res === -Infinity ? '—' : fr.res) + '</b>';
+
+  document.getElementById('i-node').textContent = fr.activeId === null ? 'null' : all[fr.activeId].val;
+  document.getElementById('i-left').textContent = fr.leftUse === null ? '—' : fr.leftUse;
+  document.getElementById('i-right').textContent = fr.rightUse === null ? '—' : fr.rightUse;
+  document.getElementById('i-ret').textContent = fr.retVal === null ? '—' : fr.retVal;
+
+  document.querySelectorAll('.code-line').forEach(function (l) { l.classList.remove('hl'); });
+  var hl = document.getElementById('cl-' + fr.line);
+  if (hl) hl.classList.add('hl');
+  document.getElementById('msg').innerHTML = makeMsg(fr);
+  document.getElementById('pcount').textContent = (cur + 1) + ' / ' + frameList.length;
+  var slider = document.getElementById('slider');
+  slider.max = frameList.length - 1; slider.value = cur;
+  document.getElementById('btnPrev').disabled = (cur === 0);
+  document.getElementById('btnNext').disabled = (cur === frameList.length - 1);
+}
+
+// ===== 运行状态 =====
+var stage = document.getElementById('stage');
+var all = {}, frameList = [], nodeEls = {}, edgeEls = {};
+var cur = 0, timer = null, playing = false, curCase = 0;
+function nodeCenter(id) { return { x: slotX(all[id]), y: rowY(all[id].depth) }; }
+function placeEdge(el, p1, p2, cls) {
+  var dx = p2.x - p1.x, dy = p2.y - p1.y;
+  var len = Math.hypot(dx), ang = Math.atan2(dy, dx) * 180 / Math.PI;
+  el.style.left = p1.x + 'px'; el.style.top = p1.y + 'px';
+  el.style.width = len + 'px'; el.style.transform = 'rotate(' + ang + 'deg)';
+  el.className = cls || 'edge';
+}
+function clearDynamic() {
+  [nodeEls, edgeEls].forEach(function (m) {
+    Object.keys(m).forEach(function (k) { m[k].remove(); });
+  });
+  nodeEls = {}; edgeEls = {};
+}
+function compute(idx) {
+  var root = buildTreeFromArr(CASES[idx].arr);
+  all = collect(root);
+  frameList = buildSteps(root);
+}
+
+// ===== 播放控制 =====
+function setPlaying(on) {
+  playing = on;
+  document.getElementById('playLabel').textContent = on ? '暂停' : '播放';
+  document.querySelector('#btnPlay svg').innerHTML = on
+    ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+}
+function play() {
+  setPlaying(true);
+  timer = setInterval(function () {
+    if (cur >= frameList.length - 1) { stop(); return; }
+    cur++; renderFrame();
+  }, Number(document.getElementById('speed').value));
+}
+function stop() {
+  setPlaying(false);
+  if (timer) { clearInterval(timer); timer = null; }
+}
+function nextStep() { if (cur < frameList.length - 1) { cur++; renderFrame(); } }
+function prevStep() { if (cur > 0) { cur--; renderFrame(); } }
+
+function switchCase(idx) {
+  stop(); curCase = idx; cur = 0;
+  clearDynamic();
+  compute(idx);
+  setupTree();
+  renderFrame();
+  document.querySelectorAll('.case-btn').forEach(function (b, i) {
+    b.classList.toggle('active', i === idx);
+  });
+}
+function renderCode() {
+  document.getElementById('lineNums').innerHTML = CODE.map(function (_, i) { return i + 1; }).join('<br>');
+  document.getElementById('codeLines').innerHTML = CODE.map(function (c, i) {
+    return '<div class="code-line" id="cl-' + (i + 1) + '">' + c + '</div>';
+  }).join('');
+}
+function renderCases() {
+  var box = document.getElementById('cases');
+  CASES.forEach(function (c, i) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (i === 0 ? ' active' : '');
+    b.textContent = '用例 ' + (i + 1) + '：[' + c.arr.map(function (x) { return x === null ? 'null' : x; }).join(',') + ']';
+    b.onclick = function () { switchCase(i); };
+    box.appendChild(b);
+  });
+}
+
+document.getElementById('btnPlay').onclick = function () { playing ? stop() : play(); };
+document.getElementById('btnNext').onclick = nextStep;
+document.getElementById('btnPrev').onclick = prevStep;
+document.getElementById('btnReset').onclick = function () { stop(); cur = 0; renderFrame(); };
+document.getElementById('slider').addEventListener('input', function (e) {
+  stop(); cur = Number(e.target.value); renderFrame();
+});
+document.getElementById('speed').onchange = function () { if (playing) { stop(); play(); } };
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); nextStep(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); prevStep(); }
+  else if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
+  else if (e.key === 'Home') { e.preventDefault(); stop(); cur = 0; renderFrame(); }
+  else if (e.key === 'End') { e.preventDefault(); stop(); cur = frameList.length - 1; renderFrame(); }
+});
+
+renderCode();
+renderCases();
+compute(0);
+setupTree();
+renderFrame();
+</script>
+</body>
+</html>

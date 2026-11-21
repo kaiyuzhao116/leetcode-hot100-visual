@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1. 两数之和 · 两次遍历哈希表可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>+</text></svg>">
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+    --purple:#bc8cff;--orange:#e3b341;--red:#f85149;--mono:"Cascadia Code",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.5;padding:22px;max-width:1180px;margin:0 auto}
+  .top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:21px;font-weight:700}
+  .diff{font-size:12px;color:var(--green);border:1px solid var(--green);border-radius:6px;padding:2px 8px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:var(--mono);font-size:13px}
+  .casebtn.active{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px}
+  .rule{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .rule h3{font-size:13px;margin-bottom:8px}
+  .rule.p1 h3{color:var(--blue)}
+  .rule.p2 h3{color:var(--purple)}
+  .rule p{font-size:12px;color:var(--muted)}
+  .rule code{color:var(--text);font-size:12px}
+  .whybox{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:18px}
+  .whybox h3{font-size:14px;margin-bottom:8px;color:var(--orange)}
+  .whybox p{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .whybox code{color:var(--text)}
+  .whygrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
+  .whyitem{border-radius:8px;padding:10px 12px;font-size:11px;display:flex;flex-direction:column;gap:5px;background:var(--panel2)}
+  .whyitem b{font-size:12px}
+  .whyitem span{color:var(--muted)}
+  .whyitem.bad{border:1px solid var(--red)}
+  .whyitem.bad b{color:var(--red)}
+  .whyitem.good{border:1px solid var(--green)}
+  .whyitem.good b{color:var(--green)}
+  .whynote{margin-bottom:0}
+  @media(max-width:760px){.whygrid{grid-template-columns:1fr}}
+  .vizwrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+  .vizwrap h2{font-size:14px;margin-bottom:14px;color:var(--muted);font-weight:600}
+  .mappanel{margin-bottom:18px}
+  .mappanel .lab{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .mentries{display:flex;gap:8px;flex-wrap:wrap;min-height:48px;align-items:center}
+  .mentry{border:1.5px solid var(--green);border-radius:8px;padding:8px 12px;background:var(--panel2);display:flex;gap:6px;align-items:center;animation:popIn .25s ease}
+  .mentry .k{color:var(--green);font-weight:700}
+  .mentry .arrow{color:var(--muted)}
+  .mentry.hit{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue)}
+  .mentry.overwrite{border-color:var(--orange)}
+  .emptyhint{font-size:12px;color:var(--muted)}
+  .arrrow{display:flex;gap:0;overflow-x:auto;padding:8px 6px;min-height:96px}
+  .acell{flex:0 0 auto;width:64px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 0;border-radius:8px;border:1.5px solid transparent}
+  .acell .idx{font-size:10px;color:var(--muted)}
+  .acell .val{font-size:20px;font-weight:700;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--panel2);border:1px solid var(--border)}
+  .acell.cur{border-color:var(--orange)}
+  .acell.cur .val{box-shadow:0 0 0 2px var(--orange)}
+  .acell.pair{border-color:var(--blue)}
+  .acell.pair .val{box-shadow:0 0 0 2px var(--blue)}
+  .acell.self{border-color:var(--red)}
+  .acell.done{opacity:.7}
+  .needline{display:flex;gap:10px;align-items:center;font-size:13px;margin-top:12px;flex-wrap:wrap}
+  .needbox{background:var(--panel2);border:1px solid var(--purple);border-radius:8px;padding:8px 14px}
+  .needbox b{color:var(--purple)}
+  .msg{background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px;min-height:44px}
+  .infobar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .icard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .icard .vval{font-size:19px;font-weight:700}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  button.ctl{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 14px;cursor:pointer;font-family:var(--mono);font-size:13px}
+  button.ctl:hover{border-color:var(--blue)}
+  button.ctl.primary{background:var(--blue);color:#0d1117;border-color:var(--blue);font-weight:700}
+  .slider{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-size:12px;color:var(--muted);min-width:64px;text-align:right}
+  .speed{display:flex;gap:4px;margin-left:auto}
+  .spd{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;font-family:var(--mono);font-size:11px}
+  .spd.active{border-color:var(--green);color:var(--green)}
+  .codewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto}
+  .codewrap h2{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .ln{display:block;padding:2px 10px;font-size:13px;white-space:pre;border-left:3px solid transparent}
+  .ln.on{background:rgba(88,166,255,.13);border-left-color:var(--blue)}
+  .kw{color:#ff7b72}.str{color:#a5d6ff}.cmt{color:#8b949e;font-style:italic}
+  @keyframes popIn{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+  @media(max-width:760px){.cards{grid-template-columns:1fr}.infobar{grid-template-columns:1fr}.acell{width:54px}.acell .val{width:38px;height:38px;font-size:17px}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>1. 两数之和</h1>
+    <span class="diff">简单</span>
+  </div>
+  <div class="sub">两次遍历 HashMap · 时间 O(n) 空间 O(n) · 值 → 下标</div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="cards">
+    <div class="rule p1">
+      <h3>第一次遍历：建表</h3>
+      <p>把每个 <code>map.put(nums[i], i)</code> 存成"值→下标"；相同值再次 put 会覆盖旧下标。</p>
+    </div>
+    <div class="rule p2">
+      <h3>第二次遍历：查补数</h3>
+      <p>need = target-nums[i]，若 map 含 need 且 <code>map.get(need)!=i</code>（不能是自己），返回这两个下标。</p>
+    </div>
+  </div>
+
+  <div class="whybox">
+    <h3>为什么必须有 <code>map.get(need) != i</code></h3>
+    <p>第一次遍历已经把<b>当前元素自己也存进了 map</b>。当 need 恰好等于 nums[i]（即 2×nums[i]=target）时，查表会查到它自己，不判断就会返回 [i,i]，同一个元素用了两次，违反题意。</p>
+    <div class="whygrid">
+      <div class="whyitem bad">
+        <b>[3,2,4] target=6，i=0</b>
+        <span>need=3，map 里 3 的下标是 0（自己），0!=0 不成立，排除，否则错误返回 [0,0]</span>
+      </div>
+      <div class="whyitem good">
+        <b>[3,3] target=6，i=0</b>
+        <span>need=3，map 里 3 的下标是 1（另一个元素），1!=0 成立，正确返回 [0,1]</span>
+      </div>
+    </div>
+    <p class="whynote">判断的是<b>下标是否相同</b>，不是值：值相同但下标不同（两个不同元素）允许，下标相同（同一个元素）才排除。</p>
+  </div>
+
+  <div class="vizwrap">
+    <h2>HashMap（值 → 下标）</h2>
+    <div class="mappanel">
+      <div class="mentries" id="mentries"></div>
+    </div>
+    <h2>数组</h2>
+    <div class="arrrow" id="arrrow"></div>
+    <div class="needline" id="needline"></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar">
+    <div class="icard"><div class="lab">阶段 / 位置 i</div><div class="vval" id="curI" style="color:var(--orange)">—</div></div>
+    <div class="icard"><div class="lab">need 补数</div><div class="vval" id="curNeed" style="color:var(--purple)">—</div></div>
+    <div class="icard"><div class="lab">返回</div><div class="vval" id="curAns" style="color:var(--green)">—</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl primary" id="play"><span id="playtxt">播放</span></button>
+    <button class="ctl" id="prev">上一步</button>
+    <button class="ctl" id="next">下一步</button>
+    <button class="ctl" id="reset">重置</button>
+    <input type="range" class="slider" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+    <div class="speed">
+      <button class="spd" data-ms="1200">0.5x</button>
+      <button class="spd active" data-ms="800">1x</button>
+      <button class="spd" data-ms="400">2x</button>
+    </div>
+  </div>
+
+  <div class="codewrap">
+    <h2>Java 两次遍历代码</h2>
+    <div id="code"></div>
+  </div>
+
+<script>
+const CASES=[
+  {nums:[2,7,11,15],target:9},
+  {nums:[3,2,4],target:6},
+  {nums:[3,3],target:6}
+];
+const CODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public int</span>[] twoSum(<span class="kw">int</span>[] nums,<span class="kw">int</span> target) {',
+  '      HashMap&lt;Integer,Integer&gt; map = <span class="kw">new</span> HashMap&lt;&gt;();',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i=0;i&lt;nums.length;i++){',
+  '          map.put(nums[i],i);',
+  '      }',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i=0;i&lt;nums.length;i++){',
+  '          <span class="kw">int</span> need = target-nums[i];',
+  '          <span class="kw">if</span> (map.containsKey(need) &amp;&amp; map.get(need)!=i){',
+  '              <span class="kw">return new int</span>[]{i,map.get(need)};',
+  '          }',
+  '      }',
+  '      <span class="kw">return new int</span>[0];',
+  '  }',
+  '}'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function buildSteps(c){
+  const nums=c.nums,target=c.target,n=nums.length;
+  const entries=[];
+  const findK=k=>entries.findIndex(e=>e.k===k);
+  const out=[];
+  const base=()=>({phase:1,cur:-1,entries:entries.map(e=>Object.assign({},e)),need:null,pair:null,self:false,hit:null,overwrite:false,ans:null});
+  const push=e=>out.push(Object.assign(base(),e));
+  push({msg:'初始化 HashMap，表为空。开始第一次遍历（建表）。',line:2});
+  for(let i=0;i<n;i++){
+    push({cur:i,msg:`第一次循环 i=${i}，当前元素 nums[${i}]=${nums[i]}，准备 put。`,line:3});
+    const fi=findK(nums[i]);
+    if(fi>=0){
+      const oldV=entries[fi].v;
+      entries[fi].v=i;
+      push({cur:i,overwrite:true,msg:`键 ${nums[i]} 已存在（旧下标 ${oldV}），put 覆盖，更新为 ${nums[i]} → ${i}。`,line:4});
+    }else{
+      entries.push({k:nums[i],v:i});
+      push({cur:i,msg:`执行 map.put：${nums[i]} → ${i}，新键值对存入表中。`,line:4});
+    }
+  }
+  push({msg:'建表完成，map 已含全部 n 个元素。开始第二次遍历：逐个算补数、查表。',line:6});
+  for(let i=0;i<n;i++){
+    push({phase:2,cur:i,msg:`第二次循环 i=${i}，当前元素 nums[${i}]=${nums[i]}。`,line:6});
+    const need=target-nums[i];
+    push({phase:2,cur:i,need,msg:`第一步计算补数：need = target-nums[${i}] = ${target}-${nums[i]} = <b>${need}</b>。`,line:7});
+    const fi=findK(need);
+    push({phase:2,cur:i,need,hit:fi>=0?need:null,msg:`条件1：map.containsKey(${need})？${fi>=0?'<b>true，表里有这个键</b>，继续检查第二个条件':'<b>false，表里没有这个补数</b>，本元素无法配对，继续下一个 i'}。`,line:8});
+    if(fi<0)continue;
+    const j=entries[fi].v;
+    if(j===i){
+      push({phase:2,cur:i,need,hit:need,self:true,msg:`条件2：map.get(${need})!=i？取到下标 ${j}，${j}!=${i} 为 <b>false（就是自己）</b>，不能用同一元素，跳过。`,line:8});
+      continue;
+    }
+    push({phase:2,cur:i,need,hit:need,msg:`条件2：map.get(${need})!=i？取到下标 ${j}，${j}!=${i} 为 <b>true</b>，两个条件都满足。`,line:8});
+    push({phase:2,cur:i,need,hit:need,pair:[i,j],msg:`配对成功：nums[${i}]=${nums[i]} 与 nums[${j}]=${nums[j]}，和为 ${target}。`,line:9});
+    push({phase:2,cur:i,need,pair:[i,j],ans:[i,j],msg:`执行 return new int[]{${i}, ${j}}，返回这两个下标，结束。`,line:9});
+    return out;
+  }
+  push({phase:2,msg:'遍历完都没找到，执行 return new int[0]，返回空数组。',line:12,ans:[]});
+  return out;
+}
+let steps=[],posIdx=0,curCase=0,timer=null,playMs=800;
+function $(id){return document.getElementById(id);}
+function render(){
+  const s=steps[posIdx],c=CASES[curCase];
+  $('msg').innerHTML=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('curI').textContent=s.cur<0?(s.phase===2?'阶段2':'阶段1'):`${s.phase} · i=${s.cur}`;
+  $('curNeed').textContent=s.need===null?'—':s.need;
+  $('curAns').textContent=s.ans?`[${s.ans.join(',')}]`:'—';
+  let mh='';
+  if(s.entries.length===0)mh='<span class="emptyhint">map 为空</span>';
+  for(const e of s.entries){
+    let cls='mentry';
+    if(s.hit===e.k)cls+=' hit';
+    if(s.overwrite&&s.cur===e.v)cls+=' overwrite';
+    mh+=`<div class="${cls}"><span class="k">${e.k}</span><span class="arrow">→</span><span>${e.v}</span></div>`;
+  }
+  $('mentries').innerHTML=mh;
+  let ah='';
+  for(let i=0;i<c.nums.length;i++){
+    let cls='acell';
+    if(s.cur===i)cls+=' cur';
+    if(s.pair&&s.pair.includes(i))cls+=' pair';
+    if(s.self&&s.cur===i)cls+=' self';
+    if(s.pair&&i<s.pair[0])cls+=' done';
+    ah+=`<div class="${cls}"><span class="idx">${i}</span><span class="val">${c.nums[i]}</span></div>`;
+  }
+  $('arrrow').innerHTML=ah;
+  let nh='';
+  if(s.need!==null){
+    nh=`<span class="needbox">need = ${c.target} - ${c.nums[s.cur]} = <b>${s.need}</b></span>`;
+    if(s.self)nh+='<span style="color:var(--red);font-size:12px">命中的是自己，排除</span>';
+    if(s.pair)nh+='<span style="color:var(--green);font-size:12px">配对成功</span>';
+  }
+  $('needline').innerHTML=nh;
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;
+  steps=buildSteps(CASES[i]);posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>{
+  const label=`[${c.nums.join(',')}] t=${c.target}`;
+  return `<button class="casebtn${i===0?' active':''}">${label}</button>`;
+}).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

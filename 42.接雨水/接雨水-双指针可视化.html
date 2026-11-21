@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>42. 接雨水 · 双指针可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>水</text></svg>">
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--water:#388bfd;
+    --green:#3fb950;--purple:#bc8cff;--orange:#e3b341;--red:#f85149;
+    --mono:"Cascadia Code",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.5;padding:22px;max-width:1180px;margin:0 auto}
+  .top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:21px;font-weight:700}
+  .diff{font-size:12px;color:var(--red);border:1px solid var(--red);border-radius:6px;padding:2px 8px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px}
+  .casebtn.active{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+.methodtabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.mtab{flex:1;min-width:170px;background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:12px 16px;cursor:pointer;text-align:left}
+.mtab.active{border-color:var(--blue);background:rgba(88,166,255,.1);color:var(--blue)}
+.mtab .mt{font-size:14px;font-weight:700;margin-bottom:2px}
+.mtab .md{font-size:11px}
+.phasenav{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.phbtn{flex:1;min-width:180px;background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:9px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+.phbtn:hover{border-color:var(--blue);color:var(--blue)}
+.phbtn.cur{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+.hidden{display:none!important}
+.stacklayout{display:grid;grid-template-columns:1fr 210px;gap:16px}
+.stackbucket{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px}
+.stackbucket h3{font-size:11px;color:var(--muted);text-align:center}
+.sitem{background:var(--panel);border:1.5px solid var(--orange);border-radius:8px;padding:8px;text-align:center;font-size:13px}
+.sitem.top{border-color:var(--red);color:var(--red)}
+.sitem .si{font-size:10px;color:var(--muted)}
+@media(max-width:760px){.stacklayout{grid-template-columns:1fr}}
+  .ideacard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:var(--muted)}
+  .ideacard b{color:var(--blue)}
+  .vizwrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+  .vizwrap h2{font-size:13px;color:var(--muted);margin-bottom:14px;font-weight:600}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:10px}
+  .lg{display:flex;align-items:center;gap:5px}
+  .sw{width:13px;height:13px;border-radius:3px}
+  .msg{background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px;min-height:44px}
+  .infobar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .icard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .icard .vval{font-size:17px;font-weight:700}
+  .icard .subval{font-size:11px;margin-top:3px;font-weight:600}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  button.ctl{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px}
+  button.ctl:hover{border-color:var(--blue)}
+  button.ctl.primary{background:var(--blue);color:#0d1117;border-color:var(--blue);font-weight:700}
+  .slider{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-size:12px;color:var(--muted);min-width:64px;text-align:right}
+  .speed{display:flex;gap:4px;margin-left:auto}
+  .spd{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;font-size:11px}
+  .spd.active{border-color:var(--green);color:var(--green)}
+  .codewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto}
+  .codewrap h2{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .ln{display:block;padding:2px 10px;font-size:13px;white-space:pre;border-left:3px solid transparent}
+  .ln.on{background:rgba(88,166,255,.13);border-left-color:var(--blue)}
+  .kw{color:#ff7b72}
+  @media(max-width:760px){.infobar{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>42. 接雨水</h1>
+    <span class="diff">困难</span>
+  </div>
+  <div class="sub">三种解法：双指针 O(1) 空间 · 单调栈按水平层 · 动态规划前后缀数组 · 核心都是每格接水量 = min(左最高, 右最高) - 自身高度</div>
+
+  <div class="methodtabs">
+    <button class="mtab active" id="tabPtr"><div class="mt">方法一：双指针</div><div class="md">按竖直列计算 · O(n) O(1)</div></button>
+    <button class="mtab" id="tabStack"><div class="mt">方法二：单调栈</div><div class="md">按水平层计算 · O(n) O(n)</div></button>
+    <button class="mtab" id="tabDP"><div class="mt">方法三：动态规划</div><div class="md">前后缀最大值 · O(n) O(n)</div></button>
+  </div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div id="viewPtr">
+  <div class="ideacard">
+    <b>pre</b> 记录 left 左侧最高、<b>next</b> 记录 right 右侧最高。pre&lt;next 时 left 位置被 pre 限制，接 pre-height[left] 后 left++；否则 right 位置接 next-height[right] 后 right--。每次只移动最高边界较小的一侧。
+  </div>
+
+  <div class="vizwrap">
+    <h2>柱子与雨水（橙=left 紫=right，虚线为 pre/next 边界）</h2>
+    <div class="legend">
+      <span class="lg"><span class="sw" style="background:#30363d"></span>柱子</span>
+      <span class="lg"><span class="sw" style="background:rgba(56,139,253,.55)"></span>雨水</span>
+      <span class="lg"><span class="sw" style="background:var(--orange)"></span>pre 边界</span>
+      <span class="lg"><span class="sw" style="background:var(--purple)"></span>next 边界</span>
+    </div>
+    <svg id="svg" viewBox="0 0 900 380" style="width:100%;height:auto"></svg>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar">
+    <div class="icard"><div class="lab">pre 左最高</div><div class="vval" id="vPre" style="color:var(--orange)">0</div></div>
+    <div class="icard"><div class="lab">next 右最高</div><div class="vval" id="vNext" style="color:var(--purple)">0</div></div>
+    <div class="icard"><div class="lab">本格接水</div><div class="vval" id="vTemp" style="color:var(--water)">0</div></div>
+    <div class="icard"><div class="lab">总接水量</div><div class="vval" id="vRes" style="color:var(--green)">0</div></div>
+  </div>
+  </div>
+
+  <div id="viewStack" class="hidden">
+    <div class="ideacard">
+      栈存下标且对应高度<b>单调递减</b>。遇到比栈顶高的柱子 i 时，弹出槽底 top，新栈顶 left 是左墙、i 是右墙：本层宽 i-left-1，高 min(height[left],height[i])-height[top]，按水平层累加。栈空说明没有左墙，break。
+    </div>
+    <div class="vizwrap">
+      <h2>柱子与当前凹槽（红框=在栈内，实心红=槽底top，绿=左墙，橙=当前i右墙）</h2>
+      <div class="stacklayout">
+        <svg id="svgStack" viewBox="0 0 660 380" style="width:100%;height:auto"></svg>
+        <div class="stackbucket">
+          <h3>单调递减栈（下标）</h3>
+          <div id="stackitems"></div>
+        </div>
+      </div>
+    </div>
+    <div class="msg" id="msgStack"></div>
+    <div class="infobar">
+      <div class="icard"><div class="lab">当前 i</div><div class="vval" id="sI" style="color:var(--orange)">—</div></div>
+      <div class="icard"><div class="lab">槽底 top</div><div class="vval" id="sTop" style="color:var(--red)">—</div></div>
+      <div class="icard"><div class="lab">左墙 left</div><div class="vval" id="sLeft" style="color:var(--green)">—</div></div>
+      <div class="icard"><div class="lab">本层面积</div><div class="vval" id="sArea" style="color:var(--water)">0</div></div>
+    </div>
+  </div>
+
+  <div id="viewDP" class="hidden">
+    <div class="ideacard">
+      开两个数组：<b>preMax[i]</b> 记录位置 i 及左侧最高柱（含自身，从左往右递推 Math.max(preMax[i-1],height[i])），<b>sufMax[i]</b> 记录 i 及右侧最高（从右往左递推）。每列水位 = Math.min(preMax[i],sufMax[i]) - height[i]，逐列累加。因为两个最大值都含自身，相减不会出现负数。
+    </div>
+    <div class="phasenav">
+      <button class="phbtn" data-phase="pre">阶段一 · 构建 preMax（左最高）</button>
+      <button class="phbtn" data-phase="suf">阶段二 · 构建 sufMax（右最高）</button>
+      <button class="phbtn" data-phase="calc">阶段三 · 逐列计算雨水</button>
+    </div>
+    <div class="vizwrap">
+      <h2>柱子与前后缀最大值（金=preMax 紫=sufMax，蓝=当前列雨水）</h2>
+      <div class="legend">
+        <span class="lg"><span class="sw" style="background:#30363d"></span>柱子</span>
+        <span class="lg"><span class="sw" style="background:#e3b341"></span>preMax 左最高</span>
+        <span class="lg"><span class="sw" style="background:#bc8cff"></span>sufMax 右最高</span>
+        <span class="lg"><span class="sw" style="background:rgba(56,139,253,.55)"></span>雨水</span>
+      </div>
+      <svg id="svgDP" viewBox="0 0 900 380" style="width:100%;height:auto"></svg>
+    </div>
+    <div class="msg" id="msgDP"></div>
+    <div class="infobar">
+      <div class="icard"><div class="lab">当前阶段 / i</div><div class="vval" id="dI" style="color:var(--blue)">—</div></div>
+      <div class="icard"><div class="lab">preMax[i]</div><div class="vval" id="dPre" style="color:var(--orange)">—</div></div>
+      <div class="icard"><div class="lab">sufMax[i]</div><div class="vval" id="dSuf" style="color:var(--purple)">—</div></div>
+      <div class="icard"><div class="lab">本格 / 累计接水</div><div class="vval" id="dAns" style="color:var(--green)">0</div><div class="subval" id="dTemp" style="color:var(--blue)">本格 0</div></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl primary" id="play"><span id="playtxt">播放</span></button>
+    <button class="ctl" id="prev">上一步</button>
+    <button class="ctl" id="next">下一步</button>
+    <button class="ctl" id="reset">重置</button>
+    <input type="range" class="slider" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+    <div class="speed">
+      <button class="spd" data-ms="1200">0.5x</button>
+      <button class="spd active" data-ms="800">1x</button>
+      <button class="spd" data-ms="400">2x</button>
+    </div>
+  </div>
+
+  <div class="codewrap">
+    <h2 id="codeTitle">Java 双指针代码</h2>
+    <div id="code"></div>
+    <div id="codeStack" class="hidden"></div>
+    <div id="codeDP" class="hidden"></div>
+  </div>
+
+<script>
+const CASES=[
+  [0,1,0,2,1,0,1,3,2,1,2,1],
+  [4,2,0,3,2,5],
+  [4,2,3]
+];
+const CODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public int</span> trap(<span class="kw">int</span>[] height) {',
+  '      <span class="kw">int</span> res = 0;',
+  '      <span class="kw">int</span> n = height.length-1;',
+  '      <span class="kw">int</span> left = 0;',
+  '      <span class="kw">int</span> right = n;',
+  '      <span class="kw">int</span> pre = 0;',
+  '      <span class="kw">int</span> next = 0;',
+  '      <span class="kw">while</span> (right &gt; left){',
+  '          pre = Math.max(pre,height[left]);',
+  '          next = Math.max(next,height[right]);',
+  '          <span class="kw">int</span> temp = 0;',
+  '          <span class="kw">if</span> (pre&lt;next){',
+  '              temp = pre-height[left];',
+  '              res = res + temp;',
+  '              left++;',
+  '          }<span class="kw">else</span> {',
+  '              temp = next - height[right];',
+  '              right--;',
+  '              res = res + temp;',
+  '          }',
+  '      }',
+  '      <span class="kw">return</span> res;',
+  '  }',
+  '}'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function buildSteps(height){
+  const n=height.length;
+  const water=new Array(n).fill(0);
+  const out=[];
+  let left=0,right=n-1,pre=0,next=0,res=0;
+  const snap=()=>({left,right,pre,next,temp:0,res,water:water.slice(),line:null});
+  const push=(msg,line,extra)=>{const s=snap();s.msg=msg;s.line=line;if(extra)Object.assign(s,extra);out.push(s);};
+  push('初始化 res=0，left=0，right=末尾，pre=next=0，开始双指针。',2);
+  while(right>left){
+    pre=Math.max(pre,height[left]);
+    next=Math.max(next,height[right]);
+    let temp=0;
+    if(pre<next){
+      temp=pre-height[left];water[left]=temp;res=res+temp;
+      push(`pre=${pre} &lt; next=${next}，left 位置被 pre 限制，接 ${pre}-${height[left]}=${temp}，累计 ${res}，left++。`,13,{temp});
+      left++;
+    }else{
+      temp=next-height[right];water[right]=temp;res=res+temp;
+      push(`pre=${pre} &gt;= next=${next}，right 位置被 next 限制，接 ${next}-${height[right]}=${temp}，累计 ${res}，right--。`,17,{temp});
+      right--;
+    }
+  }
+  push(`两指针相遇，结束，return res = ${res}。`,22);
+  return out;
+}
+const CODE_STACK=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public int</span> trap(<span class="kw">int</span>[] height) {',
+  '      <span class="kw">int</span> ans = 0;',
+  '      Deque&lt;Integer&gt; stack = <span class="kw">new</span> ArrayDeque&lt;Integer&gt;();',
+  '      <span class="kw">int</span> n = height.length;',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; n; ++i) {',
+  '          <span class="kw">while</span> (!stack.isEmpty() && height[i] &gt; height[stack.peek()]) {',
+  '              <span class="kw">int</span> top = stack.pop();',
+  '              <span class="kw">if</span> (stack.isEmpty()) {',
+  '                  <span class="kw">break</span>;',
+  '              }',
+  '              <span class="kw">int</span> left = stack.peek();',
+  '              <span class="kw">int</span> currWidth = i - left - 1;',
+  '              <span class="kw">int</span> currHeight = Math.min(height[left], height[i]) - height[top];',
+  '              ans += currWidth * currHeight;',
+  '          }',
+  '          stack.push(i);',
+  '      }',
+  '      <span class="kw">return</span> ans;',
+  '  }',
+  '}'
+];
+$('codeStack').innerHTML=CODE_STACK.map(l=>`<span class="ln">${l}</span>`).join('');
+const CODE_DP=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public int</span> trap(<span class="kw">int</span>[] height) {',
+  '      <span class="kw">int</span> n = height.length;',
+  '      <span class="kw">if</span>(n == 0) <span class="kw">return</span> 0;',
+  '      <span class="kw">int</span>[] preMax = <span class="kw">new int</span>[n];',
+  '      preMax[0] = height[0];',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i = 1; i &lt; n ; i++) {',
+  '          preMax[i] = Math.max(preMax[i-1],height[i]);',
+  '      }',
+  '      <span class="kw">int</span>[] sufMax = <span class="kw">new int</span>[n];',
+  '      sufMax[n-1] = height[n-1];',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i = n-2 ; i &gt;=0 ; i--) {',
+  '          sufMax[i] = Math.max(sufMax[i+1],height[i]);',
+  '      }',
+  '      <span class="kw">int</span> ans = 0;',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; n; i++) {',
+  '          <span class="kw">int</span> water = Math.min(preMax[i],sufMax[i]) - height[i];',
+  '          ans = ans + water;',
+  '      }',
+  '      <span class="kw">return</span> ans;',
+  '  }',
+  '}'
+];
+$('codeDP').innerHTML=CODE_DP.map(l=>`<span class="ln">${l}</span>`).join('');
+function buildStackSteps(height){
+  const n=height.length;
+  const water=new Array(n).fill(0);
+  const out=[];const stack=[];let ans=0;
+  const snap=()=>({i:null,stack:stack.slice(),top:null,left:null,water:water.slice(),area:0,ans,line:null});
+  const push=(msg,line,extra)=>{const s=snap();s.msg=msg;s.line=line;if(extra)Object.assign(s,extra);out.push(s);};
+  push('初始化空栈和 ans=0，栈里存下标，保持对应高度单调递减。',3);
+  for(let i=0;i<n;i++){
+    while(stack.length&&height[i]>height[stack[stack.length-1]]){
+      const top=stack.pop();
+      if(!stack.length){
+        push(`i=${i} 比栈顶高，弹出 ${top} 后栈空，左边没有墙，无法接水，break。`,9,{i,top});
+        break;
+      }
+      const left=stack[stack.length-1];
+      const cw=i-left-1;
+      const ch=Math.min(height[left],height[i])-height[top];
+      const area=cw*ch;
+      for(let k=left+1;k<i;k++)water[k]+=ch;
+      ans+=area;
+      push(`i=${i} 是右墙、left=${left} 是左墙、top=${top} 是槽底：宽 ${cw}，高 ${ch}，本层 +${area}，累计 ${ans}。`,14,{i,top,left,area});
+    }
+    stack.push(i);
+    push(`i=${i}（高 ${height[i]}）入栈，栈保持单调递减。`,16,{i});
+  }
+  push(`遍历结束，return ans = ${ans}。`,18);
+  return out;
+}
+function buildDPSteps(height){
+  const n=height.length;
+  const preMax=new Array(n).fill(null);
+  const sufMax=new Array(n).fill(null);
+  const water=new Array(n).fill(0);
+  const out=[];
+  let ans=0;
+  const snap=()=>({phase:null,i:null,preMax:preMax.slice(),sufMax:sufMax.slice(),water:water.slice(),temp:0,ans,line:null});
+  const push=(msg,line,extra)=>{const s=snap();s.msg=msg;s.line=line;if(extra)Object.assign(s,extra);out.push(s);};
+  push(`n=${n}，非空数组。开两个长度 n 的数组 preMax、sufMax，分别记录左、右最高。`,4);
+  preMax[0]=height[0];
+  push(`preMax[0]=height[0]=${height[0]}，作为左侧递推起点。`,5,{phase:'pre',i:0});
+  for(let i=1;i<n;i++){
+    preMax[i]=Math.max(preMax[i-1],height[i]);
+    push(`preMax[${i}]=Math.max(preMax[${i-1}]=${preMax[i-1]},height[${i}]=${height[i]})=${preMax[i]}。`,7,{phase:'pre',i});
+  }
+  sufMax[n-1]=height[n-1];
+  push(`preMax 填完。sufMax[${n-1}]=height[${n-1}]=${height[n-1]}，作为右侧递推起点。`,10,{phase:'suf',i:n-1});
+  for(let i=n-2;i>=0;i--){
+    sufMax[i]=Math.max(sufMax[i+1],height[i]);
+    push(`sufMax[${i}]=Math.max(sufMax[${i+1}]=${sufMax[i+1]},height[${i}]=${height[i]})=${sufMax[i]}。`,12,{phase:'suf',i});
+  }
+  push(`sufMax 也填完。ans=0，开始逐列算水位。`,14,{phase:'calc',i:null});
+  for(let i=0;i<n;i++){
+    const t=Math.min(preMax[i],sufMax[i])-height[i];
+    water[i]=t;
+    ans+=t;
+    push(`i=${i}：Math.min(preMax=${preMax[i]},sufMax=${sufMax[i]}) - height=${height[i]} = ${t}，ans 累计 ${ans}。`,16,{phase:'calc',i,temp:t});
+  }
+  push(`全部列计算完，return ans = ${ans}。`,19);
+  return out;
+}
+let steps=[],posIdx=0,curCase=0,curMethod='ptr',timer=null,playMs=800;
+function $(id){return document.getElementById(id);}
+function drawSvg(s){
+  const h=CASES[curCase],n=h.length;
+  const baseY=320,padX=50;
+  const slotW=(900-2*padX)/n;
+  const barW=slotW*0.6;
+  const maxH=Math.max(...h,1);
+  const scale=265/maxH;
+  const cx=i=>padX+slotW*i+slotW/2;
+  let g='';
+  // pre/next 边界线
+  if(s.pre>0)g+=`<line x1="${padX}" y1="${baseY-s.pre*scale}" x2="${cx(s.left)}" y2="${baseY-s.pre*scale}" stroke="#e3b341" stroke-width="2" stroke-dasharray="6 5"/>`;
+  if(s.next>0)g+=`<line x1="${cx(s.right)}" y1="${baseY-s.next*scale}" x2="${900-padX}" y2="${baseY-s.next*scale}" stroke="#bc8cff" stroke-width="2" stroke-dasharray="6 5"/>`;
+  // 柱子 + 水
+  for(let i=0;i<n;i++){
+    const hPx=h[i]*scale,x=cx(i)-barW/2;
+    g+=`<rect x="${x}" y="${baseY-hPx}" width="${barW}" height="${hPx}" rx="2" fill="#30363d"/>`;
+    if(s.water[i]>0){
+      const wPx=s.water[i]*scale;
+      g+=`<rect x="${x}" y="${baseY-hPx-wPx}" width="${barW}" height="${wPx}" fill="rgba(56,139,253,.55)" stroke="#388bfd" stroke-width="1"/>`;
+    }
+    g+=`<text x="${cx(i)}" y="${baseY+19}" text-anchor="middle" font-size="12" fill="#8b949e">${h[i]}</text>`;
+  }
+  // 基线
+  g+=`<line x1="40" y1="${baseY}" x2="860" y2="${baseY}" stroke="#30363d" stroke-width="2"/>`;
+  // 指针
+  if(s.left!==s.right){
+    const mark=(i,label,col)=>{
+      const y=baseY-h[i]*scale-(s.water[i]>0?s.water[i]*scale:0);
+      g+=`<text x="${cx(i)}" y="${y-10}" text-anchor="middle" font-size="14" font-weight="700" fill="${col}">${label}</text>`;
+    };
+    mark(s.left,'L','#e3b341');mark(s.right,'R','#bc8cff');
+  }
+  $('svg').innerHTML=g;
+}
+function drawStackSvg(s){
+  const h=CASES[curCase],n=h.length;
+  const baseY=320,padX=40;
+  const slotW=(660-2*padX)/n;
+  const barW=slotW*0.6;
+  const maxH=Math.max(...h,1);
+  const scale=265/maxH;
+  const cx=i=>padX+slotW*i+slotW/2;
+  let g='';
+  const inStack=new Set(s.stack);
+  for(let i=0;i<n;i++){
+    const hPx=h[i]*scale,x=cx(i)-barW/2;
+    let fill='#30363d',stroke='none';
+    if(inStack.has(i)){fill='rgba(248,81,73,.16)';stroke='#f85149';}
+    if(i===s.top){fill='#f85149';stroke='none';}
+    if(i===s.left){fill='#3fb950';stroke='none';}
+    if(i===s.i){fill='#e3b341';stroke='none';}
+    g+=`<rect x="${x}" y="${baseY-hPx}" width="${barW}" height="${hPx}" rx="2" fill="${fill}"${stroke==='none'?'':` stroke="${stroke}" stroke-width="1.5"`}/>`;
+    if(s.water[i]>0){
+      const wPx=s.water[i]*scale;
+      g+=`<rect x="${x}" y="${baseY-hPx-wPx}" width="${barW}" height="${wPx}" fill="rgba(56,139,253,.55)" stroke="#388bfd"/>`;
+    }
+    g+=`<text x="${cx(i)}" y="${baseY+18}" text-anchor="middle" font-size="11" fill="#8b949e">${h[i]}</text>`;
+  }
+  g+=`<line x1="30" y1="${baseY}" x2="630" y2="${baseY}" stroke="#30363d" stroke-width="2"/>`;
+  $('svgStack').innerHTML=g;
+  $('stackitems').innerHTML=s.stack.length?s.stack.slice().reverse().map((idx,k)=>
+    `<div class="sitem${k===0?' top':''}">下标 ${idx}<div class="si">高 ${CASES[curCase][idx]}</div></div>`
+  ).join(''):'<div style="font-size:11px;color:var(--muted);text-align:center">空栈</div>';
+}
+function drawDPSvg(s){
+  const h=CASES[curCase],n=h.length;
+  const baseY=320,padX=50;
+  const slotW=(900-2*padX)/n;
+  const barW=slotW*0.6;
+  const maxH=Math.max(...h,1);
+  const scale=265/maxH;
+  const cx=i=>padX+slotW*i+slotW/2;
+  const yOf=v=>baseY-v*scale;
+  let g='';
+  for(let i=0;i<n;i++){
+    const hPx=h[i]*scale,x=cx(i)-barW/2,isCur=i===s.i;
+    g+=`<rect x="${x}" y="${baseY-hPx}" width="${barW}" height="${hPx}" rx="2" fill="#30363d"${isCur?' stroke="#58a6ff" stroke-width="2.5"':''}/>`;
+    g+=`<text x="${cx(i)}" y="${baseY+19}" text-anchor="middle" font-size="12" fill="${isCur?'#58a6ff':'#8b949e'}">${h[i]}</text>`;
+  }
+  for(let i=0;i<n;i++){
+    if(s.water[i]>0){
+      const wPx=s.water[i]*scale,x=cx(i)-barW/2,hPx=h[i]*scale,isCur=i===s.i;
+      g+=`<rect x="${x}" y="${baseY-hPx-wPx}" width="${barW}" height="${wPx}" fill="rgba(56,139,253,.55)" stroke="${isCur?'#79c0ff':'#388bfd'}" stroke-width="${isCur?2:1}"/>`;
+    }
+  }
+  const lineFor=(arr,col)=>{
+    const pts=[];
+    for(let i=0;i<n;i++){if(arr[i]!==null)pts.push(`${cx(i)},${yOf(arr[i])}`);}
+    if(pts.length>1)g+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5"/>`;
+    for(let i=0;i<n;i++){if(arr[i]!==null)g+=`<circle cx="${cx(i)}" cy="${yOf(arr[i])}" r="3.5" fill="${col}"/>`;}
+  };
+  lineFor(s.preMax,'#e3b341');
+  lineFor(s.sufMax,'#bc8cff');
+  g+=`<line x1="40" y1="${baseY}" x2="860" y2="${baseY}" stroke="#30363d" stroke-width="2"/>`;
+  if(s.i!==null){
+    const x=cx(s.i);
+    const lab=s.phase==='pre'?'preMax':(s.phase==='suf'?'sufMax':'water');
+    g+=`<line x1="${x}" y1="${baseY+6}" x2="${x}" y2="40" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    g+=`<text x="${x}" y="34" text-anchor="middle" font-size="12" font-weight="700" fill="#58a6ff">${lab}</text>`;
+  }
+  $('svgDP').innerHTML=g;
+}
+function render(){
+  const s=steps[posIdx];
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  if(curMethod==='ptr'){
+    $('msg').innerHTML=s.msg;
+    $('vPre').textContent=s.pre;
+    $('vNext').textContent=s.next;
+    $('vTemp').textContent=s.temp;
+    $('vRes').textContent=s.res;
+    drawSvg(s);
+    $('code').querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+  }else if(curMethod==='stack'){
+    $('msgStack').innerHTML=s.msg;
+    $('sI').textContent=s.i===null?'—':s.i;
+    $('sTop').textContent=s.top===null?'—':s.top;
+    $('sLeft').textContent=s.left===null?'—':s.left;
+    $('sArea').textContent=s.area;
+    drawStackSvg(s);
+    $('codeStack').querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+  }else{
+    $('msgDP').innerHTML=s.msg;
+    $('dI').textContent=s.i===null?'—':({pre:'pre',suf:'suf',calc:'calc'})[s.phase]+' '+s.i;
+    const pv=s.i!==null?s.preMax[s.i]:null;
+    const sv=s.i!==null?s.sufMax[s.i]:null;
+    $('dPre').textContent=(pv===null||pv===undefined)?'—':pv;
+    $('dSuf').textContent=(sv===null||sv===undefined)?'—':sv;
+    $('dAns').textContent=s.ans;
+    $('dTemp').textContent='本格 '+s.temp;
+    document.querySelectorAll('.phbtn').forEach(b=>b.classList.toggle('cur',b.dataset.phase===s.phase));
+    drawDPSvg(s);
+    $('codeDP').querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+  }
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;
+  if(curMethod==='ptr')steps=buildSteps(CASES[i]);
+  else if(curMethod==='stack')steps=buildStackSteps(CASES[i]);
+  else steps=buildDPSteps(CASES[i]);
+  posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+function switchMethod(m){
+  curMethod=m;
+  $('viewPtr').classList.toggle('hidden',m!=='ptr');
+  $('viewStack').classList.toggle('hidden',m!=='stack');
+  $('viewDP').classList.toggle('hidden',m!=='dp');
+  $('tabPtr').classList.toggle('active',m==='ptr');
+  $('tabStack').classList.toggle('active',m==='stack');
+  $('tabDP').classList.toggle('active',m==='dp');
+  $('code').classList.toggle('hidden',m!=='ptr');
+  $('codeStack').classList.toggle('hidden',m!=='stack');
+  $('codeDP').classList.toggle('hidden',m!=='dp');
+  const titleMap={ptr:'Java 双指针代码',stack:'Java 单调栈代码',dp:'Java 动态规划代码'};
+  $('codeTitle').textContent=titleMap[m];
+  loadCase(curCase);
+}
+$('tabPtr').onclick=()=>switchMethod('ptr');
+$('tabStack').onclick=()=>switchMethod('stack');
+$('tabDP').onclick=()=>switchMethod('dp');
+function gotoPhase(phase){
+  stopPlay();
+  const idx=steps.findIndex(s=>s.phase===phase);
+  if(idx>=0){posIdx=idx;render();}
+}
+document.querySelectorAll('.phbtn').forEach(b=>b.onclick=()=>gotoPhase(b.dataset.phase));
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">用例 ${i+1}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

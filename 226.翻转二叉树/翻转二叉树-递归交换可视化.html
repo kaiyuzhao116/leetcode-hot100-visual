@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>226. 翻转二叉树 · 递归交换可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%94%83</text></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI","Microsoft YaHei",sans-serif;line-height:1.6;padding:24px 16px 60px}
+.wrap{max-width:1080px;margin:0 auto}
+header h1{font-size:28px;font-weight:700;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tag{font-size:13px;font-weight:600;padding:2px 10px;border-radius:20px;background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.35)}
+.subtitle{color:var(--muted);margin-top:6px;font-size:14px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px}
+.intro{color:var(--muted);font-size:14px}
+.intro b{color:var(--text)}
+.intro .kw-null{color:var(--red);font-weight:600}
+.intro .kw-swap{color:var(--purple);font-weight:600}
+.cases{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.case-btn{background:var(--panel2);border:1px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;transition:all .15s}
+.case-btn:hover{border-color:var(--blue);color:var(--text)}
+.case-btn.active{background:rgba(88,166,255,.15);border-color:var(--blue);color:var(--blue)}
+.stage{position:relative;width:100%;max-width:560px;height:312px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;margin:0 auto;overflow:hidden}
+.zone-label{position:absolute;font-size:12px;color:var(--muted);z-index:1}
+.tnode{position:absolute;width:38px;height:38px;border-radius:50%;background:var(--panel);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:5;transition:left .55s cubic-bezier(.4,0,.2,1),background .25s,border-color .25s;min-width:0}
+.tnode.active{background:rgba(88,166,255,.2);border-color:var(--blue);color:var(--blue);box-shadow:0 0 0 4px rgba(88,166,255,.12)}
+.tnode.done{background:rgba(63,185,80,.18);border-color:var(--green);color:var(--green)}
+.edge{position:absolute;height:2px;background:var(--border);transform-origin:0 50%;z-index:2;transition:all .55s cubic-bezier(.4,0,.2,1),background .25s}
+.edge.flip{background:rgba(188,140,255,.7)}
+.stack-item{position:absolute;width:38px;height:38px;border-radius:8px;background:rgba(188,140,255,.15);border:1px solid var(--purple);color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:4;transition:all .3s}
+.stack-item.top{background:rgba(188,140,255,.32);border-color:var(--purple);box-shadow:0 0 0 3px rgba(188,140,255,.15)}
+.legend{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--muted)}
+.legend-dot{display:inline-flex;align-items:center;gap:7px}
+.dot{width:11px;height:11px;border-radius:50%}
+.dot.blue{background:var(--blue)}.dot.green{background:var(--green)}.dot.purple{background:var(--purple)}
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px}
+@media(min-width:760px){.info-grid{grid-template-columns:repeat(4,1fr)}}
+.info-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;min-width:0}
+.info-card .lab{font-size:12px;color:var(--muted)}
+.info-card .val{font-size:18px;font-weight:700;margin-top:3px;word-break:break-all}
+.val.blue{color:var(--blue)}.val.green{color:var(--green)}.val.purple{color:var(--purple)}.val.orange{color:var(--orange)}
+.code-panel{margin-top:16px;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.code-head{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border)}
+.code-head .c{width:12px;height:12px;border-radius:50%}
+.code-head .fname{font-size:13px;color:var(--muted);margin-left:6px}
+.code-body{display:flex;padding:12px 0;overflow-x:auto}
+.line-nums{padding:0 12px 0 14px;text-align:right;color:var(--muted);font-size:13px;line-height:1.9;user-select:none;font-family:Consolas,monospace}
+.code-lines{flex:1;font-family:Consolas,"Courier New",monospace;font-size:13px;line-height:1.9;min-width:0}
+.code-line{padding:0 16px 0 8px;white-space:pre;border-left:3px solid transparent}
+.code-line.hl{background:rgba(88,166,255,.13);border-left-color:var(--blue)}
+.t-kw{color:#ff7b72}.t-type{color:#79c0ff}.t-fn{color:#d2a8ff}.t-id{color:#e6edf3}.t-bool{color:#79c0ff}.t-num{color:#e3b341}.t-cmt{color:#8b949e}
+.controls{margin-top:16px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.ctrl-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+button.ctrl{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:42px;height:42px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+button.ctrl:hover{border-color:var(--blue)}
+button.ctrl:disabled{opacity:.4;cursor:not-allowed}
+button.ctrl.play{width:auto;padding:0 18px;gap:8px;font-size:14px;font-family:inherit;color:var(--blue);border-color:var(--blue)}
+button.ctrl.play:hover{background:rgba(88,166,255,.12)}
+button.ctrl svg{width:18px;height:18px;fill:currentColor}
+.progress{flex:1;min-width:140px;display:flex;align-items:center;gap:10px}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:5px;background:var(--border);border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--blue);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border:none;border-radius:50%;background:var(--blue);cursor:pointer}
+.pcount{font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;cursor:pointer}
+.kbd-hint{margin-top:10px;font-size:12px;color:var(--muted)}
+.kbd-hint kbd{background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:Consolas,monospace;font-size:11px}
+.msg{margin-top:14px;padding:10px 14px;background:var(--panel2);border-left:3px solid var(--blue);border-radius:6px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>226. 翻转二叉树 <span class="tag">简单</span></h1>
+    <div class="subtitle">递归 · 先翻转左子树 left，再翻转右子树 right，后序交换左右指针 · 调用栈记录递归路径</div>
+  </header>
+
+  <div class="panel">
+    <div class="intro">
+      <b>invertTree</b> 先递归翻转 <b style="color:var(--blue)">left</b> 再翻转 <b style="color:var(--orange)">right</b>，遇到 <span class="kw-null">null</span> 返回 null；
+      两子树都翻转后，执行 <span class="kw-swap">root.left = right / root.right = left</span> 交换指针，节点随之移动到镜像位置。
+    </div>
+    <div class="cases" id="cases"></div>
+  </div>
+
+  <div class="panel">
+    <div class="stage" id="stage">
+      <div class="zone-label" style="left:14px;top:8px">二叉树（节点随翻转移动）</div>
+      <div class="zone-label" style="left:16px;top:208px">调用栈</div>
+    </div>
+    <div class="legend">
+      <span class="legend-dot"><span class="dot blue"></span>当前节点</span>
+      <span class="legend-dot"><span class="dot green"></span>已交换（翻转完成）</span>
+      <span class="legend-dot"><span class="dot purple"></span>调用栈</span>
+    </div>
+    <div class="info-grid">
+      <div class="info-card"><div class="lab">当前动作</div><div class="val blue" id="i-phase">—</div></div>
+      <div class="info-card"><div class="lab">当前节点</div><div class="val" id="i-node">—</div></div>
+      <div class="info-card"><div class="lab">栈深度</div><div class="val purple" id="i-stack">0</div></div>
+      <div class="info-card"><div class="lab">已翻转节点</div><div class="val green" id="i-done">0</div></div>
+    </div>
+  </div>
+
+  <div class="code-panel">
+    <div class="code-head"><span class="c" style="background:#ff5f56"></span><span class="c" style="background:#ffbd2e"></span><span class="c" style="background:#27c93f"></span><span class="fname">Solution.java</span></div>
+    <div class="code-body">
+      <div class="line-nums" id="lineNums"></div>
+      <div class="code-lines" id="codeLines"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl-row">
+      <button class="ctrl play" id="btnPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playLabel">播放</span></button>
+      <button class="ctrl" id="btnPrev" title="上一步"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+      <button class="ctrl" id="btnNext" title="下一步"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+      <button class="ctrl" id="btnReset" title="重置"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.3 0 6 2.7 6 6s-2.7 6-6 6-6-2.7-6-6H4c0 4.4 3.6 8 8 8s8-3.6 8-8-3.6-8-8-8z"/></svg></button>
+      <div class="progress"><input type="range" id="slider" min="0" max="0" value="0"><span class="pcount" id="pcount">0 / 0</span></div>
+      <select id="speed"><option value="1200">0.5x</option><option value="800" selected>1x</option><option value="450">2x</option><option value="220">4x</option></select>
+    </div>
+    <div class="kbd-hint">键盘：<kbd>←</kbd>/<kbd>→</kbd> 单步 · <kbd>空格</kbd> 播放暂停 · <kbd>Home</kbd>/<kbd>End</kbd> 首末</div>
+  </div>
+
+  <div class="msg" id="msg">—</div>
+</div>
+<script>
+// ===== 数据：测试用例（层序数组，null 为空位）=====
+var CASES = [
+  { name: '用例 1：题目示例', tree: [4, 2, 7, 1, 3, 6, 9] },
+  { name: '用例 2：空树', tree: [] },
+  { name: '用例 3：单节点', tree: [1] },
+  { name: '用例 4：满二叉树', tree: [1, 2, 3] },
+  { name: '用例 5：只有左子树', tree: [4, 2, null, 1] },
+  { name: '用例 6：只有右子树', tree: [3, null, 4, null, 5] },
+  { name: '用例 7：不对称', tree: [1, 2, 3, 4] },
+  { name: '用例 8：左偏斜', tree: [1, 2, null, 3, null, 4, null] }
+];
+
+// ===== 几何常量 =====
+var STAGE_W = 560, NODE_R = 19;
+var STACK_TOP = 230, STACK_START = 20, STACK_W = 38, STACK_GAP = 6;
+function rowY(d) { return 30 + d * 52; }
+
+// ===== 树构建（层序数组，id 用数组下标）=====
+function buildTreeFromArr(arr) {
+  if (arr.length === 0) return null;
+  var nodes = arr.map(function (v, i) {
+    return v === null ? null : { id: i, val: v, left: null, right: null };
+  });
+  var root = nodes[0];
+  var q = [root];
+  var i = 1;
+  while (q.length && i < nodes.length) {
+    var cur = q.shift();
+    if (i < nodes.length) { cur.left = nodes[i]; if (nodes[i]) q.push(nodes[i]); i++; }
+    if (i < nodes.length) { cur.right = nodes[i]; if (nodes[i]) q.push(nodes[i]); i++; }
+  }
+  return root;
+}
+
+// ===== 预处理：depth / path（L/R 序列）/ ancPath（各层祖先 id）=====
+function prepare(root) {
+  var flat = {};
+  (function walk(n, d, path, anc) {
+    if (!n) return;
+    n.depth = d;
+    n.path = path.slice();
+    n.ancPath = anc.slice();
+    flat[n.id] = n;
+    walk(n.left, d + 1, path.concat(['L']), anc.concat([n.id]));
+    walk(n.right, d + 1, path.concat(['R']), anc.concat([n.id]));
+  })(root, 0, [], []);
+  return flat;
+}
+
+// ===== 当前 x：已翻转祖先会把对应路径位取反 =====
+function currentX(node, flipped) {
+  var k = 0;
+  for (var j = 0; j < node.depth; j++) {
+    var bit = node.path[j] === 'R' ? 1 : 0;
+    if (flipped.indexOf(node.ancPath[j]) >= 0) bit = 1 - bit;
+    k = (k << 1) | bit;
+  }
+  var denom = Math.pow(2, node.depth);
+  return (k + 0.5) * STAGE_W / denom;
+}
+
+// ===== 代码（14 行，含空行）=====
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-id">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-type">TreeNode</span> <span class="t-fn">invertTree</span>(<span class="t-type">TreeNode</span> <span class="t-id">root</span>) {',
+  '        <span class="t-kw">if</span>(<span class="t-id">root</span> == <span class="t-bool">null</span>){',
+  '            <span class="t-kw">return</span> <span class="t-bool">null</span>;',
+  '        }',
+  '',
+  '        <span class="t-type">TreeNode</span> <span class="t-id">left</span> = <span class="t-fn">invertTree</span>(<span class="t-id">root</span>.left);',
+  '        <span class="t-type">TreeNode</span> <span class="t-id">right</span> = <span class="t-fn">invertTree</span>(<span class="t-id">root</span>.right);',
+  '',
+  '        <span class="t-id">root</span>.left = <span class="t-id">right</span>;',
+  '        <span class="t-id">root</span>.right = <span class="t-id">left</span> ;',
+  '        <span class="t-kw">return</span> <span class="t-id">root</span> ;',
+  '    }',
+  '}'
+];
+var PHASE_CN = { start: '开始', enter: '进入节点', null: '空返回', swap: '交换指针', done: '完成' };
+
+// ===== 帧生成（带帧递归，先左后右，后序交换）=====
+function buildSteps(root) {
+  var steps = [];
+  var stack = [], flipped = [];
+  function snap(phase, active, line, msg) {
+    steps.push({ phase: phase, active: active, line: line, msg: msg,
+      stack: stack.slice(), flipped: flipped.slice() });
+  }
+  snap('start', null, 2, '开始调用 invertTree，准备翻转整棵二叉树');
+  function dfs(n) {
+    if (n === null) {
+      snap('null', null, 4, '遇到 null 子节点，直接返回 null');
+      return null;
+    }
+    stack.push(n.id);
+    snap('enter', n.id, 7, '进入节点 ' + n.val + '，先递归翻转它的左子树');
+    dfs(n.left);
+    dfs(n.right);
+    flipped.push(n.id);
+    snap('swap', n.id, 10, '节点 ' + n.val + ' 的左右子树已翻转，交换 root.left / root.right');
+    stack.pop();
+    return n;
+  }
+  if (root !== null) dfs(root);
+  snap('done', null, 12, '翻转完成，根节点返回，整棵树已左右镜像');
+  return steps;
+}
+
+// ===== 运行状态 =====
+var stage = document.getElementById('stage');
+var curCase = 0, frames = [], flat = {}, cur = 0, playing = false, timer = null;
+var nodeEls = {}, edgeEls = [];
+
+function compute(caseIdx) {
+  var root = buildTreeFromArr(CASES[caseIdx].tree);
+  flat = root === null ? {} : prepare(root);
+  frames = buildSteps(root);
+}
+
+// 首次创建节点与边元素（复用，靠 transition 平滑移动）
+function ensureElements() {
+  Object.keys(nodeEls).forEach(function (id) { nodeEls[id].remove(); });
+  edgeEls.forEach(function (e) { e.remove(); });
+  nodeEls = {}; edgeEls = [];
+  Object.keys(flat).forEach(function (id) {
+    var d = document.createElement('div');
+    d.className = 'tnode';
+    stage.appendChild(d);
+    nodeEls[id] = d;
+  });
+  Object.keys(flat).forEach(function (id) {
+    var n = flat[id];
+    if (n.left) {
+      var e = document.createElement('div');
+      e.className = 'edge'; e.pid = id; e.cid = n.left.id;
+      stage.appendChild(e); edgeEls.push(e);
+    }
+    if (n.right) {
+      var e2 = document.createElement('div');
+      e2.className = 'edge'; e2.pid = id; e2.cid = n.right.id;
+      stage.appendChild(e2); edgeEls.push(e2);
+    }
+  });
+}
+
+function nodePos(id, fr) {
+  var n = flat[id];
+  return { x: currentX(n, fr.flipped), y: rowY(n.depth) };
+}
+
+function renderFrame() {
+  var fr = frames[cur];
+  // 节点
+  Object.keys(flat).forEach(function (id) {
+    var n = flat[id];
+    var p = nodePos(id, fr);
+    var el = nodeEls[id];
+    el.style.left = (p.x - NODE_R) + 'px';
+    el.style.top = (p.y - NODE_R) + 'px';
+    el.textContent = n.val;
+    var cls = 'tnode';
+    if (fr.active === Number(id)) cls += ' active';
+    else if (fr.flipped.indexOf(Number(id)) >= 0) cls += ' done';
+    el.className = cls;
+  });
+  // 边（端点跟随节点当前位置）
+  edgeEls.forEach(function (e) {
+    var p1 = nodePos(e.pid, fr), p2 = nodePos(e.cid, fr);
+    var dx = p2.x - p1.x, dy = p2.y - p1.y;
+    var len = Math.hypot(dx, dy);
+    var ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    e.style.left = p1.x + 'px';
+    e.style.top = p1.y + 'px';
+    e.style.width = len + 'px';
+    e.style.transform = 'rotate(' + ang + 'deg)';
+    e.className = 'edge' + (fr.flipped.indexOf(Number(e.pid)) >= 0 ? ' flip' : '');
+  });
+  // 调用栈（先清旧的）
+  Array.prototype.slice.call(stage.querySelectorAll('.stack-item')).forEach(function (s) { s.remove(); });
+  fr.stack.forEach(function (id, idx) {
+    var s = document.createElement('div');
+    var isTop = (idx === fr.stack.length - 1);
+    s.className = 'stack-item' + (isTop ? ' top' : '');
+    s.style.left = (STACK_START + idx * (STACK_W + STACK_GAP)) + 'px';
+    s.style.top = (STACK_TOP - 19) + 'px';
+    s.textContent = flat[id].val;
+    stage.appendChild(s);
+  });
+  // 信息卡片
+  document.getElementById('i-phase').textContent = PHASE_CN[fr.phase];
+  document.getElementById('i-node').textContent = fr.active === null ? '—' : flat[fr.active].val;
+  document.getElementById('i-stack').textContent = fr.stack.length;
+  document.getElementById('i-done').textContent = fr.flipped.length;
+  // 代码高亮
+  document.querySelectorAll('.code-line').forEach(function (l) { l.classList.remove('hl'); });
+  var hl = document.getElementById('cl-' + fr.line);
+  if (hl) hl.classList.add('hl');
+  // 消息与进度
+  document.getElementById('msg').textContent = fr.msg;
+  document.getElementById('pcount').textContent = (cur + 1) + ' / ' + frames.length;
+  var slider = document.getElementById('slider');
+  slider.max = frames.length - 1;
+  slider.value = cur;
+  document.getElementById('btnPrev').disabled = (cur === 0);
+  document.getElementById('btnNext').disabled = (cur === frames.length - 1);
+}
+
+// ===== 播放控制 =====
+function stepDelay() { return Number(document.getElementById('speed').value); }
+function setPlaying(on) {
+  playing = on;
+  document.getElementById('playLabel').textContent = on ? '暂停' : '播放';
+  var icon = document.querySelector('#btnPlay svg');
+  icon.innerHTML = on ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+}
+function play() {
+  setPlaying(true);
+  timer = setInterval(function () {
+    if (cur >= frames.length - 1) { stop(); return; }
+    cur++;
+    renderFrame();
+  }, stepDelay());
+}
+function stop() {
+  setPlaying(false);
+  if (timer) { clearInterval(timer); timer = null; }
+}
+function nextStep() { if (cur < frames.length - 1) { cur++; renderFrame(); } }
+function prevStep() { if (cur > 0) { cur--; renderFrame(); } }
+function reset() { stop(); cur = 0; renderFrame(); }
+
+function switchCase(idx) {
+  stop();
+  curCase = idx; cur = 0;
+  compute(idx);
+  ensureElements();
+  renderFrame();
+  document.querySelectorAll('.case-btn').forEach(function (b, i) {
+    b.classList.toggle('active', i === idx);
+  });
+}
+
+// ===== 代码渲染（空行用 &nbsp; 填充保证行高）=====
+function renderCode() {
+  var ln = document.getElementById('lineNums');
+  var cl = document.getElementById('codeLines');
+  ln.innerHTML = CODE.map(function (_, i) { return i + 1; }).join('<br>');
+  cl.innerHTML = CODE.map(function (c, i) {
+    return '<div class="code-line" id="cl-' + (i + 1) + '">' + (c === '' ? '&nbsp;' : c) + '</div>';
+  }).join('');
+}
+
+// ===== 用例按钮 =====
+function renderCases() {
+  var box = document.getElementById('cases');
+  CASES.forEach(function (c, i) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (i === 0 ? ' active' : '');
+    b.textContent = c.name;
+    b.onclick = function () { switchCase(i); };
+    box.appendChild(b);
+  });
+}
+
+// ===== 事件绑定 =====
+document.getElementById('btnPlay').onclick = function () { playing ? stop() : play(); };
+document.getElementById('btnNext').onclick = nextStep;
+document.getElementById('btnPrev').onclick = prevStep;
+document.getElementById('btnReset').onclick = reset;
+document.getElementById('slider').addEventListener('input', function (e) {
+  stop(); cur = Number(e.target.value); renderFrame();
+});
+document.getElementById('speed').onchange = function () {
+  if (playing) { stop(); play(); }
+};
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); nextStep(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); prevStep(); }
+  else if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
+  else if (e.key === 'Home') { e.preventDefault(); stop(); cur = 0; renderFrame(); }
+  else if (e.key === 'End') { e.preventDefault(); stop(); cur = frames.length - 1; renderFrame(); }
+});
+
+// ===== 初始化 =====
+renderCode();
+renderCases();
+compute(0);
+ensureElements();
+renderFrame();
+</script>
+</body>
+</html>

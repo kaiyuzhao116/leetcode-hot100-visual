@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>K</text></svg>">
+<title>查找和最小K对数字 · 小根堆可视化</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#30363d;
+    --fg:#e6edf3;--muted:#8b949e;
+    --blue:#58a6ff;--green:#3fb950;--orange:#d29922;--red:#f85149;--purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.55;padding:22px}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:12.5px;margin-bottom:16px}
+  .idea{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .idea h3{font-size:12.5px;color:var(--orange);font-family:var(--mono);margin-bottom:10px;font-weight:700}
+  .idea ol{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px}
+  .idea li{font-size:12.5px;color:var(--fg);padding-left:24px;position:relative;line-height:1.5}
+  .idea li .no{position:absolute;left:0;top:0;color:var(--blue);font-family:var(--mono);font-weight:700;font-size:11.5px}
+  .idea li b{color:var(--green)}
+  .idea .loop{margin-top:11px;padding-top:10px;border-top:1px dashed var(--border);font-size:12.5px;font-family:var(--mono);color:var(--muted)}
+  .idea .loop b{color:var(--orange)}
+  .initviz{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+  .iv-title{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-bottom:11px}
+  .iv-flow{display:flex;align-items:stretch;gap:7px;flex-wrap:wrap}
+  .iv-card{background:rgba(88,166,255,.08);border:1px solid var(--blue);border-radius:8px;padding:8px 12px;font-family:var(--mono);display:flex;flex-direction:column;gap:3px;min-width:78px}
+  .iv-card .iv-i{font-size:10px;color:var(--orange)}
+  .iv-card .iv-p{font-size:13px;color:var(--blue);font-weight:700}
+  .iv-card .iv-s{font-size:10.5px;color:var(--muted)}
+  .iv-arrow{display:flex;align-items:center;color:var(--muted)}
+  .iv-heap{background:rgba(63,185,80,.1);border:1px solid var(--green);border-radius:8px;padding:8px 13px;font-family:var(--mono);font-size:11px;color:var(--green);display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:7px 13px;cursor:pointer;font-size:12.5px}
+  .casebtn.active{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.1)}
+  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:14px}
+  .ctl{background:var(--panel2);border:1px solid var(--border);color:var(--fg);border-radius:7px;width:38px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .ctl:hover{background:#272e3a}
+  .ctl.play{width:auto;padding:0 16px;color:var(--green)}
+  input[type=range]{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .msg{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:8px;padding:11px 15px;margin-bottom:14px;font-size:13px;min-height:44px}
+  .grid{display:grid;grid-template-columns:1fr 290px;gap:16px}
+  .box{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .box h2{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:12px;font-weight:600}
+  /* 矩阵 */
+  .matrix{display:grid;gap:6px}
+  .mcell{background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:9px 6px;text-align:center;font-family:var(--mono);transition:all .25s;display:flex;flex-direction:column;gap:2px;min-width:64px}
+  .mcell.hdr{background:transparent;border:none;color:var(--muted);font-weight:700;justify-content:center}
+  .mcell .sm{font-size:9.5px;color:var(--muted)}
+  .mcell .ss{font-size:15px;font-weight:700}
+  .mcell.inheap{border-color:var(--blue);background:rgba(88,166,255,.1)}
+  .mcell.inheap .ss{color:var(--blue)}
+  .mcell.ans{border-color:var(--green);background:rgba(63,185,80,.12)}
+  .mcell.ans .ss{color:var(--green)}
+  .mcell.pop{border-color:var(--red);box-shadow:0 0 0 2px var(--red)}
+  .mcell.pop .ss{color:var(--red)}
+  .mcell.add{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange)}
+  .mcell.add .ss{color:var(--orange)}
+  .heaptree{position:relative;height:250px}
+  .heaptree svg{position:absolute;inset:0;width:100%;height:100%}
+  .heaptree line{stroke:var(--border);stroke-width:1.6}
+  .hnode{position:absolute;transform:translate(-50%,-50%);min-width:50px;height:48px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--blue);color:var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);line-height:1.15;z-index:2;transition:all .3s ease;padding:0 6px}
+  .hnode .hv{font-size:10.5px;font-weight:700}
+  .hnode .hs{font-size:11px;color:var(--muted)}
+  .hnode.t0{border-color:var(--green);color:var(--green)}
+  .hnode.hi{border-color:var(--orange);box-shadow:0 0 0 3px rgba(210,153,34,.25)}
+  .hnode.cmp{border-color:var(--purple)}
+  .side{display:flex;flex-direction:column;gap:14px}
+  .stat{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--border)}
+  .stat .k{color:var(--muted)}.stat .v{font-family:var(--mono);font-weight:700}
+  .anslist,.heaplist{font-family:var(--mono);font-size:11.5px;display:flex;flex-direction:column;gap:6px}
+  .anslist .chip{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green);border-radius:6px;padding:5px 8px}
+  .heaplist .chip{background:rgba(88,166,255,.1);border:1px solid var(--blue);color:var(--blue);border-radius:6px;padding:5px 8px}
+  .empty{color:var(--muted);font-family:var(--mono);font-size:11px}
+  .codebox{margin-top:16px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:auto}
+  .codebox h2{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
+  pre{font-family:var(--mono);font-size:12.5px;line-height:1.85}
+  .ln{display:block;padding:0 10px;border-radius:5px;white-space:pre}
+  .ln.on{background:rgba(88,166,255,.13)}
+  .kw{color:#ff7b72}.ty{color:#79c0ff}.cmt{color:#8b949e}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}.idea ol{grid-template-columns:1fr}body{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>373 查找和最小的 K 对数字 · 小根堆</h1>
+  <div class="sub">矩阵格子是数对之和；小根堆里存候选格子，每次弹出和最小的，再把同一行右边格子补进堆。</div>
+
+  <div class="idea">
+    <h3>核心思想 · 为什么不用枚举所有配对</h3>
+    <ol>
+      <li><span class="no">01</span>两个数组都<b>不减</b>，所以每行从左到右，和严格递增</li>
+      <li><span class="no">02</span>每行只派<b>一个代表</b>（当前最左、未选的格子）进堆，它就是这行最小</li>
+      <li><span class="no">03</span>没进堆的格子不用管：左边还没选，右边更大，不可能先成为答案</li>
+      <li><span class="no">04</span>代表被选走，就派同一行右边的 <b>(i,j+1)</b> 接班</li>
+    </ol>
+    <div class="loop">循环：<b>加</b>候选进堆 → 堆自动<b>比</b>较、最小顶到堆顶 → <b>弹</b>出堆顶，重复 k 次</div>
+  </div>
+
+  <div class="initviz">
+    <div class="iv-title">初始化对应：for 循环把每行首配对 (i,0) 依次 offer 进堆（比较器按和排）</div>
+    <div class="iv-flow" id="initflow"></div>
+  </div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="controls">
+    <button class="ctl" id="reset">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="ctl play" id="play">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span id="playtxt">播放</span>
+    </button>
+    <button class="ctl" id="prev">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="ctl" id="next">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
+    <input type="range" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="grid">
+    <div class="box">
+      <h2>和矩阵（行 nums1 × 列 nums2）</h2>
+      <div class="matrix" id="matrix"></div>
+      <h2 style="margin-top:20px">小根堆树（节点上：数对，下：和）</h2>
+      <div class="heaptree">
+        <svg id="heaplines" viewBox="0 0 1000 250" preserveAspectRatio="none"></svg>
+        <div id="heapnodes"></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="box">
+        <h2>状态</h2>
+        <div class="stat"><span class="k">k</span><span class="v" id="sK"></span></div>
+        <div class="stat"><span class="k">已选</span><span class="v" id="sPicked"></span></div>
+        <div class="stat" style="border:none"><span class="k">堆中候选</span><span class="v" id="sHeap"></span></div>
+      </div>
+      <div class="box">
+        <h2>答案序列</h2>
+        <div class="anslist" id="anslist"><span class="empty">暂无</span></div>
+      </div>
+      <div class="box">
+        <h2>堆中候选格子</h2>
+        <div class="heaplist" id="heaplist"><span class="empty">暂无</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="codebox">
+    <h2>Java 代码</h2>
+    <pre id="code"></pre>
+  </div>
+</div>
+
+<script>
+const CASES=[
+  {name:'[1,7,11]×[2,4,6] k=3',n1:[1,7,11],n2:[2,4,6],k:3},
+  {name:'[1,1,2]×[1,2,3] k=2',n1:[1,1,2],n2:[1,2,3],k:2}
+];
+
+function buildSteps(n1,n2,k){
+  const steps=[];const sum=(i,j)=>n1[i]+n2[j];
+  let heap=[];let ans=[];
+  const better=(a,b)=>sum(a[0],a[1])<sum(b[0],b[1]);
+  const push=s=>steps.push(Object.assign({inHeap:heap.map(x=>[...x]),popCell:null,addCell:null,hi:-1,cmp:-1,ans:ans.map(x=>[...x]),line:0},s));
+  // 上浮一个新元素，记录每步
+  function offerCell(cell,line){
+    heap.push(cell);
+    push({msg:`offer (${n1[cell[0]]},${n2[cell[1]]})，先加到堆末尾`,addCell:[...cell],hi:heap.length-1,line});
+    let ci=heap.length-1;
+    while(ci>0){
+      const p=(ci-1)>>1;
+      if(better(heap[ci],heap[p])){
+        push({msg:`上浮：和 ${sum(...heap[ci])} < 父和 ${sum(...heap[p])}，交换`,hi:ci,cmp:p,line});
+        [heap[ci],heap[p]]=[heap[p],heap[ci]];ci=p;
+      }else{push({msg:`上浮停止，小根堆性质恢复`,hi:ci,cmp:p,line});break;}
+    }
+  }
+  // 初始化：每行首配对
+  for(let i=0;i<n1.length&&i<k;i++){offerCell([i,0],4);}
+  // 弹出 k 次
+  while(ans.length<k&&heap.length>0){
+    const top=heap[0];
+    push({msg:`堆顶 (${n1[top[0]]},${n2[top[1]]}) 和=${sum(...top)} 最小，poll`,popCell:[...top],hi:0,line:7});
+    const last=heap.pop();ans.push(top);
+    if(heap.length>0){
+      heap[0]=last;
+      let p=0;
+      while(true){
+        const l=2*p+1,r=2*p+2;let m=p;
+        if(l<heap.length&&better(heap[l],heap[m]))m=l;
+        if(r<heap.length&&better(heap[r],heap[m]))m=r;
+        if(m===p){push({msg:`下沉停止`,hi:p,line:7});break;}
+        push({msg:`下沉：与和更小的子交换`,hi:p,cmp:m,line:7});
+        [heap[p],heap[m]]=[heap[m],heap[p]];p=m;
+      }
+    }
+    if(top[1]+1<n2.length){offerCell([top[0],top[1]+1],11);}
+  }
+  push({msg:`已选出 ${k} 个，即和最小的前 ${k} 对`,line:14});
+  return steps;
+}
+
+let curCase=0,steps=[],posIdx=0,timer=null;
+const $=id=>document.getElementById(id);
+const eq=(a,b)=>a&&b&&a[0]===b[0]&&a[1]===b[1];
+
+function heapNodePos(i){
+  const d=Math.floor(Math.log2(i+1)),ls=Math.pow(2,d)-1,lc=Math.pow(2,d),pos=i-ls;
+  return{x:((pos+0.5)/lc)*1000,y:d*70+28};
+}
+
+function render(){
+  const cs=CASES[curCase],s=steps[posIdx];
+  $('msg').textContent=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  // 矩阵
+  let html='<div class="mcell hdr"></div>';
+  cs.n2.forEach(v=>html+=`<div class="mcell hdr">${v}</div>`);
+  for(let i=0;i<cs.n1.length;i++){
+    html+=`<div class="mcell hdr">${cs.n1[i]}</div>`;
+    for(let j=0;j<cs.n2.length;j++){
+      let cls='mcell';
+      if(s.inHeap.some(c=>eq(c,[i,j])))cls+=' inheap';
+      if(s.ans.some(c=>eq(c,[i,j])))cls+=' ans';
+      if(eq(s.popCell,[i,j]))cls+=' pop';
+      if(eq(s.addCell,[i,j]))cls+=' add';
+      html+=`<div class="${cls}"><span class="sm">${cs.n1[i]}+${cs.n2[j]}</span><span class="ss">${cs.n1[i]+cs.n2[j]}</span></div>`;
+    }
+  }
+  $('matrix').style.gridTemplateColumns=`repeat(${cs.n2.length+1},1fr)`;
+  $('matrix').innerHTML=html;
+  // 堆树
+  let hlines='',hnodes='';
+  s.inHeap.forEach((cell,idx)=>{
+    const P=heapNodePos(idx);
+    if(idx>0){const Q=heapNodePos((idx-1)>>1);hlines+=`<line x1="${Q.x}" y1="${Q.y}" x2="${P.x}" y2="${P.y}"/>`;}
+    let cls='hnode';
+    if(idx===0)cls+=' t0';
+    if(idx===s.hi)cls+=' hi';
+    if(idx===s.cmp)cls+=' cmp';
+    hnodes+=`<div class="${cls}" style="left:${P.x/10}%;top:${P.y}px"><span class="hv">${cs.n1[cell[0]]},${cs.n2[cell[1]]}</span><span class="hs">和=${cs.n1[cell[0]]+cs.n2[cell[1]]}</span></div>`;
+  });
+  $('heaplines').innerHTML=hlines;
+  $('heapnodes').innerHTML=hnodes||'<div class="empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">堆为空</div>';
+  // 状态
+  $('sK').textContent=cs.k;$('sPicked').textContent=s.ans.length;$('sHeap').textContent=s.inHeap.length;
+  $('anslist').innerHTML=s.ans.length?s.ans.map(c=>`<span class="chip">(${cs.n1[c[0]]},${cs.n2[c[1]]})</span>`).join(''):'<span class="empty">暂无</span>';
+  $('heaplist').innerHTML=s.inHeap.length?s.inHeap.map(c=>`<span class="chip">(${cs.n1[c[0]]},${cs.n2[c[1]]}) 和=${cs.n1[c[0]]+cs.n2[c[1]]}</span>`).join(''):'<span class="empty">暂无</span>';
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+
+const CODE=[
+  'PriorityQueue&lt;int[]&gt; heap = <span class="kw">new</span> PriorityQueue&lt;&gt;((a,b)-&gt;',
+  '    (n1[a[0]]+n2[a[1]])-(n1[b[0]]+n2[b[1]]));',
+  '<span class="kw">for</span> (<span class="kw">int</span> i=0; i&lt;n1.length &amp;&amp; i&lt;k; i++) {',
+  '    <span class="kw">int</span>[] cur = <span class="kw">new</span> <span class="kw">int</span>[]{i,0};',
+  '    heap.offer(cur);',
+  '}',
+  '<span class="kw">while</span> (ans.size()&lt;k &amp;&amp; !heap.isEmpty()) {',
+  '    <span class="kw">int</span>[] p = heap.poll();',
+  '    ans.add([n1[p[0]], n2[p[1]]]);',
+  '    <span class="kw">if</span> (p[1]+1 &lt; n2.length) {',
+  '        <span class="kw">int</span>[] nxt = <span class="kw">new</span> <span class="kw">int</span>[]{p[0],p[1]+1};',
+  '        heap.offer(nxt);',
+  '    }',
+  '}',
+  '<span class="kw">return</span> ans;'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function renderInit(cs){
+  const n=Math.min(cs.n1.length,cs.k);
+  let h='';
+  for(let i=0;i<n;i++){
+    const sm=cs.n1[i]+cs.n2[0];
+    h+=`<div class="iv-card"><span class="iv-i">i=${i} → [${i},0]</span><span class="iv-p">(${cs.n1[i]},${cs.n2[0]})</span><span class="iv-s">和=${sm}</span></div>`;
+    if(i<n-1)h+='<span class="iv-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+  }
+  h+='<span class="iv-arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+  h+='<div class="iv-heap"><span>小根堆</span><span>按和排序</span></div>';
+  $('initflow').innerHTML=h;
+}
+function loadCase(i){
+  curCase=i;steps=buildSteps(CASES[i].n1,CASES[i].n2,CASES[i].k);posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  renderInit(CASES[i]);
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">${c.name}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},800);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

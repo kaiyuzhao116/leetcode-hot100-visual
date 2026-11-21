@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>49. 字母异位词分组 · 排序作 Key 可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>a</text></svg>">
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+    --purple:#bc8cff;--orange:#e3b341;--red:#f85149;--mono:"Cascadia Code",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.5;padding:22px;max-width:1180px;margin:0 auto}
+  .top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:21px;font-weight:700}
+  .diff{font-size:12px;color:var(--orange);border:1px solid var(--orange);border-radius:6px;padding:2px 8px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px}
+  .casebtn.active{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+  .ideacard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:var(--muted)}
+  .ideacard b{color:var(--blue)}
+  .vizwrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+  .vizwrap h2{font-size:13px;color:var(--muted);margin-bottom:14px;font-weight:600}
+  .sortpanel{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px}
+  .sortrow{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .chargrp{display:flex;gap:6px}
+  .chargrp .lab{font-size:10px;color:var(--muted);width:100%;margin-bottom:4px}
+  .chargrp{flex-direction:column}
+  .chars{display:flex;gap:6px}
+  .chbox{width:40px;height:40px;border-radius:8px;background:var(--panel);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700}
+  .chbox.orig{color:var(--orange)}
+  .chbox.sorted{color:var(--green);border-color:var(--green);animation:popIn .3s ease}
+  .chbox.sorting{color:var(--blue);border-color:var(--blue)}
+  .chbox.cmp{box-shadow:0 0 0 2px var(--orange);border-color:var(--orange);color:var(--orange)}
+  .arrow{color:var(--muted);font-size:18px}
+  .keyline{display:flex;gap:8px;align-items:center;margin-top:14px;font-size:13px;flex-wrap:wrap}
+  .keytag{background:rgba(88,166,255,.13);border:1px solid var(--blue);color:var(--blue);border-radius:7px;padding:6px 12px;font-weight:700}
+  .grouppanel h2{margin-bottom:12px}
+  .groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .gcard{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;animation:popIn .3s ease}
+  .gcard.active{border-color:var(--blue);box-shadow:0 0 0 2px rgba(88,166,255,.3)}
+  .gcard .gkey{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:9px}
+  .gwords{display:flex;gap:6px;flex-wrap:wrap}
+  .dword{background:var(--panel);border:1px solid var(--green);color:var(--green);border-radius:6px;padding:4px 9px;font-size:12px;animation:popIn .25s ease}
+  .empty-g{color:var(--muted);font-size:12px}
+  .msg{background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px;min-height:44px}
+  .infobar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .icard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .icard .vval{font-size:17px;font-weight:700;word-break:break-all}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  button.ctl{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px}
+  button.ctl:hover{border-color:var(--blue)}
+  button.ctl.primary{background:var(--blue);color:#0d1117;border-color:var(--blue);font-weight:700}
+  .slider{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-size:12px;color:var(--muted);min-width:64px;text-align:right}
+  .speed{display:flex;gap:4px;margin-left:auto}
+  .spd{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;font-size:11px}
+  .spd.active{border-color:var(--green);color:var(--green)}
+  .codewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto}
+  .codewrap h2{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .ln{display:block;padding:2px 10px;font-size:13px;white-space:pre;border-left:3px solid transparent}
+  .ln.on{background:rgba(88,166,255,.13);border-left-color:var(--blue)}
+  .kw{color:#ff7b72}.str{color:#a5d6ff}.cmt{color:#8b949e;font-style:italic}
+  @keyframes popIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  @media(max-width:760px){.infobar{grid-template-columns:1fr}.chbox{width:34px;height:34px;font-size:15px}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>49. 字母异位词分组</h1>
+    <span class="diff">中等</span>
+  </div>
+  <div class="sub">排序作 Key · 时间 O(n·k log k) 空间 O(nk) · n 个单词，每个最长 k</div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="ideacard">
+    核心：字母异位词排序后得到<b>相同的字符串</b>，用它作 key。map 存 key → 该组单词列表；每个单词排序得 key，没有就新建列表，再 add 进去，最后返回 map.values()。
+  </div>
+
+  <div class="vizwrap">
+    <h2>当前单词：排序得到 Key</h2>
+    <div class="sortpanel">
+      <div class="sortrow">
+        <div class="chargrp"><span class="lab">原单词 toCharArray</span><div class="chars" id="origChars"></div></div>
+        <span class="arrow">→ sort →</span>
+        <div class="chargrp"><span class="lab">排序过程（冒泡，橙框=本次交换）</span><div class="chars" id="sortedChars"></div></div>
+      </div>
+      <div class="keyline" id="keyline"></div>
+    </div>
+    <div class="grouppanel">
+      <h2>HashMap 分组（key → 单词列表）</h2>
+      <div class="groups" id="groups"></div>
+    </div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar">
+    <div class="icard"><div class="lab">当前单词</div><div class="vval" id="curWord" style="color:var(--orange)">—</div></div>
+    <div class="icard"><div class="lab">key</div><div class="vval" id="curKey" style="color:var(--blue)">—</div></div>
+    <div class="icard"><div class="lab">分组数</div><div class="vval" id="groupCount" style="color:var(--purple)">0</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl primary" id="play"><span id="playtxt">播放</span></button>
+    <button class="ctl" id="prev">上一步</button>
+    <button class="ctl" id="next">下一步</button>
+    <button class="ctl" id="reset">重置</button>
+    <input type="range" class="slider" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+    <div class="speed">
+      <button class="spd" data-ms="1200">0.5x</button>
+      <button class="spd active" data-ms="800">1x</button>
+      <button class="spd" data-ms="400">2x</button>
+    </div>
+  </div>
+
+  <div class="codewrap">
+    <h2>Java 排序法代码</h2>
+    <div id="code"></div>
+  </div>
+
+<script>
+const CASES=[
+  ['eat','tea','tan','ate','nat','bat'],
+  ['abc','cba','ab','ba','a'],
+  ['','']
+];
+const CODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public</span> List&lt;List&lt;String&gt;&gt; groupAnagrams(String[] strs) {',
+  '      HashMap&lt;String,List&lt;String&gt;&gt; map = <span class="kw">new</span> HashMap&lt;&gt;();',
+  '      <span class="kw">for</span> (String s : strs){',
+  '          <span class="kw">char</span>[] chars = s.toCharArray();',
+  '          Arrays.sort(chars);',
+  '          String key = <span class="kw">new</span> String(chars);',
+  '          <span class="kw">if</span> (!map.containsKey(key)){',
+  '              map.put(key,<span class="kw">new</span> ArrayList&lt;&gt;());',
+  '          }',
+  '          map.get(key).add(s);',
+  '      }',
+  '      List&lt;List&lt;String&gt;&gt; ans = <span class="kw">new</span> ArrayList&lt;&gt;();',
+  '      <span class="kw">for</span> (List&lt;String&gt; group : map.values()){',
+  '          ans.add(group);',
+  '      }',
+  '      <span class="kw">return</span> ans;',
+  '  }',
+  '}'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function sortStr(s){return s.split('').sort().join('');}
+function bubbleSwaps(arr){
+  const a=arr.slice();const swaps=[];
+  for(let i=0;i<a.length-1;i++){
+    for(let j=0;j<a.length-1-i;j++){
+      if(a[j]>a[j+1]){
+        const t=a[j];a[j]=a[j+1];a[j+1]=t;
+        swaps.push({a:a.slice(),cmp:[j,j+1]});
+      }
+    }
+  }
+  return swaps;
+}
+
+function buildSteps(strs){
+  const groups=[];
+  const findG=k=>groups.findIndex(g=>g.key===k);
+  const out=[];
+  const base=()=>({word:null,orig:null,sortState:null,sorted:null,key:null,cmp:null,groups:groups.map(g=>({key:g.key,words:g.words.slice()})),activeKey:null});
+  const push=e=>out.push(Object.assign(base(),e));
+  push({msg:'初始化空 map，开始遍历。每个单词先排序得到 key，再归入对应分组。',line:2});
+  for(let wi=0;wi<strs.length;wi++){
+    const word=strs[wi];
+    const orig=word===''?[]:word.split('');
+    push({word,orig,msg:`取出第 ${wi} 个单词 "${word}"，toCharArray 得到字符数组。`,line:4});
+    if(orig.length>0){
+      const swaps=bubbleSwaps(orig);
+      if(swaps.length===0){
+        push({word,sortState:orig.slice(),msg:'字符本身已按字母序排列，无需交换。',line:5});
+      }else{
+        for(const sp of swaps){
+          push({word,sortState:sp.a,cmp:sp.cmp,msg:`冒泡比较位置 ${sp.cmp[0]}、${sp.cmp[1]}，前者字母更大，交换，当前序列 [${sp.a.join(',')}]。`,line:5});
+        }
+      }
+    }
+    const key=sortStr(word);
+    push({word,key,sorted:key===''?[]:key.split(''),msg:`排序完成，new String 得到 key = "${key===''?'(空串)':key}"。`,line:6});
+    const gi=findG(key);
+    if(gi<0){
+      push({word,key,activeKey:key,msg:`containsKey("${key}") 为 false，新 key，先 put 一个空 ArrayList。`,line:8});
+      groups.push({key,words:[]});
+    }else{
+      push({word,key,activeKey:key,msg:`containsKey("${key}") 为 true，分组已存在，复用该列表。`,line:7});
+    }
+    const gi2=findG(key);
+    groups[gi2].words.push(word);
+    push({word,key,activeKey:key,msg:`map.get("${key}").add("${word}")，单词加入该组，现有 ${groups[gi2].words.length} 个。`,line:10});
+  }
+  push({msg:`遍历结束，map 里共 ${groups.length} 个分组。建空 ans，遍历 map.values() 把每个分组 add 进去，最后 return ans。`,line:16});
+  return out;
+}
+let steps=[],posIdx=0,curCase=0,timer=null,playMs=800;
+function $(id){return document.getElementById(id);}
+function render(){
+  const s=steps[posIdx];
+  $('msg').innerHTML=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('curWord').textContent=s.word===null?'—':(s.word===''?'(空串)':s.word);
+  $('curKey').textContent=s.key===null?'—':(s.key===''?'(空串)':s.key);
+  $('groupCount').textContent=s.groups.length;
+  const boxes=(arr,cls)=>arr.length?arr.map(c=>`<div class="chbox ${cls}">${c}</div>`).join('')
+    :'<span style="font-size:11px;color:var(--muted)">空字符</span>';
+  $('origChars').innerHTML=s.orig?boxes(s.orig,'orig'):'';
+  const procArr=s.sortState?s.sortState:s.sorted;
+  let procHtml='';
+  if(procArr){
+    procHtml=procArr.map((c,i)=>{
+      let cls='chbox '+(s.sortState?'sorting':'sorted');
+      if(s.cmp&&s.cmp.includes(i))cls+=' cmp';
+      return `<div class="${cls}">${c}</div>`;
+    }).join('');
+  }
+  $('sortedChars').innerHTML=procHtml;
+  $('keyline').innerHTML=s.key===null?'':`<span style="font-size:11px;color:var(--muted)">作为 key：</span><span class="keytag">${s.key===''?'(空串)':s.key}</span>`;
+  let gh='';
+  if(s.groups.length===0)gh='<span class="empty-g">还没有分组</span>';
+  for(const g of s.groups){
+    const active=g.key===s.activeKey;
+    const words=g.words.map(w=>`<span class="dword">${w===''?'(空串)':w}</span>`).join('');
+    gh+=`<div class="gcard${active?' active':''}"><div class="gkey">key: ${g.key===''?'(空串)':g.key}</div><div class="gwords">${words}</div></div>`;
+  }
+  $('groups').innerHTML=gh;
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;
+  steps=buildSteps(CASES[i]);posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">用例 ${i+1}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

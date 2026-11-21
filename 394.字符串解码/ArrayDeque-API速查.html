@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArrayDeque API 速查 · 可交互演示</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --fg:#e6edf3; --muted:#8b949e;
+    --blue:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149; --purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;line-height:1.6;padding:22px 18px 50px;
+  }
+  .wrap{max-width:1020px;margin:0 auto}
+  h1{font-size:21px;margin-bottom:4px}
+  .lead{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    padding:16px 18px;margin-bottom:16px;
+  }
+  .panel h2{
+    font-size:13px;font-family:var(--mono);color:var(--muted);
+    text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;font-weight:600;
+  }
+  /* 双端队列可视化 */
+  .deque-stage{
+    display:flex;align-items:center;gap:10px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:16px 14px;
+  }
+  .end-tag{
+    flex-shrink:0;text-align:center;font-family:var(--mono);font-size:11px;
+    color:var(--muted);width:62px;line-height:1.4;
+  }
+  .end-tag b{display:block;font-size:13px;color:var(--blue)}
+  .deque{flex:1;display:flex;gap:6px;justify-content:center;min-height:46px;flex-wrap:wrap}
+  .dq-item{
+    font-family:var(--mono);font-size:15px;padding:9px 15px;border-radius:6px;
+    background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.4);
+    animation:pop .25s ease;
+  }
+  .dq-item.first-hl{background:rgba(210,153,34,.3);color:var(--orange);border-color:var(--orange)}
+  .dq-item.last-hl{background:rgba(188,140,255,.3);color:var(--purple);border-color:var(--purple)}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  .empty-hint{color:#484f58;font-family:var(--mono);font-size:13px;align-self:center}
+  /* 控制区 */
+  .ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .end-card{
+    background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px;
+  }
+  .end-card.first{border-top:3px solid var(--orange)}
+  .end-card.last{border-top:3px solid var(--purple)}
+  .end-card .t{font-family:var(--mono);font-size:12px;margin-bottom:9px;color:var(--muted)}
+  .btn{
+    background:var(--bg);color:var(--fg);border:1px solid var(--border);
+    padding:8px 6px;border-radius:6px;cursor:pointer;font-family:var(--mono);
+    font-size:11.5px;transition:.15s;width:100%;
+  }
+  .btn:hover{background:#272e3a;border-color:#444c56}
+  .btn.blue{background:rgba(31,111,235,.2);border-color:rgba(31,111,235,.5)}
+  .btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .input-row{display:flex;gap:8px;margin-bottom:14px}
+  input{
+    flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--fg);
+    border-radius:6px;padding:9px 11px;font-family:var(--mono);font-size:14px;
+  }
+  input:focus{outline:none;border-color:var(--blue)}
+  .util-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .util-row .btn{flex:1;min-width:90px}
+  /* 日志 */
+  .log{
+    background:#0d1117;border:1px solid var(--border);border-radius:8px;
+    padding:12px 14px;font-family:var(--mono);font-size:12.5px;
+    max-height:220px;overflow:auto;
+  }
+  .log-line{padding:3px 0;border-bottom:1px solid rgba(48,54,61,.5)}
+  .log-line:last-child{border-bottom:none}
+  .call{color:var(--purple)}
+  .ret-true{color:var(--green)}.ret-false{color:var(--red)}.ret-num{color:var(--orange)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:8px 9px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-family:var(--mono);font-size:11px}
+  td.mono{font-family:var(--mono);white-space:nowrap}
+  .note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.7}
+  .note b{color:var(--fg)}
+  @media(max-width:720px){.ctrl-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ArrayDeque API 速查</h1>
+  <div class="lead">双端队列，两端都能插入/移除/查看；既能当栈也能当队列。下面可在两端动手操作，返回值模拟 Java 行为。</div>
+
+  <div class="panel">
+    <h2>双端队列演示（左=头部 First，右=尾部 Last）</h2>
+    <div class="deque-stage">
+      <div class="end-tag"><b>First</b>头部</div>
+      <div class="deque" id="deque"><span class="empty-hint">空队列 []</span></div>
+      <div class="end-tag"><b>Last</b>尾部</div>
+    </div>
+
+    <div class="input-row">
+      <input type="number" id="num" placeholder="输入整数">
+      <button class="btn blue" style="width:auto;padding:9px 18px" onclick="addFirst()">addFirst</button>
+      <button class="btn blue" style="width:auto;padding:9px 18px" onclick="addLast()">addLast</button>
+    </div>
+
+    <div class="ctrl-grid">
+      <div class="end-card first">
+        <div class="t">头部 First 操作</div>
+        <div class="btn-grid">
+          <button class="btn" onclick="removeFirst()">removeFirst</button>
+          <button class="btn" onclick="pollFirst()">pollFirst</button>
+          <button class="btn" onclick="getFirst()">getFirst</button>
+          <button class="btn" onclick="peekFirst()">peekFirst</button>
+        </div>
+      </div>
+      <div class="end-card last">
+        <div class="t">尾部 Last 操作</div>
+        <div class="btn-grid">
+          <button class="btn" onclick="removeLast()">removeLast</button>
+          <button class="btn" onclick="pollLast()">pollLast</button>
+          <button class="btn" onclick="getLast()">getLast</button>
+          <button class="btn" onclick="peekLast()">peekLast</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="util-row">
+      <button class="btn" onclick="doSize()">size()</button>
+      <button class="btn" onclick="doIsEmpty()">isEmpty()</button>
+      <button class="btn" onclick="doContains()">contains()</button>
+      <button class="btn" onclick="doClear()">clear()</button>
+      <button class="btn" onclick="seed()">填入 1,2,3</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>操作日志（调用 → 返回值/异常）</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="panel">
+    <h2>API 方法矩阵</h2>
+    <table>
+      <tr><th>操作</th><th class="mono">头部（失败抛异常）</th><th class="mono">头部（失败返 null/false）</th><th class="mono">尾部（抛异常）</th><th class="mono">尾部（返 null/false）</th></tr>
+      <tr><td>插入</td><td class="mono">addFirst</td><td class="mono">offerFirst</td><td class="mono">addLast</td><td class="mono">offerLast</td></tr>
+      <tr><td>移除</td><td class="mono">removeFirst</td><td class="mono">pollFirst</td><td class="mono">removeLast</td><td class="mono">pollLast</td></tr>
+      <tr><td>查看</td><td class="mono">getFirst</td><td class="mono">peekFirst</td><td class="mono">getLast</td><td class="mono">peekLast</td></tr>
+    </table>
+    <div class="note">
+      <b>两组差异：</b>add/remove/get 在空队列操作时抛 NoSuchElementException；offer/poll/peek 不抛异常，返回 null 或 false。<br>
+      <b>当栈：</b>push=addFirst、pop=removeFirst、peek=peekFirst（只用头部）。<br>
+      <b>当队列：</b>offer=addLast（尾部进）、poll=removeFirst（头部出）。<br>
+      <b>不允许 null 元素；</b>ArrayDeque 基于可变数组，无固定容量，offer 一般不会失败。
+    </div>
+  </div>
+</div>
+
+<script>
+const deque = [];
+let hl = null;   // 高亮端
+const dequeEl = document.getElementById('deque');
+const logEl = document.getElementById('log');
+const numInput = document.getElementById('num');
+
+function getVal(){
+  const v = numInput.value.trim();
+  if(v===''){
+    numInput.style.borderColor='var(--red)';
+    setTimeout(()=>numInput.style.borderColor='var(--border)',600);
+    return null;
+  }
+  return Number(v);
+}
+function addLog(call, ret, cls){
+  const line = document.createElement('div');
+  line.className='log-line';
+  line.innerHTML = `<span class="call">${call}</span> → <span class="${cls}">${ret}</span>`;
+  logEl.appendChild(line); logEl.scrollTop=logEl.scrollHeight;
+}
+function render(){
+  if(deque.length===0){
+    dequeEl.innerHTML='<span class="empty-hint">空队列 []</span>';
+    return;
+  }
+  dequeEl.innerHTML = deque.map((v,i)=>{
+    let cls='dq-item';
+    if(hl==='first' && i===0) cls+=' first-hl';
+    if(hl==='last' && i===deque.length-1) cls+=' last-hl';
+    return `<span class="${cls}">${v}</span>`;
+  }).join('');
+}
+/* 插入 */
+function addFirst(){
+  const v=getVal(); if(v===null)return;
+  deque.unshift(v); hl='first';
+  addLog(`addFirst(${v})`,'void','ret-num'); render();
+}
+function addLast(){
+  const v=getVal(); if(v===null)return;
+  deque.push(v); hl='last';
+  addLog(`addLast(${v})`,'void','ret-num'); render();
+}
+/* 移除：抛异常版 */
+function removeFirst(){
+  if(deque.length===0){addLog('removeFirst()','抛出 NoSuchElementException','ret-false');return;}
+  const v=deque.shift(); hl='first';
+  addLog('removeFirst()',v,'ret-num'); render();
+}
+function removeLast(){
+  if(deque.length===0){addLog('removeLast()','抛出 NoSuchElementException','ret-false');return;}
+  const v=deque.pop(); hl='last';
+  addLog('removeLast()',v,'ret-num'); render();
+}
+/* 移除：返回 null 版 */
+function pollFirst(){
+  if(deque.length===0){addLog('pollFirst()','null','ret-false');return;}
+  const v=deque.shift(); hl='first';
+  addLog('pollFirst()',v,'ret-num'); render();
+}
+function pollLast(){
+  if(deque.length===0){addLog('pollLast()','null','ret-false');return;}
+  const v=deque.pop(); hl='last';
+  addLog('pollLast()',v,'ret-num'); render();
+}
+/* 查看：抛异常版 */
+function getFirst(){
+  if(deque.length===0){addLog('getFirst()','抛出 NoSuchElementException','ret-false');return;}
+  hl='first'; addLog('getFirst()',deque[0],'ret-num'); render();
+}
+function getLast(){
+  if(deque.length===0){addLog('getLast()','抛出 NoSuchElementException','ret-false');return;}
+  hl='last'; addLog('getLast()',deque[deque.length-1],'ret-num'); render();
+}
+/* 查看：返回 null 版 */
+function peekFirst(){
+  if(deque.length===0){addLog('peekFirst()','null','ret-false');return;}
+  hl='first'; addLog('peekFirst()',deque[0],'ret-num'); render();
+}
+function peekLast(){
+  if(deque.length===0){addLog('peekLast()','null','ret-false');return;}
+  hl='last'; addLog('peekLast()',deque[deque.length-1],'ret-num'); render();
+}
+/* 通用 */
+function doSize(){ addLog('size()',deque.length,'ret-num'); }
+function doIsEmpty(){
+  const r=deque.length===0;
+  addLog('isEmpty()',r,r?'ret-true':'ret-false');
+}
+function doContains(){
+  const v=getVal(); if(v===null)return;
+  const r=deque.includes(v);
+  addLog(`contains(${v})`,r,r?'ret-true':'ret-false');
+}
+function doClear(){
+  deque.length=0; hl=null;
+  addLog('clear()','void','ret-num'); render();
+}
+function seed(){
+  [1,2,3].forEach(v=>deque.push(v));
+  addLog('填入 1,2,3','done','ret-num'); render();
+}
+numInput.addEventListener('keydown',e=>{if(e.key==='Enter')addFirst();});
+render();
+</script>
+</body>
+</html>

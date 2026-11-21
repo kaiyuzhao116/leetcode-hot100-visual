@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11. 盛最多水的容器 · 双指针可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>水</text></svg>">
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+    --purple:#bc8cff;--orange:#e3b341;--red:#f85149;--water:#388bfd;
+    --mono:"Cascadia Code",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.5;padding:22px;max-width:1180px;margin:0 auto}
+  .top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:21px;font-weight:700}
+  .diff{font-size:12px;color:var(--orange);border:1px solid var(--orange);border-radius:6px;padding:2px 8px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px}
+  .casebtn.active{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+  .ideacard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:var(--muted)}
+  .ideacard b{color:var(--blue)}
+  .vizwrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+  .vizwrap h2{font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600}
+  svg{width:100%;height:auto;display:block}
+  .histwrap{margin-top:14px}
+  .histwrap h2{margin-bottom:10px}
+  .hist{display:flex;gap:7px;flex-wrap:wrap}
+  .hchip{font-size:11px;border-radius:6px;padding:4px 9px;border:1px solid var(--border);background:var(--panel2);color:var(--muted)}
+  .hchip.best{border-color:var(--green);color:var(--green);font-weight:700}
+  .hchip.cur{border-color:var(--orange);color:var(--orange)}
+  .msg{background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px;min-height:44px}
+  .infobar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .icard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .icard .vval{font-size:17px;font-weight:700}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  button.ctl{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px}
+  button.ctl:hover{border-color:var(--blue)}
+  button.ctl.primary{background:var(--blue);color:#0d1117;border-color:var(--blue);font-weight:700}
+  .slider{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-size:12px;color:var(--muted);min-width:64px;text-align:right}
+  .speed{display:flex;gap:4px;margin-left:auto}
+  .spd{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;font-size:11px}
+  .spd.active{border-color:var(--green);color:var(--green)}
+  .codewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto}
+  .codewrap h2{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .ln{display:block;padding:2px 10px;font-size:13px;white-space:pre;border-left:3px solid transparent}
+  .ln.on{background:rgba(88,166,255,.13);border-left-color:var(--blue)}
+  .kw{color:#ff7b72}
+  @media(max-width:760px){.infobar{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>11. 盛最多水的容器</h1>
+    <span class="diff">中等</span>
+  </div>
+  <div class="sub">双指针左右靠拢 · 时间 O(n) 空间 O(1) · 容量 = 宽 × 短板高度</div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="ideacard">
+    两指针 <b>left、right</b> 从两端向内。当前容量由<b>短板</b>决定，移动长边只会让宽变小、短板不变，面积更小；所以每次<b>移动短边</b>，才可能遇到更高板、得到更大面积，全程不会漏掉最优解。
+  </div>
+
+  <div class="vizwrap">
+    <h2>容器与双指针（蓝色=当前盛水，橙线=短板高度）</h2>
+    <svg id="svg" viewBox="0 0 900 380" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="histwrap">
+      <h2>面积历史</h2>
+      <div class="hist" id="hist"></div>
+    </div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar">
+    <div class="icard"><div class="lab">宽度 right-left</div><div class="vval" id="vWidth" style="color:var(--purple)">0</div></div>
+    <div class="icard"><div class="lab">短板高度</div><div class="vval" id="vShort" style="color:var(--orange)">0</div></div>
+    <div class="icard"><div class="lab">当前面积</div><div class="vval" id="vCur" style="color:var(--blue)">0</div></div>
+    <div class="icard"><div class="lab">最大面积</div><div class="vval" id="vMax" style="color:var(--green)">0</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl primary" id="play"><span id="playtxt">播放</span></button>
+    <button class="ctl" id="prev">上一步</button>
+    <button class="ctl" id="next">下一步</button>
+    <button class="ctl" id="reset">重置</button>
+    <input type="range" class="slider" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+    <div class="speed">
+      <button class="spd" data-ms="1200">0.5x</button>
+      <button class="spd active" data-ms="800">1x</button>
+      <button class="spd" data-ms="400">2x</button>
+    </div>
+  </div>
+
+  <div class="codewrap">
+    <h2>Java 双指针代码</h2>
+    <div id="code"></div>
+  </div>
+
+<script>
+const CASES=[
+  [1,8,6,2,5,4,8,3,7],
+  [1,1],
+  [4,3,2,1,4]
+];
+const CODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public int</span> maxArea(<span class="kw">int</span>[] height) {',
+  '      <span class="kw">int</span> res = 0;',
+  '      <span class="kw">int</span> i = 0;',
+  '      <span class="kw">int</span> j = height.length - 1;',
+  '      <span class="kw">while</span> (i &lt; j) {',
+  '          <span class="kw">int</span> area = (j - i) * Math.min(height[i], height[j]);',
+  '          res = Math.max(res, area);',
+  '          <span class="kw">if</span> (height[i] &lt; height[j]) {',
+  '              i++;',
+  '          } <span class="kw">else</span> {',
+  '              j--;',
+  '          }',
+  '      }',
+  '      <span class="kw">return</span> res;',
+  '  }',
+  '}'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function buildSteps(height){
+  const out=[];let i=0,j=height.length-1,res=0;const hist=[];
+  const base=()=>({left:i,right:j,width:j-i,shortH:Math.min(height[i],height[j]),curArea:0,max:res,hist:hist.slice(),moveSide:null,line:null});
+  const push=e=>out.push(Object.assign(base(),e));
+  push({msg:`初始化 res=0，i=0，j=${j}，开始双指针。`,line:2});
+  while(i<j){
+    const w=j-i,sh=Math.min(height[i],height[j]),area=w*sh;
+    hist.push(area);
+    res=Math.max(res,area);
+    push({curArea:area,max:res,msg:`宽 ${w} × 短板 ${sh} = area ${area}，Math.max 后 res=${res}。`,line:7});
+    if(height[i]<height[j]){
+      push({curArea:area,moveSide:'left',msg:`height[i]=${height[i]} < height[j]=${height[j]}，左边短，i++，移动短边。`,line:8});
+      i++;
+    }else{
+      push({curArea:area,moveSide:'right',msg:`height[i]=${height[i]} >= height[j]=${height[j]}，右边短（或相等），j--。`,line:8});
+      j--;
+    }
+  }
+  push({max:res,msg:`两指针相遇，循环结束，return res = ${res}。`,line:14});
+  return out;
+}
+let steps=[],posIdx=0,curCase=0,timer=null,playMs=800;
+function $(id){return document.getElementById(id);}
+function drawSvg(s){
+  const h=CASES[curCase],n=h.length;
+  const baseY=320,padX=55;
+  const slotW=(900-2*padX)/n;
+  const barW=Math.min(slotW*0.55,46);
+  const maxH=Math.max(...h);
+  const scale=265/maxH;
+  const cx=i=>padX+slotW*i+slotW/2;
+  let g=`<line x1="40" y1="${baseY}" x2="860" y2="${baseY}" stroke="#30363d" stroke-width="2"/>`;
+  if(s.left<s.right){
+    const x1=cx(s.left),x2=cx(s.right),shPx=s.shortH*scale,wy=baseY-shPx;
+    g+=`<rect x="${x1}" y="${wy}" width="${x2-x1}" height="${shPx}" fill="rgba(56,139,253,.28)" stroke="#388bfd" stroke-width="1.5"/>`;
+    g+=`<line x1="${x1}" y1="${wy}" x2="${x2}" y2="${wy}" stroke="#e3b341" stroke-width="2" stroke-dasharray="6 5"/>`;
+  }
+  for(let i=0;i<n;i++){
+    const bh=h[i]*scale,x=cx(i)-barW/2,y=baseY-bh;
+    let fill='#30363d';
+    if(i===s.left||i===s.right)fill='#58a6ff';
+    g+=`<rect x="${x}" y="${y}" width="${barW}" height="${bh}" rx="3" fill="${fill}"/>`;
+    g+=`<text x="${cx(i)}" y="${baseY+20}" text-anchor="middle" font-size="13" fill="#8b949e">${h[i]}</text>`;
+  }
+  if(s.left<s.right){
+    const mark=(i,label)=>{
+      const y=baseY-h[i]*scale;
+      const moving=(s.moveSide==='left'&&i===s.left)||(s.moveSide==='right'&&i===s.right);
+      const col=moving?'#bc8cff':'#e3b341';
+      g+=`<text x="${cx(i)}" y="${y-12}" text-anchor="middle" font-size="15" font-weight="700" fill="${col}">${label}</text>`;
+    };
+    mark(s.left,'L');mark(s.right,'R');
+  }
+  $('svg').innerHTML=g;
+}
+function render(){
+  const s=steps[posIdx];
+  $('msg').innerHTML=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('vWidth').textContent=s.width;
+  $('vShort').textContent=s.shortH;
+  $('vCur').textContent=s.curArea;
+  $('vMax').textContent=s.max;
+  drawSvg(s);
+  $('hist').innerHTML=s.hist.length?s.hist.map((a,i)=>{
+    let cls='hchip';
+    if(i===s.hist.length-1)cls+=' cur';
+    if(a===s.max)cls+=' best';
+    return `<span class="${cls}">${a}</span>`;
+  }).join(''):'<span style="font-size:11px;color:var(--muted)">暂无</span>';
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;
+  steps=buildSteps(CASES[i]);posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">用例 ${i+1}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

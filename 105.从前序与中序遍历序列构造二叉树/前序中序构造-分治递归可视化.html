@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>105. 从前序与中序构造二叉树 · 分治递归可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='%2358a6ff'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.6;}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 26px 40px;}
+h1{font-size:27px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:12px;background:rgba(88,166,255,.14);color:var(--blue);}
+.subtitle{color:var(--muted);margin:0 0 22px;font-size:14.5px;}
+.info-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:20px;}
+.info-panel p{margin:0 0 14px;color:var(--muted);font-size:14px;}
+.info-panel b{color:var(--text);font-weight:600;}
+.info-panel .hl-b{color:var(--blue);font-weight:600;}
+.info-panel .hl-g{color:var(--green);font-weight:600;}
+.info-panel .hl-p{color:var(--purple);font-weight:600;}
+#cases{display:flex;flex-wrap:wrap;gap:8px;}
+.case-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:7px 13px;font-size:13.5px;cursor:pointer;transition:border-color .15s,background .15s;}
+.case-btn:hover{border-color:var(--blue);}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);}
+.main-grid{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:20px;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.card-head{padding:11px 16px;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--muted);
+  font-weight:600;letter-spacing:.3px;display:flex;align-items:center;gap:8px;}
+#stage{position:relative;height:430px;}
+.legend{position:absolute;left:16px;bottom:6px;display:flex;gap:13px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap;}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-1px;}
+.dot.r{background:var(--orange);} .dot.l{background:var(--green);} .dot.p{background:var(--purple);} .dot.a{background:var(--blue);}
+
+.tnode{position:absolute;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13.5px;font-weight:600;background:var(--panel2);border:2px solid var(--border);color:var(--text);
+  transition:border-color .18s,background .18s,color .18s;z-index:3;}
+.tnode.active{border-color:var(--blue);background:rgba(88,166,255,.16);color:var(--blue);}
+.tnode.built{border-color:var(--green);background:rgba(63,185,80,.13);color:var(--green);}
+.tnode.hit{border-color:var(--orange);background:rgba(227,179,65,.17);color:var(--orange);}
+.edge{position:absolute;height:2px;background:var(--border);transform-origin:0 50%;border-radius:1px;z-index:1;}
+.edge.show{background:var(--green);}
+.stack-frame{position:absolute;height:24px;min-width:64px;padding:0 9px;border-radius:6px;
+  background:rgba(188,140,255,.14);border:1px solid var(--purple);color:var(--purple);
+  font-size:11.5px;display:flex;align-items:center;justify-content:center;font-family:Consolas,monospace;}
+.arr-label{position:absolute;font-size:12.5px;color:var(--muted);font-weight:600;}
+.arr-box{position:absolute;min-width:30px;height:28px;padding:0 6px;border-radius:6px;
+  border:1px solid var(--border);background:var(--panel2);color:var(--muted);
+  font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  transition:border-color .16s,background .16s,color .16s;}
+.arr-box.range{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue);}
+.arr-box.leftpart{border-color:var(--green);background:rgba(63,185,80,.12);color:var(--green);}
+.arr-box.rightpart{border-color:var(--purple);background:rgba(188,140,255,.12);color:var(--purple);}
+.arr-box.root{border-color:var(--orange);background:rgba(227,179,65,.16);color:var(--orange);
+  box-shadow:0 0 0 3px rgba(227,179,65,.1);}
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 16px;border-top:1px solid var(--border);}
+.stat{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;min-width:0;}
+.stat .k{font-size:12px;color:var(--muted);margin-bottom:3px;}
+.stat .val{font-size:13.5px;font-weight:600;font-family:Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.val.blue{color:var(--blue);} .val.green{color:var(--green);} .val.orange{color:var(--orange);} .val.purple{color:var(--purple);}
+
+.controls{display:flex;align-items:center;gap:10px;padding:13px 16px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.ctrl-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;
+  width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ctrl-btn:hover:not(:disabled){border-color:var(--blue);}
+.ctrl-btn:disabled{opacity:.4;cursor:not-allowed;}
+.ctrl-btn.wide{width:auto;padding:0 16px;gap:7px;font-size:14px;}
+.ctrl-btn svg{width:18px;height:18px;fill:var(--text);}
+#slider{flex:1;min-width:120px;height:5px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:3px;outline:none;}
+#slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--blue);cursor:pointer;}
+#pcount{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:56px;text-align:center;}
+#speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 8px;font-size:13.5px;cursor:pointer;}
+.kbd-hint{padding:0 16px 13px;font-size:12.5px;color:var(--muted);}
+
+#codeCard{display:flex;flex-direction:column;}
+.code-wrap{flex:1;overflow:auto;padding:14px 0;}
+.code-inner{display:flex;min-width:max-content;}
+.line-nums{padding:0 12px 0 16px;text-align:right;color:var(--muted);font-size:13.5px;line-height:1.7;
+  font-family:Consolas,monospace;user-select:none;border-right:1px solid var(--border);}
+.code-lines{padding:0 16px 0 12px;font-family:Consolas,monospace;font-size:13.5px;line-height:1.7;min-width:0;}
+.code-line{white-space:pre;border-radius:4px;padding:0 6px;margin:0 -6px;}
+.code-line.hl{background:rgba(88,166,255,.13);box-shadow:inset 3px 0 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;} .t-cmt{color:#8b949e;}
+#msg{padding:11px 16px;border-top:1px solid var(--border);font-size:13.5px;color:var(--text);background:var(--panel2);min-height:44px;}
+@media (max-width:980px){.main-grid{grid-template-columns:1fr;}#codeCard{max-height:520px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>105. 从前序与中序构造二叉树 <span class="badge">中等</span></h1>
+  <p class="subtitle">前序首元素定位根，中序切分左右子树，分治递归建树</p>
+
+  <div class="info-panel">
+    <p>前序 <b>preorder</b> 的<b>首元素就是当前子树的根</b>；用哈希表 <span class="hl-b">map</span> 查出根在中序 <b>inorder</b> 的位置，根左边是<span class="hl-g">左子树</span>、右边是<span class="hl-p">右子树</span>，算出左子树节点数 size 后，把前序、中序区间各自切成两段递归。绿色=左子树区间，紫色=右子树区间，金色=当前根。</p>
+    <div id="cases"></div>
+  </div>
+
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="var(--muted)"><path d="M12 2l4 8-4 12-4-12z"/></svg>
+        分治构造过程（区间切分 + 树生长）
+      </div>
+      <div id="stage">
+        <div class="arr-label" style="left:18px;top:14px;">前序 preorder</div>
+        <div class="arr-label" style="left:18px;top:318px;">中序 inorder</div>
+        <div class="legend">
+          <span><span class="dot a"></span>当前区间</span>
+          <span><span class="dot r"></span>根</span>
+          <span><span class="dot l"></span>左子树</span>
+          <span><span class="dot p"></span>右子树</span>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="k">当前根</div><div class="val orange" id="i-root">&mdash;</div></div>
+        <div class="stat"><div class="k">前序区间</div><div class="val blue" id="i-pre">&mdash;</div></div>
+        <div class="stat"><div class="k">中序区间 / 根位置</div><div class="val blue" id="i-ino">&mdash;</div></div>
+        <div class="stat"><div class="k">左子树 size</div><div class="val green" id="i-size">&mdash;</div></div>
+      </div>
+      <div class="controls">
+        <button class="ctrl-btn wide" id="btnPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playLabel">播放</span></button>
+        <button class="ctrl-btn" id="btnPrev" title="上一步（←）"><svg viewBox="0 0 24 24"><path d="M16 6l-8 6 8 6z"/></svg></button>
+        <button class="ctrl-btn" id="btnNext" title="下一步（→）"><svg viewBox="0 0 24 24"><path d="M8 6l8 6-8 6z"/></svg></button>
+        <button class="ctrl-btn" id="btnReset" title="重置（Home）"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+        <input type="range" id="slider" min="0" value="0">
+        <span id="pcount">1 / 1</span>
+        <select id="speed">
+          <option value="1200">0.8x</option>
+          <option value="850" selected>1x</option>
+          <option value="500">1.5x</option>
+          <option value="280">2.5x</option>
+        </select>
+      </div>
+      <div class="kbd-hint">键盘：← / → 单步 · 空格 播放暂停 · Home / End 首末</div>
+    </div>
+
+    <div class="card" id="codeCard">
+      <div class="card-head">Solution.java</div>
+      <div class="code-wrap">
+        <div class="code-inner">
+          <div class="line-nums" id="lineNums"></div>
+          <div class="code-lines" id="codeLines"></div>
+        </div>
+      </div>
+      <div id="msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 测试用例（前序 + 中序，值唯一且合法）=====
+var CASES = [
+  { name: '用例 1：题目示例', pre: [3, 9, 20, 15, 7], ino: [9, 3, 15, 20, 7] },
+  { name: '用例 2：单节点', pre: [1], ino: [1] },
+  { name: '用例 3：三节点满树', pre: [1, 2, 3], ino: [2, 1, 3] },
+  { name: '用例 4：左偏链', pre: [1, 2, 3, 4], ino: [4, 3, 2, 1] },
+  { name: '用例 5：右偏链', pre: [1, 2, 3, 4], ino: [1, 2, 3, 4] },
+  { name: '用例 6：三层满树', pre: [1, 2, 4, 5, 3, 6, 7], ino: [4, 2, 5, 1, 6, 3, 7] },
+  { name: '用例 7：只有左子树', pre: [1, 2, 3], ino: [3, 2, 1] },
+  { name: '用例 8：只有右子树', pre: [1, 2, 3], ino: [1, 2, 3] }
+];
+
+var NODE_R = 18;
+function stageW() { return document.getElementById('stage').clientWidth; }
+function rowY(d) { return 128 + d * 36; }
+
+// ===== 分治构造最终树（用于固定节点位置）=====
+function buildFinal(pre, ino) {
+  var map = {};
+  ino.forEach(function (v, i) { map[v] = i; });
+  function b(preL, preR, intL, intR) {
+    if (preL > preR) return null;
+    var t = pre[preL], node = { val: t, left: null, right: null };
+    var l = map[t], size = l - intL;
+    node.left = b(preL + 1, preL + size, intL, l - 1);
+    node.right = b(preL + size + 1, preR, l + 1, intR);
+    return node;
+  }
+  return b(0, pre.length - 1, 0, ino.length - 1);
+}
+function collect(root) {
+  var all = {};
+  (function walk(n, d, path) {
+    if (!n) return;
+    n.depth = d; n.path = path.slice(); all[n.val] = n;
+    walk(n.left, d + 1, path.concat(['L']));
+    walk(n.right, d + 1, path.concat(['R']));
+  })(root, 0, []);
+  return all;
+}
+function slotX(node) {
+  var k = 0;
+  for (var j = 0; j < node.path.length; j++) k = (k << 1) | (node.path[j] === 'R' ? 1 : 0);
+  return (k + 0.5) * stageW() / Math.pow(2, node.depth);
+}
+
+// ===== 代码（22 行，无空行）=====
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-id">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-type">Map</span>&lt;<span class="t-type">Integer</span>,<span class="t-type">Integer</span>&gt; <span class="t-id">map</span>;',
+  '    <span class="t-kw">public</span> <span class="t-kw">int</span>[] <span class="t-id">pre</span>;',
+  '    <span class="t-kw">public</span> <span class="t-type">TreeNode</span> <span class="t-fn">buildTree</span>(<span class="t-kw">int</span>[] <span class="t-id">preorder</span>, <span class="t-kw">int</span>[] <span class="t-id">inorder</span>) {',
+  '        <span class="t-id">map</span> = <span class="t-kw">new</span> <span class="t-fn">HashMap</span>&lt;&gt;();',
+  '        <span class="t-id">pre</span> = <span class="t-id">preorder</span>;',
+  '        <span class="t-kw">for</span>(<span class="t-kw">int</span> <span class="t-id">i</span> =<span class="t-num">0</span>;<span class="t-id">i</span>&lt;<span class="t-id">inorder</span>.length;<span class="t-id">i</span>++){',
+  '            <span class="t-id">map</span>.<span class="t-fn">put</span>(<span class="t-id">inorder</span>[<span class="t-id">i</span>],<span class="t-id">i</span>);',
+  '        }',
+  '        <span class="t-kw">return</span> <span class="t-fn">bulid</span>(<span class="t-num">0</span>,<span class="t-id">preorder</span>.length-<span class="t-num">1</span>,<span class="t-num">0</span>,<span class="t-id">inorder</span>.length -<span class="t-num">1</span>);',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-type">TreeNode</span> <span class="t-fn">bulid</span>(<span class="t-kw">int</span> <span class="t-id">preL</span>,<span class="t-kw">int</span> <span class="t-id">preR</span>,<span class="t-kw">int</span> <span class="t-id">intL</span>,<span class="t-kw">int</span> <span class="t-id">intR</span>){',
+  '        <span class="t-kw">if</span>(<span class="t-id">preL</span>&gt;<span class="t-id">preR</span>) <span class="t-kw">return</span> <span class="t-bool">null</span>;',
+  '        <span class="t-kw">int</span> <span class="t-id">t</span> = <span class="t-id">pre</span>[<span class="t-id">preL</span>];',
+  '        <span class="t-type">TreeNode</span> <span class="t-id">root</span> = <span class="t-kw">new</span> <span class="t-fn">TreeNode</span>(<span class="t-id">t</span>);',
+  '        <span class="t-kw">int</span> <span class="t-id">l</span> =  <span class="t-id">map</span>.<span class="t-fn">get</span>(<span class="t-id">t</span>);',
+  '        <span class="t-kw">int</span> <span class="t-id">size</span> = <span class="t-id">l</span>-<span class="t-id">intL</span>;',
+  '        <span class="t-id">root</span>.left = <span class="t-fn">bulid</span>(<span class="t-id">preL</span>+<span class="t-num">1</span>,<span class="t-id">preL</span>+<span class="t-id">size</span>,<span class="t-id">intL</span>,<span class="t-id">l</span>-<span class="t-num">1</span>);',
+  '        <span class="t-id">root</span>.right = <span class="t-fn">bulid</span>(<span class="t-id">preL</span>+<span class="t-id">size</span>+<span class="t-num">1</span>,<span class="t-id">preR</span>,<span class="t-id">l</span>+<span class="t-num">1</span>,<span class="t-id">intR</span>);',
+  '        <span class="t-kw">return</span> <span class="t-id">root</span>;',
+  '    }',
+  '}'
+];
+var PHASE_CN = { start: '开始', mapinit: '建立哈希表', null: '空区间', root: '定位根',
+  create: '创建节点', size: '切分区间', goleft: '递归左子树', goright: '递归右子树',
+  return: '返回子树', done: '构造完成' };
+
+// ===== 帧生成 =====
+function buildSteps(pre, ino) {
+  var map = {};
+  ino.forEach(function (v, i) { map[v] = i; });
+  var steps = [], stack = [], builtIds = [], activeId = null;
+  function snap(phase, line, ctx) {
+    steps.push({ phase: phase, line: line,
+      stack: stack.map(function (s) { return Object.assign({}, s); }),
+      builtIds: builtIds.slice(), activeId: activeId,
+      preL: ctx.preL, preR: ctx.preR, intL: ctx.intL, intR: ctx.intR,
+      l: ctx.l, size: ctx.size, rootVal: ctx.rootVal });
+  }
+  snap('start', 4, { preL: null, preR: null, intL: null, intR: null, l: null, size: null, rootVal: null });
+  snap('mapinit', 8, { preL: null, preR: null, intL: null, intR: null, l: null, size: null, rootVal: null });
+
+  function bulid(preL, preR, intL, intR) {
+    var base = { preL: preL, preR: preR, intL: intL, intR: intR };
+    stack.push(Object.assign({}, base));
+    if (preL > preR) {
+      activeId = null;
+      snap('null', 13, Object.assign({}, base, { l: null, size: null, rootVal: null }));
+      stack.pop();
+      return null;
+    }
+    var t = pre[preL], l = map[t], size = l - intL;
+    var ctx = Object.assign({}, base, { l: l, size: size, rootVal: t });
+    activeId = t;
+    snap('root', 14, ctx);
+    builtIds.push(t);
+    snap('create', 15, ctx);
+    snap('size', 17, ctx);
+    snap('goleft', 18, ctx);
+    bulid(preL + 1, preL + size, intL, l - 1);
+    activeId = t;
+    snap('goright', 19, ctx);
+    bulid(preL + size + 1, preR, l + 1, intR);
+    activeId = t;
+    snap('return', 20, ctx);
+    stack.pop();
+    activeId = null;
+  }
+  bulid(0, pre.length - 1, 0, ino.length - 1);
+  snap('done', 11, { preL: null, preR: null, intL: null, intR: null, l: null, size: null, rootVal: null });
+  return steps;
+}
+
+// ===== 运行状态 =====
+var stage = document.getElementById('stage');
+var curCase = 0, frameList = [], all = {}, cur = 0, playing = false, timer = null;
+var nodeEls = {}, edgeEls = {}, stackEls = {}, preEls = {}, inoEls = {};
+
+function compute(idx) {
+  var c = CASES[idx];
+  var finalRoot = buildFinal(c.pre, c.ino);
+  all = finalRoot === null ? {} : collect(finalRoot);
+  frameList = buildSteps(c.pre, c.ino);
+}
+function clearDynamic() {
+  [nodeEls, edgeEls, stackEls, preEls, inoEls].forEach(function (m) {
+    Object.keys(m).forEach(function (k) { m[k].remove(); });
+  });
+  nodeEls = {}; edgeEls = {}; stackEls = {}; preEls = {}; inoEls = {};
+}
+function nodeCenter(val) { return { x: slotX(all[val]), y: rowY(all[val].depth) }; }
+function placeEdge(el, p1, p2, cls) {
+  var dx = p2.x - p1.x, dy = p2.y - p1.y;
+  var len = Math.hypot(dx), ang = Math.atan2(dy, dx) * 180 / Math.PI;
+  el.style.left = p1.x + 'px'; el.style.top = p1.y + 'px';
+  el.style.width = len + 'px'; el.style.transform = 'rotate(' + ang + 'deg)';
+  el.className = cls || 'edge';
+}
+
+function setupTree() {
+  Object.keys(all).forEach(function (val) {
+    var n = all[val];
+    if (n.left) {
+      var e = document.createElement('div');
+      placeEdge(e, nodeCenter(val), nodeCenter(n.left.val), 'edge');
+      edgeEls[val + '-' + n.left.val] = e; stage.appendChild(e);
+    }
+    if (n.right) {
+      var e2 = document.createElement('div');
+      placeEdge(e2, nodeCenter(val), nodeCenter(n.right.val), 'edge');
+      edgeEls[val + '-' + n.right.val] = e2; stage.appendChild(e2);
+    }
+  });
+  Object.keys(all).forEach(function (val) {
+    var p = nodeCenter(val);
+    var d = document.createElement('div');
+    d.style.left = (p.x - NODE_R) + 'px'; d.style.top = (p.y - NODE_R) + 'px';
+    d.textContent = val; d.className = 'tnode';
+    nodeEls[val] = d; stage.appendChild(d);
+  });
+}
+
+function makeMsg(fr) {
+  switch (fr.phase) {
+    case 'start': return '开始构造，先建立值到中序索引的哈希表';
+    case 'mapinit': return 'map 已建好：每个值可 O(1) 查到中序位置';
+    case 'null': return '区间 [' + fr.preL + '..' + fr.preR + '] 为空，返回 null';
+    case 'root': return '前序首元素 ' + fr.rootVal + ' 是当前子树的根，中序位置 ' + fr.l;
+    case 'create': return '创建根节点 ' + fr.rootVal;
+    case 'size': return '左子树 size = ' + fr.size + '，据此切出前序/中序的左右区间';
+    case 'goleft': return '递归构造 ' + fr.rootVal + ' 的左子树';
+    case 'goright': return '递归构造 ' + fr.rootVal + ' 的右子树';
+    case 'return': return '节点 ' + fr.rootVal + ' 的左右子树构造完成，返回';
+    case 'done': return '构造完成，共 ' + fr.builtIds.length + ' 个节点';
+  }
+}
+
+var PRE_BOX_TOP = 36, INO_BOX_TOP = 340, STACK_TOP = 76, ARR_W = 30, ARR_GAP = 6;
+
+// 数组方块 class：根金 > 区间内左绿/右紫 > 区间外暗
+function arrClass(pos, isPre, fr) {
+  if (fr.preL === null) return 'arr-box';
+  if (isPre) {
+    if (pos === fr.preL) return 'arr-box root';
+    if (pos >= fr.preL && pos <= fr.preR) {
+      if (pos <= fr.preL + fr.size) return 'arr-box leftpart';
+      return 'arr-box rightpart';
+    }
+    return 'arr-box';
+  } else {
+    if (pos === fr.l) return 'arr-box root';
+    if (pos >= fr.intL && pos <= fr.intR) {
+      if (pos < fr.l) return 'arr-box leftpart';
+      if (pos > fr.l) return 'arr-box rightpart';
+    }
+    return 'arr-box';
+  }
+}
+
+function renderFrame() {
+  var fr = frameList[cur];
+  // 节点显隐与颜色
+  Object.keys(nodeEls).forEach(function (val) {
+    var built = fr.builtIds.indexOf(Number(val)) >= 0;
+    nodeEls[val].style.visibility = built ? 'visible' : 'hidden';
+    var cls = 'tnode';
+    if (fr.activeId === Number(val)) cls += ' active';
+    else if (built) cls += ' built';
+    nodeEls[val].className = cls;
+  });
+  // 边：父子都 built 才显示
+  Object.keys(edgeEls).forEach(function (k) {
+    var parts = k.split('-'), pv = Number(parts[0]), cv = Number(parts[1]);
+    var ok = fr.builtIds.indexOf(pv) >= 0 && fr.builtIds.indexOf(cv) >= 0;
+    edgeEls[k].style.display = ok ? 'block' : 'none';
+    edgeEls[k].className = ok ? 'edge show' : 'edge';
+  });
+  [stackEls, preEls, inoEls].forEach(function (m) {
+    Object.keys(m).forEach(function (k) { m[k].remove(); });
+  });
+  stackEls = {}; preEls = {}; inoEls = {};
+  // 调用栈
+  fr.stack.forEach(function (s, idx) {
+    var d = document.createElement('div');
+    d.className = 'stack-frame';
+    d.style.left = (18 + idx * 74) + 'px'; d.style.top = STACK_TOP + 'px';
+    d.textContent = 'p' + s.preL + '-' + s.preR;
+    stackEls[idx] = d; stage.appendChild(d);
+  });
+  // 前序方块
+  var c = CASES[curCase], nPre = c.pre.length;
+  var wPre = nPre * ARR_W + (nPre - 1) * ARR_GAP;
+  var sxPre = (stageW() - wPre) / 2;
+  c.pre.forEach(function (val, pos) {
+    var d = document.createElement('div');
+    d.className = arrClass(pos, true, fr);
+    d.style.left = (sxPre + pos * (ARR_W + ARR_GAP)) + 'px'; d.style.top = PRE_BOX_TOP + 'px';
+    d.textContent = val;
+    preEls[pos] = d; stage.appendChild(d);
+  });
+  // 中序方块
+  var nIno = c.ino.length;
+  var wIno = nIno * ARR_W + (nIno - 1) * ARR_GAP;
+  var sxIno = (stageW() - wIno) / 2;
+  c.ino.forEach(function (val, pos) {
+    var d = document.createElement('div');
+    d.className = arrClass(pos, false, fr);
+    d.style.left = (sxIno + pos * (ARR_W + ARR_GAP)) + 'px'; d.style.top = INO_BOX_TOP + 'px';
+    d.textContent = val;
+    inoEls[pos] = d; stage.appendChild(d);
+  });
+  // 信息卡片
+  document.getElementById('i-root').textContent = fr.rootVal === null ? '—' : fr.rootVal;
+  document.getElementById('i-pre').textContent = fr.preL === null ? '—' : fr.preL + '..' + fr.preR;
+  document.getElementById('i-ino').textContent = fr.intL === null ? '—' : fr.intL + '..' + fr.intR + ' @ ' + fr.l;
+  document.getElementById('i-size').textContent = fr.size === null ? '—' : fr.size;
+  // 代码高亮
+  document.querySelectorAll('.code-line').forEach(function (l) { l.classList.remove('hl'); });
+  var hl = document.getElementById('cl-' + fr.line);
+  if (hl) hl.classList.add('hl');
+  document.getElementById('msg').innerHTML = makeMsg(fr);
+  document.getElementById('pcount').textContent = (cur + 1) + ' / ' + frameList.length;
+  var slider = document.getElementById('slider');
+  slider.max = frameList.length - 1; slider.value = cur;
+  document.getElementById('btnPrev').disabled = (cur === 0);
+  document.getElementById('btnNext').disabled = (cur === frameList.length - 1);
+}
+
+// ===== 播放控制 =====
+function stepDelay() { return Number(document.getElementById('speed').value); }
+function setPlaying(on) {
+  playing = on;
+  document.getElementById('playLabel').textContent = on ? '暂停' : '播放';
+  document.querySelector('#btnPlay svg').innerHTML = on
+    ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+}
+function play() {
+  setPlaying(true);
+  timer = setInterval(function () {
+    if (cur >= frameList.length - 1) { stop(); return; }
+    cur++; renderFrame();
+  }, stepDelay());
+}
+function stop() {
+  setPlaying(false);
+  if (timer) { clearInterval(timer); timer = null; }
+}
+function nextStep() { if (cur < frameList.length - 1) { cur++; renderFrame(); } }
+function prevStep() { if (cur > 0) { cur--; renderFrame(); } }
+
+function switchCase(idx) {
+  stop(); curCase = idx; cur = 0;
+  clearDynamic();
+  compute(idx);
+  if (Object.keys(all).length) setupTree();
+  renderFrame();
+  document.querySelectorAll('.case-btn').forEach(function (b, i) {
+    b.classList.toggle('active', i === idx);
+  });
+}
+
+function renderCode() {
+  document.getElementById('lineNums').innerHTML = CODE.map(function (_, i) { return i + 1; }).join('<br>');
+  document.getElementById('codeLines').innerHTML = CODE.map(function (c, i) {
+    return '<div class="code-line" id="cl-' + (i + 1) + '">' + (c === '' ? '&nbsp;' : c) + '</div>';
+  }).join('');
+}
+function renderCases() {
+  var box = document.getElementById('cases');
+  CASES.forEach(function (c, i) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (i === 0 ? ' active' : '');
+    b.textContent = c.name; b.onclick = function () { switchCase(i); };
+    box.appendChild(b);
+  });
+}
+
+document.getElementById('btnPlay').onclick = function () { playing ? stop() : play(); };
+document.getElementById('btnNext').onclick = nextStep;
+document.getElementById('btnPrev').onclick = prevStep;
+document.getElementById('btnReset').onclick = function () { stop(); cur = 0; renderFrame(); };
+document.getElementById('slider').addEventListener('input', function (e) {
+  stop(); cur = Number(e.target.value); renderFrame();
+});
+document.getElementById('speed').onchange = function () { if (playing) { stop(); play(); } };
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); nextStep(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); prevStep(); }
+  else if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
+  else if (e.key === 'Home') { e.preventDefault(); stop(); cur = 0; renderFrame(); }
+  else if (e.key === 'End') { e.preventDefault(); stop(); cur = frameList.length - 1; renderFrame(); }
+});
+
+renderCode();
+renderCases();
+compute(0);
+setupTree();
+renderFrame();
+</script>
+</body>
+</html>

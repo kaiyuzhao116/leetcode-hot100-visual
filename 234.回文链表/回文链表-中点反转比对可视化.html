@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>234. 回文链表 · 中点反转比对可视化</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230d1117'/%3E%3Cpath d='M7 9h10M7 15h10' stroke='%2358a6ff' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='5' cy='12' r='2' fill='%233fb950'/%3E%3Ccircle cx='19' cy='12' r='2' fill='%233fb950'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  line-height:1.6;padding:28px 18px 40px;
+}
+.wrap{max-width:1080px;margin:0 auto;}
+.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;}
+
+.head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px;}
+.head h1{font-size:26px;margin:0;font-weight:700;}
+.badge{font-size:12px;padding:2px 10px;border-radius:20px;border:1px solid var(--green);color:var(--green);}
+.sub{color:var(--muted);font-size:14px;margin:2px 0 18px;}
+
+.intro{
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;font-size:14px;margin-bottom:18px;
+}
+.intro b{color:var(--blue);font-weight:600;}
+.intro b.o{color:var(--orange);} .intro b.p{color:var(--purple);}
+
+.case-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.case-btn{
+  background:var(--panel);border:1px solid var(--border);color:var(--muted);
+  padding:8px 16px;border-radius:8px;font-size:13.5px;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;
+}
+.case-btn:hover{border-color:var(--blue);color:var(--text);}
+.case-btn.active{background:rgba(88,166,255,.12);border-color:var(--blue);color:var(--blue);}
+.case-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+
+.stage-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:16px 16px 12px;margin-bottom:16px;
+}
+.stage-title{font-size:14px;color:var(--muted);margin:0 0 10px;}
+.stage-scroll{overflow-x:auto;}
+.stage{position:relative;width:620px;height:300px;margin:0 auto;}
+.svg-layer{position:absolute;left:0;top:0;pointer-events:none;}
+.null-chip{
+  position:absolute;font-size:12px;font-weight:600;color:var(--muted);
+  background:var(--panel2);border:1px solid var(--border);border-radius:7px;
+  padding:2px 8px;white-space:nowrap;line-height:1.4;
+}
+
+.node{
+  position:absolute;width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:600;
+  background:var(--panel2);border:1.5px solid var(--border);color:var(--muted);
+  transition:border-color .2s,background .2s,color .2s,box-shadow .2s;
+}
+.node.slow-mark,.node.left-mark{border-color:var(--blue);color:var(--blue);}
+.node.fast-mark{border-color:var(--orange);color:var(--orange);}
+.node.right-mark{border-color:var(--purple);color:var(--purple);}
+.node.rev-done{border-color:var(--purple);color:var(--purple);}
+.node.match{border-color:var(--green);color:#fff;background:linear-gradient(140deg,#238636,#3fb950);box-shadow:0 0 0 3px rgba(63,185,80,.2);}
+.node.mismatch{border-color:var(--red);color:#fff;background:linear-gradient(140deg,#b62324,#f85149);box-shadow:0 0 0 3px rgba(248,81,73,.2);}
+.node.mid-node{border-color:var(--blue);color:var(--blue);}
+
+.ptr-tag{
+  position:absolute;font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;
+  top:-18px;white-space:nowrap;line-height:1.4;
+}
+.ptr-tag.tag-slow,.ptr-tag.tag-left{left:0;background:rgba(88,166,255,.18);color:var(--blue);}
+.ptr-tag.tag-fast{right:0;background:rgba(227,179,65,.16);color:var(--orange);}
+.ptr-tag.tag-right{right:0;background:rgba(188,140,255,.16);color:var(--purple);}
+.node.both-ptr .ptr-tag{left:50%;right:auto;transform:translateX(-50%);}
+.node.both-ptr .tag-up{top:-18px;}
+.node.both-ptr .tag-down{top:-37px;}
+
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--muted);}
+.legend .item{display:flex;align-items:center;gap:6px;}
+.dot{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--border);background:var(--panel2);}
+.dot.d-blue{border-color:var(--blue);} .dot.d-orange{border-color:var(--orange);}
+.dot.d-purple{border-color:var(--purple);} .dot.d-green{background:#3fb950;border-color:var(--green);} .dot.d-red{background:#f85149;border-color:var(--red);}
+
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.info-cell{background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:9px 10px;min-width:0;}
+.info-cell .k{font-size:12px;color:var(--muted);margin-bottom:2px;}
+.info-cell .v{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.info-cell .v.blue{color:var(--blue);} .info-cell .v.purple{color:var(--purple);}
+.info-cell .v.green{color:var(--green);} .info-cell .v.red{color:var(--red);}
+
+.msg{
+  border-radius:9px;padding:10px 14px;font-size:13.5px;margin-bottom:16px;
+  background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--blue);
+}
+.msg.stage2{border-left-color:var(--purple);}
+.msg.good{border-left-color:var(--green);} .msg.bad{border-left-color:var(--red);}
+.msg .ph{font-weight:700;margin-right:8px;}
+.msg.good .ph{color:var(--green);} .msg.bad .ph{color:var(--red);} .msg.stage2 .ph{color:var(--purple);}
+
+.code-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:18px;}
+.code-bar{
+  display:flex;align-items:center;gap:7px;padding:10px 14px;
+  background:var(--panel2);border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);
+}
+.traffic{display:flex;gap:6px;margin-right:8px;}
+.traffic i{width:11px;height:11px;border-radius:50%;display:block;}
+.code-body{display:flex;font-size:13.5px;overflow-x:auto;}
+.lineno{padding:14px 12px 14px 14px;text-align:right;color:#484f58;user-select:none;border-right:1px solid var(--border);background:var(--panel);}
+.lineno div,.code-lines div{height:24px;line-height:24px;white-space:pre;}
+.code-lines{padding:14px 16px;flex:1;min-width:0;}
+.code-lines div{border-radius:4px;padding:0 8px;margin:0 -8px;transition:background .15s;}
+.code-lines div.hl{background:rgba(88,166,255,.16);}
+.t-kw{color:#ff7b72;} .t-type{color:#ffa657;} .t-fn{color:#d2a8ff;}
+.t-id{color:#79c0ff;} .t-bool{color:#79c0ff;}
+
+.controls{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.ctrl-btn{
+  background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  width:42px;height:42px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.ctrl-btn:hover{border-color:var(--blue);}
+.ctrl-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+.ctrl-btn.play{width:auto;padding:0 20px;background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600;gap:7px;}
+.ctrl-btn.play:hover{background:#388bfd;}
+.ctrl-btn:disabled{opacity:.4;cursor:not-allowed;}
+.scrub{flex:1;min-width:140px;display:flex;align-items:center;gap:10px;}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;flex:1;height:5px;border-radius:3px;
+  background:var(--border);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--blue);border:none;
+}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--blue);border:none;}
+.step-count{font-size:13px;color:var(--muted);white-space:nowrap;}
+select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;}
+.kbd-hint{font-size:12px;color:var(--muted);width:100%;margin-top:2px;}
+.kbd-hint kbd{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:11px;font-family:Consolas,monospace;}
+@media (max-width:720px){
+  .info-grid{grid-template-columns:repeat(2,1fr);}
+  .head h1{font-size:22px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>234. 回文链表</h1>
+    <span class="badge">简单</span>
+  </div>
+  <div class="sub">快慢指针找中点 · 反转后半 · 双指针两端比对 · 时间 O(n) · 空间 O(1)</div>
+
+  <div class="intro">
+    分三步：<b>slow/fast</b> 找中点（fast 走 2、slow 走 1）；把<b class="p">后半段反转</b>；让 <b>left</b> 从头、<b class="p">right</b> 从尾，向中间逐个比值——全部相等是回文，有一对不等即返回 false。奇数长度的中间节点不参与比较。
+  </div>
+
+  <div class="case-row" id="caseRow"></div>
+
+  <div class="stage-card">
+    <p class="stage-title">链表结构（节点位置固定，箭头在反转阶段改变方向）</p>
+    <div class="stage-scroll">
+      <div class="stage" id="stage">
+        <svg class="svg-layer" id="svgLayer" width="620" height="300"></svg>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="item"><span class="dot d-blue"></span>slow / left</span>
+      <span class="item"><span class="dot d-orange"></span>fast</span>
+      <span class="item"><span class="dot d-purple"></span>right / 已反转</span>
+      <span class="item"><span class="dot d-green"></span>匹配</span>
+      <span class="item"><span class="dot d-red"></span>不匹配</span>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-cell"><div class="k">left 所在</div><div class="v blue" id="infoLeft">—</div></div>
+    <div class="info-cell"><div class="k">right 所在</div><div class="v purple" id="infoRight">—</div></div>
+    <div class="info-cell"><div class="k">当前阶段</div><div class="v" id="infoStage">—</div></div>
+    <div class="info-cell"><div class="k">判定</div><div class="v" id="infoVerdict">—</div></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="code-card">
+    <div class="code-bar">
+      <span class="traffic"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i></span>
+      Solution.java
+    </div>
+    <div class="code-body">
+      <div class="lineno mono" id="lineno"></div>
+      <div class="code-lines mono" id="codeLines"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn play" id="playBtn"></button>
+    <button class="ctrl-btn" id="prevBtn" title="上一步"></button>
+    <button class="ctrl-btn" id="nextBtn" title="下一步"></button>
+    <button class="ctrl-btn" id="resetBtn" title="重置"></button>
+    <div class="scrub">
+      <input type="range" id="scrub" min="0" max="0" value="0">
+      <span class="step-count" id="stepCount">0 / 0</span>
+    </div>
+    <select id="speedSel">
+      <option value="1200">0.5x</option>
+      <option value="750" selected>1x</option>
+      <option value="420">1.8x</option>
+      <option value="220">3x</option>
+    </select>
+    <div class="kbd-hint">
+      键盘：<kbd>←</kbd>/<kbd>→</kbd> 单步 · <kbd>空格</kbd> 播放暂停 · <kbd>Home</kbd>/<kbd>End</kbd> 首末
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== 用例数据（节点位置固定，水平排列） ===== */
+var CASES = [
+  {
+    label: '用例 1：偶数回文（1,2,2,1）',
+    nodes: [
+      { val: 1, cx: 110, cy: 150 }, { val: 2, cx: 210, cy: 150 },
+      { val: 2, cx: 310, cy: 150 }, { val: 1, cx: 410, cy: 150 }
+    ]
+  },
+  {
+    label: '用例 2：非回文（1,2）',
+    nodes: [
+      { val: 1, cx: 210, cy: 150 }, { val: 2, cx: 310, cy: 150 }
+    ]
+  },
+  {
+    label: '用例 3：奇数回文（1,2,3,2,1）',
+    nodes: [
+      { val: 1, cx: 110, cy: 150 }, { val: 2, cx: 210, cy: 150 },
+      { val: 3, cx: 310, cy: 150 }, { val: 2, cx: 410, cy: 150 },
+      { val: 1, cx: 510, cy: 150 }
+    ]
+  },
+  {
+    label: '用例 4：单节点（1）',
+    nodes: [ { val: 1, cx: 260, cy: 150 } ]
+  }
+];
+
+/* ===== Java 代码（语法高亮） ===== */
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-type">boolean</span> <span class="t-fn">isPalindrome</span>(<span class="t-type">ListNode</span> <span class="t-id">head</span>) {',
+  '        <span class="t-type">ListNode</span> <span class="t-id">slow</span> = <span class="t-id">head</span>;',
+  '        <span class="t-type">ListNode</span> <span class="t-id">fast</span> = <span class="t-id">head</span>;',
+  '',
+  '        <span class="t-kw">while</span> (<span class="t-id">fast</span>.next != <span class="t-bool">null</span> && <span class="t-id">fast</span>.next.next != <span class="t-bool">null</span>) {',
+  '            <span class="t-id">fast</span> = <span class="t-id">fast</span>.next.next;',
+  '            <span class="t-id">slow</span> = <span class="t-id">slow</span>.next;',
+  '        }',
+  '        <span class="t-type">ListNode</span> <span class="t-id">right</span> = <span class="t-id">slow</span>.next;',
+  '        <span class="t-type">ListNode</span> <span class="t-id">left</span> = <span class="t-id">head</span>;',
+  '        <span class="t-id">right</span> = <span class="t-fn">reverse</span>(<span class="t-id">right</span>);',
+  '        <span class="t-kw">while</span> (<span class="t-id">right</span> != <span class="t-bool">null</span>) {',
+  '            ',
+  '            <span class="t-kw">if</span> (<span class="t-id">left</span>.val != <span class="t-id">right</span>.val) {',
+  '                <span class="t-kw">return</span> <span class="t-bool">false</span>;',
+  '            }',
+  '            <span class="t-id">left</span> = <span class="t-id">left</span>.next;',
+  '            <span class="t-id">right</span> = <span class="t-id">right</span>.next;',
+  '        }',
+  '        <span class="t-kw">return</span> <span class="t-bool">true</span>;',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-type">ListNode</span> <span class="t-fn">reverse</span>(<span class="t-type">ListNode</span> <span class="t-id">head</span>) {',
+  '        <span class="t-type">ListNode</span> <span class="t-id">dummy</span> = <span class="t-kw">new</span> <span class="t-type">ListNode</span>(0);',
+  '        <span class="t-kw">while</span> (<span class="t-id">head</span> != <span class="t-bool">null</span>) {',
+  '            <span class="t-type">ListNode</span> <span class="t-id">next</span> = <span class="t-id">head</span>.next;',
+  '            <span class="t-id">head</span>.next = <span class="t-id">dummy</span>.next;',
+  '            <span class="t-id">dummy</span>.next = <span class="t-id">head</span>;',
+  '            <span class="t-id">head</span> = <span class="t-id">next</span>;',
+  '        }',
+  '        <span class="t-kw">return</span> <span class="t-id">dummy</span>.next;',
+  '    }',
+  '}'
+];
+
+/* ===== 帧辅助 ===== */
+function frame(o) {
+  return {
+    phase: o.phase, links: o.links,
+    slow: o.slow == null ? null : o.slow,
+    fast: o.fast == null ? null : o.fast,
+    left: o.left == null ? null : o.left,
+    right: o.right == null ? null : o.right,
+    mid: o.mid == null ? null : o.mid,
+    revCur: o.revCur == null ? null : o.revCur,
+    revDone: o.revDone || [],
+    comparePair: o.comparePair || null,
+    compareResult: o.compareResult || null,
+    line: o.line, msgClass: o.msgClass || '', msg: o.msg
+  };
+}
+function cpLinks(l) { var c = {}; for (var k in l) c[k] = l[k]; return c; }
+
+/* ===== 步骤生成：三阶段 ===== */
+function buildSteps(cd) {
+  var frames = [];
+  var n = cd.nodes.length;
+  var links = {};
+  for (var i = 0; i < n; i++) links[i] = (i + 1 < n) ? i + 1 : null;
+
+  // ---- 阶段一：快慢找中点 ----
+  var slow = 0, fast = 0;
+  frames.push(frame({ phase: 'find', links: cpLinks(links), slow: 0, fast: 0, line: 6,
+    msg: 'slow、fast 都从 head 出发，进入 while 循环' }));
+  while (links[fast] !== null && links[links[fast]] !== null) {
+    fast = links[links[fast]];
+    slow = links[slow];
+    frames.push(frame({ phase: 'find', links: cpLinks(links), slow: slow, fast: fast, line: 7,
+      msg: 'fast 走 2 步到 ' + cd.nodes[fast].val + '，slow 走 1 步到 ' + cd.nodes[slow].val }));
+  }
+  frames.push(frame({ phase: 'mid', links: cpLinks(links), slow: slow, fast: fast, mid: slow, line: 10,
+    msg: 'fast 到末尾，slow 停在中点（节点 ' + cd.nodes[slow].val + '），取 right = slow.next' }));
+
+  // ---- 阶段二：反转后半 ----
+  var half = [], hh = links[slow];
+  while (hh !== null) { half.push(hh); hh = links[hh]; }
+  var revHead = null, revDone = [];
+  for (var k = 0; k < half.length; k++) {
+    var node = half[k];
+    links[node] = revHead;
+    revDone.push(node);
+    revHead = node;
+    frames.push(frame({ phase: 'reverse', links: cpLinks(links), slow: slow, mid: slow,
+      revCur: node, revDone: revDone.slice(), line: 27, msgClass: 'stage2',
+      msg: '头插：把节点 ' + cd.nodes[node].val + ' 摘下，插到已反转部分最前，箭头改向' }));
+  }
+
+  // ---- 阶段三：双指针两端比对 ----
+  var left = 0, right = revHead;
+  if (right === null) {
+    frames.push(frame({ phase: 'result', links: cpLinks(links), left: 0, line: 21, msgClass: 'good',
+      msg: '只有一个节点，无需比较，是回文，返回 true' }));
+    return frames;
+  }
+  var guard = 0;
+  while (right !== null) {
+    var lv = cd.nodes[left].val, rv = cd.nodes[right].val;
+    if (lv !== rv) {
+      frames.push(frame({ phase: 'compare', links: cpLinks(links), left: left, right: right,
+        comparePair: [left, right], compareResult: 'mismatch', line: 15, msgClass: 'bad',
+        msg: '比较两端：left=' + lv + '，right=' + rv + '，不相等，返回 false' }));
+      frames.push(frame({ phase: 'result', links: cpLinks(links), left: left, right: right,
+        comparePair: [left, right], compareResult: 'mismatch', line: 16, msgClass: 'bad',
+        msg: '不是回文链表，返回 false' }));
+      return frames;
+    }
+    frames.push(frame({ phase: 'compare', links: cpLinks(links), left: left, right: right,
+      comparePair: [left, right], compareResult: 'match', line: 15, msgClass: 'good',
+      msg: '比较两端：left=' + lv + '，right=' + rv + '，相等，两指针向中间移动' }));
+    left = links[left];
+    right = links[right];
+    if (++guard > 20) throw new Error('比对步骤异常');
+  }
+  frames.push(frame({ phase: 'result', links: cpLinks(links), left: left, line: 21, msgClass: 'good',
+    msg: '所有对应节点都相等，是回文链表，返回 true' }));
+  return frames;
+}
+
+/* ===== 全局状态与渲染锚点 ===== */
+var caseIndex = 0;
+var steps = buildSteps(CASES[0]);
+var current = 0;
+var playing = false;
+var timer = null;
+
+/* ===== 代码面板 ===== */
+function renderCode() {
+  var lineno = document.getElementById('lineno');
+  var codeLines = document.getElementById('codeLines');
+  lineno.innerHTML = '';
+  codeLines.innerHTML = '';
+  for (var i = 0; i < CODE.length; i++) {
+    var ln = document.createElement('div');
+    ln.textContent = i + 1;
+    lineno.appendChild(ln);
+    var cl = document.createElement('div');
+    cl.innerHTML = CODE[i];
+    cl.setAttribute('data-line', i + 1);
+    codeLines.appendChild(cl);
+  }
+}
+function highlightLine(line) {
+  var lines = document.getElementById('codeLines').children;
+  for (var i = 0; i < lines.length; i++) {
+    lines[i].className = (+lines[i].getAttribute('data-line') === line) ? 'hl' : '';
+  }
+}
+
+/* ===== 用例按钮 ===== */
+function renderCaseButtons() {
+  var row = document.getElementById('caseRow');
+  row.innerHTML = '';
+  CASES.forEach(function (c, idx) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (idx === caseIndex ? ' active' : '');
+    b.textContent = c.label;
+    b.addEventListener('click', function () { switchCase(idx); });
+    row.appendChild(b);
+  });
+}
+function switchCase(idx) {
+  stopPlay();
+  caseIndex = idx;
+  steps = buildSteps(CASES[idx]);
+  current = 0;
+  renderCaseButtons();
+  updateScrubRange();
+  render();
+}
+
+/* ===== 节点层与 SVG ===== */
+var stage = document.getElementById('stage');
+var nodeLayer = document.createElement('div');
+nodeLayer.style.cssText = 'position:absolute;left:0;top:0;width:620px;height:300px;';
+stage.appendChild(nodeLayer);
+
+var SVG_NS = 'http://www.w3.org/2000/svg';
+var svg = document.getElementById('svgLayer');
+(function initSvg() {
+  var defs = document.createElementNS(SVG_NS, 'defs');
+  var marker = document.createElementNS(SVG_NS, 'marker');
+  marker.setAttribute('id', 'arrowHead');
+  marker.setAttribute('markerWidth', '9');
+  marker.setAttribute('markerHeight', '9');
+  marker.setAttribute('refX', '7');
+  marker.setAttribute('refY', '4.5');
+  marker.setAttribute('orient', 'auto');
+  marker.setAttribute('markerUnits', 'userSpaceOnUse');
+  var mp = document.createElementNS(SVG_NS, 'path');
+  mp.setAttribute('d', 'M0,0 L8,4.5 L0,9 Z');
+  mp.setAttribute('fill', '#7d8590');
+  marker.appendChild(mp);
+  defs.appendChild(marker);
+  var g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('id', 'arrowG');
+  svg.appendChild(defs);
+  svg.appendChild(g);
+})();
+
+function renderStage(fr) {
+  nodeLayer.innerHTML = '';
+  var cd = CASES[caseIndex];
+  cd.nodes.forEach(function (n, id) { nodeLayer.appendChild(makeNodeEl(id, n, fr)); });
+  drawEdges(fr, cd);
+}
+
+function nodeClass(id, fr) {
+  var cls = 'node';
+  if (fr.comparePair && (fr.comparePair[0] === id || fr.comparePair[1] === id)) {
+    cls += fr.compareResult === 'match' ? ' match' : ' mismatch';
+  } else if (fr.phase === 'reverse') {
+    if (fr.revCur === id || fr.revDone.indexOf(id) >= 0) cls += ' rev-done';
+    if (fr.mid === id) cls += ' mid-node';
+  } else {
+    if (fr.slow === id) cls += ' slow-mark';
+    if (fr.fast === id) cls += ' fast-mark';
+    if (fr.left === id) cls += ' left-mark';
+    if (fr.right === id) cls += ' right-mark';
+    if (fr.mid === id && fr.phase === 'mid') cls += ' mid-node';
+  }
+  return cls;
+}
+
+function makeNodeEl(id, n, fr) {
+  var el = document.createElement('div');
+  el.style.left = (n.cx - 28) + 'px';
+  el.style.top = (n.cy - 28) + 'px';
+  el.className = nodeClass(id, fr);
+  el.textContent = n.val;
+
+  var tags = [];
+  if (fr.slow === id) tags.push(['tag-slow', 'slow']);
+  if (fr.fast === id) tags.push(['tag-fast', 'fast']);
+  if (fr.left === id) tags.push(['tag-left', 'left']);
+  if (fr.right === id) tags.push(['tag-right', 'right']);
+  if (fr.revCur === id && fr.phase === 'reverse') tags.push(['tag-right', 'rev']);
+  if (tags.length >= 2) el.classList.add('both-ptr');
+  tags.forEach(function (t, ti) {
+    var sp = ptrTag(t[0], t[1]);
+    if (tags.length >= 2) sp.classList.add(ti === 0 ? 'tag-up' : 'tag-down');
+    el.appendChild(sp);
+  });
+  return el;
+}
+function ptrTag(cls, text) {
+  var t = document.createElement('span');
+  t.className = 'ptr-tag ' + cls;
+  t.textContent = text;
+  return t;
+}
+
+function drawEdges(fr, cd) {
+  var g = document.getElementById('arrowG');
+  g.innerHTML = '';
+  cd.nodes.forEach(function (n, src) {
+    var target = fr.links[src];
+    if (target === null || target === undefined) {
+      var chip = document.createElement('div');
+      chip.className = 'null-chip';
+      chip.style.left = (n.cx + 37) + 'px';
+      chip.style.top = (n.cy - 14) + 'px';
+      chip.textContent = 'null';
+      nodeLayer.appendChild(chip);
+      addStraight(g, n.cx + 29, n.cy, n.cx + 35, n.cy);
+    } else {
+      var t = cd.nodes[target];
+      var x1, x2;
+      if (t.cx > n.cx) { x1 = n.cx + 29; x2 = t.cx - 29; }
+      else { x1 = n.cx - 29; x2 = t.cx + 29; }
+      addStraight(g, x1, n.cy, x2, t.cy);
+    }
+  });
+}
+function addStraight(g, x1, y1, x2, y2) {
+  var l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  l.setAttribute('stroke', '#7d8590');
+  l.setAttribute('stroke-width', '2');
+  l.setAttribute('marker-end', 'url(#arrowHead)');
+  g.appendChild(l);
+}
+
+/* ===== 信息卡片与消息 ===== */
+function renderInfo(fr) {
+  var cd = CASES[caseIndex];
+  function vOf(x) { return (x === null || x === undefined) ? 'null' : cd.nodes[x].val; }
+  document.getElementById('infoLeft').textContent = vOf(fr.left);
+  document.getElementById('infoRight').textContent = vOf(fr.right);
+  var stageName = { find: '① 找中点', mid: '① 找中点', reverse: '② 反转后半', compare: '③ 两端比对', result: '结论' }[fr.phase];
+  document.getElementById('infoStage').textContent = stageName;
+  var verdict = document.getElementById('infoVerdict');
+  if (fr.phase === 'result' && fr.msgClass === 'good') { verdict.textContent = '回文 true'; verdict.className = 'v green'; }
+  else if (fr.phase === 'result' && fr.msgClass === 'bad') { verdict.textContent = '非回文 false'; verdict.className = 'v red'; }
+  else if (fr.compareResult === 'mismatch') { verdict.textContent = '非回文 false'; verdict.className = 'v red'; }
+  else { verdict.textContent = '进行中…'; verdict.className = 'v'; }
+
+  var msg = document.getElementById('msg');
+  msg.className = 'msg ' + fr.msgClass;
+  var phaseText = { find: '找中点', mid: '中点', reverse: '反转', compare: '比对', result: '结论' }[fr.phase];
+  msg.innerHTML = '<span class="ph">' + phaseText + '</span>' + fr.msg;
+}
+
+/* ===== 总渲染 ===== */
+function render() {
+  var fr = steps[current];
+  renderStage(fr);
+  renderInfo(fr);
+  highlightLine(fr.line);
+  document.getElementById('scrub').value = current;
+  document.getElementById('stepCount').textContent = current + ' / ' + (steps.length - 1);
+  updateCtrlButtons();
+}
+
+/* ===== 控制栏 ===== */
+var ICONS = {
+  play: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>',
+  pause: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>',
+  prev: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M18 6v12l-9-6z" fill="currentColor"/><rect x="5" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  next: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M6 6v12l9-6z" fill="currentColor"/><rect x="17" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  reset: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>'
+};
+var playBtn = document.getElementById('playBtn');
+var prevBtn = document.getElementById('prevBtn');
+var nextBtn = document.getElementById('nextBtn');
+var resetBtn = document.getElementById('resetBtn');
+var scrub = document.getElementById('scrub');
+var speedSel = document.getElementById('speedSel');
+prevBtn.innerHTML = ICONS.prev;
+nextBtn.innerHTML = ICONS.next;
+resetBtn.innerHTML = ICONS.reset;
+
+function updatePlayLabel() {
+  playBtn.innerHTML = (playing ? ICONS.pause : ICONS.play) + '<span>' + (playing ? '暂停' : '播放') + '</span>';
+}
+function updateCtrlButtons() {
+  prevBtn.disabled = (current === 0);
+  nextBtn.disabled = (current === steps.length - 1);
+}
+function updateScrubRange() {
+  scrub.max = steps.length - 1;
+  scrub.value = current;
+}
+function stepNext() { if (current < steps.length - 1) { current++; render(); } else { stopPlay(); } }
+function stepPrev() { if (current > 0) { current--; render(); } }
+
+function tick() {
+  if (!playing) return;
+  if (current >= steps.length - 1) { stopPlay(); return; }
+  current++;
+  render();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function startPlay() {
+  if (current >= steps.length - 1) current = 0;
+  playing = true;
+  updatePlayLabel();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function stopPlay() {
+  playing = false;
+  if (timer) { clearTimeout(timer); timer = null; }
+  updatePlayLabel();
+}
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+
+playBtn.addEventListener('click', togglePlay);
+nextBtn.addEventListener('click', stepNext);
+prevBtn.addEventListener('click', stepPrev);
+resetBtn.addEventListener('click', function () { stopPlay(); current = 0; render(); });
+scrub.addEventListener('input', function () {
+  stopPlay();
+  current = +scrub.value;
+  render();
+});
+
+/* ===== 键盘 ===== */
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  switch (e.key) {
+    case 'ArrowRight': e.preventDefault(); stepNext(); break;
+    case 'ArrowLeft': e.preventDefault(); stepPrev(); break;
+    case ' ': e.preventDefault(); togglePlay(); break;
+    case 'Home': e.preventDefault(); stopPlay(); current = 0; render(); break;
+    case 'End': e.preventDefault(); stopPlay(); current = steps.length - 1; render(); break;
+  }
+});
+
+/* ===== 初始化 ===== */
+renderCode();
+renderCaseButtons();
+updateScrubRange();
+updatePlayLabel();
+render();
+</script>
+</body>
+</html>

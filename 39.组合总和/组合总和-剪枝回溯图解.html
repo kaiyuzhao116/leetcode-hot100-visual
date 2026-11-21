@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeetCode 39 组合总和：可重复选 + 剪枝回溯图解</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23131718'/%3E%3Ccircle cx='11' cy='11' r='4' fill='%231A5470'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%239C7412'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#EDEEE9; --paper-hi:#F8F9F5;
+  --ink:#131718; --ink-2:#4A5257; --ink-3:#7B8387;
+  --rule:rgba(19,23,24,.15); --rule-2:rgba(19,23,24,.075);
+  --blue:#1A5470; --blue-bg:#D8E6EC;
+  --gold:#9C7412; --gold-bg:rgba(156,116,18,.12);
+  --red:#9E3529; --red-bg:rgba(158,53,41,.1);
+  --green:#2F6B3A; --green-bg:rgba(47,107,58,.12);
+  --gline:rgba(19,23,24,.045);
+  --sans:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --serif:"Songti SC","SimSun","STSong","Noto Serif SC",Georgia,serif;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.8;-webkit-font-smoothing:antialiased}
+.grid-layer{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--gline) 1px,transparent 1px),linear-gradient(90deg,var(--gline) 1px,transparent 1px);background-size:34px 34px}
+
+.wrap{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:0 20px}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.05em;color:var(--ink-3);display:flex;align-items:center;gap:10px;margin-top:38px}
+.kicker::before{content:"";width:22px;height:1px;background:var(--ink-3)}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(27px,4.6vw,40px);line-height:1.25;margin:14px 0 0}
+.lede{margin:16px 0 0;font-size:16px;color:var(--ink-2);max-width:48em}
+.lede b{color:var(--ink)}
+
+.console{margin-top:26px;border:1px solid var(--rule);background:var(--paper-hi)}
+.console-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px;border-bottom:1px solid var(--rule-2)}
+.btn{font-family:var(--sans);font-size:14px;padding:7px 15px;border:1px solid rgba(19,23,24,.55);background:transparent;color:var(--ink);cursor:pointer;min-height:40px;line-height:1.4}
+.btn:hover{background:rgba(19,23,24,.06)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.32;cursor:default}
+.btn.primary{background:var(--ink);color:var(--paper-hi);border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.ghost{border-color:var(--rule);color:var(--ink-2)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule)}
+.seg button{font-family:var(--sans);font-size:12.5px;padding:8px 9px;border:0;background:transparent;color:var(--ink-2);cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper-hi)}
+.seg button+button{border-left:1px solid var(--rule)}
+.step-ind{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-left:auto}
+
+.cand-wrap{padding:14px 18px 6px}
+.cand-title{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-bottom:8px}
+.cand-row{display:flex;gap:8px;flex-wrap:wrap}
+.cand{border:1px solid var(--rule);background:#fff;min-width:64px;padding:7px 6px 6px;text-align:center;transition:border-color .15s,background .15s}
+.cand .ci{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);display:block}
+.cand .v{font-family:var(--mono);font-size:17px;font-weight:600;color:var(--ink-2);display:block;line-height:1.3}
+.cand .why{font-size:11px;line-height:1.3;display:block;margin-top:2px;min-height:15px}
+.cand.cur{border-width:2.2px}
+.cand.out{opacity:.55;background:var(--paper)} .cand.out .why{color:var(--ink-3)}
+.cand.idle{opacity:.85}
+.cand.picked{border-color:var(--blue);background:var(--blue-bg)} .cand.picked .v{color:var(--blue)} .cand.picked .why{color:var(--blue)}
+
+.tree-svg{padding:6px 10px 2px}
+.tree-svg svg{display:block;width:100%;height:auto}
+.console-text{padding:12px 16px 14px;font-size:14.5px;line-height:1.8;color:var(--ink-2);border-top:1px solid var(--rule-2);min-height:66px}
+.console-text b{color:var(--ink)}
+.console-text .gold{color:var(--gold);font-weight:600}
+.console-text .red{color:var(--red);font-weight:600}
+.console-text .green{color:var(--green);font-weight:600}
+
+.stat-grid{display:grid;gap:12px;margin-top:16px}
+@media(min-width:760px){.stat-grid{grid-template-columns:repeat(3,1fr)}}
+.stat{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.stat h3{font-family:var(--mono);font-size:11.5px;font-weight:400;margin:0 0 9px;color:var(--ink-3)}
+.path-box{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+.pill{font-family:var(--mono);font-size:13px;padding:3px 9px;border:1px solid rgba(19,23,24,.4);color:var(--ink)}
+.pill.cur{border-color:var(--gold);background:var(--gold-bg)}
+.pill.over{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.sum-line{display:flex;align-items:baseline;gap:8px}
+.sum-line .big{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--blue)}
+.sum-line .tgt{font-family:var(--mono);color:var(--ink-3);font-size:14px}
+.bar{height:7px;background:rgba(19,23,24,.1);margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold);transition:width .2s}
+.bar i.over{background:var(--red)}
+.sum-rest{font-size:12px;color:var(--ink-3);margin-top:7px}
+.res-list{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.res-item{font-family:var(--mono);font-size:12px;border:1px solid rgba(26,84,112,.4);background:rgba(216,230,236,.55);padding:2px 7px;color:var(--blue)}
+.res-empty{font-size:13px;color:var(--ink-3)}
+
+.code-panel{margin-top:22px;display:grid;gap:14px}
+@media(min-width:880px){.code-panel{grid-template-columns:1.24fr .76fr}}
+.codebox{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.codebox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px;font-weight:700}
+.code-scroll{max-height:480px;overflow:auto}
+pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.9;color:var(--ink-2);white-space:pre}
+pre .ln{display:block;padding:0 6px;margin:0 -6px;border-left:2px solid transparent}
+pre .ln.act{background:var(--gold-bg);border-left-color:var(--gold);color:var(--ink)}
+.tipbox{border:1px solid var(--rule);background:var(--paper-hi);padding:14px 16px}
+.tipbox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px}
+.tipbox ul{margin:0;padding-left:1.2em;font-size:14px;color:var(--ink-2);line-height:1.85}
+.tipbox li{margin:5px 0}
+.tipbox b{color:var(--ink)}
+
+.note{border-left:2px solid var(--gold);background:var(--gold-bg);padding:14px 16px;margin-top:22px;font-size:14.5px;color:var(--ink-2);line-height:1.8;max-width:54em}
+.note b{color:var(--ink)}
+.note.blue{border-left-color:var(--blue);background:rgba(26,84,112,.07)}
+code{font-family:var(--mono);font-size:.92em;background:rgba(19,23,24,.06);padding:1px 5px}
+
+footer{margin-top:60px;padding:26px 0 40px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink-3);line-height:1.9}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--paper-hi);font-size:14px;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.001s !important;animation-duration:.001s !important}}
+</style>
+</head>
+<body>
+<div class="grid-layer" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="kicker">LeetCode 39 · 中等 · 回溯 / 剪枝</div>
+  <h1>组合总和：数字可重复选，<br>sum 超了就剪枝</h1>
+  <p class="lede">题目：数组<b>无重复元素</b>，找出所有和为 <b>target</b> 的组合，<b>同一个数字可以无限次使用</b>。你的写法用成员变量 <b>sum 记当前和</b>，递归时传 <b>i（不是 i+1）</b>实现重复选；sum&gt;target 直接返回剪枝，sum==target 收集。下面把每次加和、剪枝都标出来。</p>
+
+  <div class="console">
+    <div class="console-bar">
+      <button class="btn primary" id="btnPrev">上一步</button>
+      <button class="btn primary" id="btnNext">下一步</button>
+      <button class="btn" id="btnPlay">自动播放</button>
+      <button class="btn ghost" id="btnReset">重置</button>
+      <div class="seg" role="group" id="caseSeg"></div>
+      <span class="step-ind" id="stepInd"></span>
+    </div>
+
+    <div class="cand-wrap">
+      <div class="cand-title">本层候选（for 从 index 开始；蓝色＝当前选，灰色＝本层起点之前）</div>
+      <div class="cand-row" id="candRow"></div>
+    </div>
+
+    <div class="tree-svg">
+      <svg id="stage" viewBox="0 0 920 300" role="img" aria-label="组合总和回溯剪枝树"></svg>
+    </div>
+    <div class="console-text" id="stepText"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <h3>当前路径 path</h3>
+      <div class="path-box" id="pathBox"></div>
+    </div>
+    <div class="stat">
+      <h3>当前和 sum / 目标 target</h3>
+      <div class="sum-line"><span class="big" id="sumVal">0</span><span class="tgt">/ <span id="tgtVal"></span></span></div>
+      <div class="bar"><i id="sumBar"></i></div>
+      <div class="sum-rest" id="sumRest"></div>
+    </div>
+    <div class="stat">
+      <h3>已收集组合 res</h3>
+      <div class="res-list" id="resBox"></div>
+    </div>
+  </div>
+
+  <div class="code-panel">
+    <div class="codebox">
+      <h3>你的代码（当前执行行高亮）</h3>
+      <div class="code-scroll">
+<pre id="srcCode"><span class="ln" data-l="1">class Solution {</span>
+<span class="ln" data-l="2">    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();</span>
+<span class="ln" data-l="3">    List&lt;Integer&gt; path = new ArrayList&lt;&gt;();</span>
+<span class="ln" data-l="4">    int sum = 0;</span>
+<span class="ln" data-l="5">    public List&lt;List&lt;Integer&gt;&gt; combinationSum(int[] candidates, int target) {</span>
+<span class="ln" data-l="6">        </span>
+<span class="ln" data-l="7">        </span>
+<span class="ln" data-l="8">        backtraking(candidates,target,0);</span>
+<span class="ln" data-l="9">        return res;</span>
+<span class="ln" data-l="10"></span>
+<span class="ln" data-l="11">    }</span>
+<span class="ln" data-l="12">    public void backtraking(int[] candidates,int target,int index ){</span>
+<span class="ln" data-l="13">        if(sum &gt; target){</span>
+<span class="ln" data-l="14">            return;</span>
+<span class="ln" data-l="15">        }</span>
+<span class="ln" data-l="16">        if(sum == target){</span>
+<span class="ln" data-l="17">            res.add(new ArrayList&lt;&gt;(path));</span>
+<span class="ln" data-l="18">            return;</span>
+<span class="ln" data-l="19">        }</span>
+<span class="ln" data-l="20">        for(int i = index ;i &lt; candidates.length;i++){</span>
+<span class="ln" data-l="21">            sum = sum + candidates[i];</span>
+<span class="ln" data-l="22">            path.add(candidates[i]);</span>
+<span class="ln" data-l="23">            backtraking(candidates,target,i);</span>
+<span class="ln" data-l="24">            path.remove(path.size() -1);</span>
+<span class="ln" data-l="25">            sum = sum -candidates[i];    </span>
+<span class="ln" data-l="26">        }</span>
+<span class="ln" data-l="27">    }</span>
+<span class="ln" data-l="28">}</span></pre>
+      </div>
+    </div>
+    <div class="tipbox">
+      <h3>看图抓三个点</h3>
+      <ul>
+        <li><b>递归传 i</b>：同一数字能反复选，传 i+1 就只能用一次。</li>
+        <li><b>sum&gt;target 剪枝</b>：正数再加只会更大，此路不通直接返回。</li>
+        <li><b>双变量一起回溯</b>：path 撤销、sum 减回，缺一不可。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note blue"><b>复杂度：</b>设实际搜索到的节点数为 K（含被剪枝的分支），每个节点做 O(1) 加和与拷贝，时间约 <b>O(K)</b>；递归栈深度不超过 target（最小元素为 1 时），辅助空间 <b>O(target)</b>。若先排序还能在同层更早剪枝，但当前写法不排序也正确。</div>
+  <div class="note"><b>为什么递归传 i 而不是 i+1：</b>题目允许同一数字无限次使用，传 i 让下一层仍能从当前这个数字开始选（包括再选它自己）；index 则保证组合按「不回头」的顺序生成，避免 [2,3] 和 [3,2] 这样的重复。</div>
+
+  <footer>
+    LeetCode 39 组合总和 · 可重复选 + 剪枝回溯图解<br>
+    金色命中、红色剪枝、蓝色当前路径；每个命中节点就是一个和为 target 的组合。
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+var NS='http://www.w3.org/2000/svg';
+function svgEl(tag,attrs){var e=document.createElementNS(NS,tag);if(attrs)for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
+var toastTimer=null;
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('on');},2200);}
+
+var CASES=[
+  {c:[2,3,6,7],t:7},{c:[2,3,5],t:8},{c:[2],t:1},{c:[1],t:2},
+  {c:[2,4],t:8},{c:[3,5,7],t:10},{c:[1,2],t:3},{c:[7,3,2],t:7}
+];
+
+/* 回溯剪枝树（含 over/hit 节点）*/
+function buildDecisionTree(candidates,target){
+  var nodes=[],path=[],sum=0;
+  function rec(parentId,index){
+    var id=nodes.length;
+    var kind=sum>target?'over':(sum===target?'hit':'run');
+    nodes.push({path:path.slice(),parent:parentId,children:[],depth:path.length,
+      index:index,sum:sum,kind:kind});
+    if(parentId>=0)nodes[parentId].children.push(id);
+    if(kind!=='run')return;
+    for(var i=index;i<candidates.length;i++){
+      sum+=candidates[i];path.push(candidates[i]);
+      rec(id,i);
+      path.pop();sum-=candidates[i];
+    }
+  }
+  rec(-1,0);
+  var leaves=nodes.filter(function(nd){return nd.children.length===0;});
+  var W=920,m=72;
+  var sp=leaves.length>1?(W-2*m)/(leaves.length-1):0;
+  leaves.forEach(function(nd,i){nd.x=m+i*sp;});
+  for(var k=nodes.length-1;k>=0;k--){
+    var nd=nodes[k];
+    if(nd.children.length){nd.x=nd.children.reduce(function(s,c){return s+nodes[c].x;},0)/nd.children.length;}
+    nd.y=38+nd.depth*78;
+  }
+  var byKey={};
+  nodes.forEach(function(nd){nd.key=nd.path.join('>')+'@'+nd.index;byKey[nd.key]=nd;});
+  var maxDepth=nodes.reduce(function(mx,nd){return Math.max(mx,nd.depth);},0);
+  return {nodes:nodes,byKey:byKey,height:38+maxDepth*78+36};
+}
+
+/* 帧（与 verify_39 一致）*/
+function buildSteps(candidates,target){
+  var path=[],sum=0,collected=[],steps=[];
+  function idleCand(index){
+    return candidates.map(function(v,i){return {i:i,val:v,status:i<index?'out':'idle',cur:false};});
+  }
+  function snap(phase,line,index,cand,ci,over){
+    steps.push({phase:phase,line:line,path:path.slice(),sum:sum,index:index,i:ci,
+      cand:cand.map(function(c){return {i:c.i,val:c.val,status:c.status,cur:c.cur};}),
+      collected:collected.map(function(p){return p.slice();}),over:!!over});
+  }
+  function bt(index){
+    if(sum>target){snap('over',13,index,idleCand(index),-1,true);return;}
+    if(sum===target){collected.push(path.slice());snap('hit',17,index,idleCand(index),-1);return;}
+    var cand=idleCand(index);
+    snap('enter',20,index,cand,-1);
+    for(var i=index;i<candidates.length;i++){
+      sum=sum+candidates[i];
+      path.push(candidates[i]);
+      cand[i].cur=true;cand[i].status='picked';
+      snap('pick',21,index,cand,i);
+      cand[i].cur=false;
+      bt(i);
+      path.pop();
+      sum=sum-candidates[i];
+      snap('undo',25,index,cand,i);
+    }
+  }
+  bt(0);
+  snap('done',9,candidates.length,idleCand(candidates.length),-1);
+  return steps;
+}
+
+var tree=null,steps=null,step=0,curTarget=CASES[0].t;
+var stage=document.getElementById('stage');
+function render(){
+  var f=steps[step];
+  renderCand(f);renderTree(f);renderStats(f);renderText(f);renderCode(f);
+  document.getElementById('stepInd').textContent='步骤 '+(step+1)+' / '+steps.length;
+  document.getElementById('btnPrev').disabled=step===0;
+  document.getElementById('btnNext').disabled=step===steps.length-1;
+}
+function renderCand(f){
+  document.getElementById('candRow').innerHTML=f.cand.map(function(c){
+    var why='';
+    if(c.status==='out')why='起点前';
+    else if(c.status==='picked')why='当前选';
+    return '<div class="cand '+c.status+(c.cur?' cur':'')+'">'+
+      '<span class="ci">i='+c.i+'</span><span class="v">'+c.val+'</span>'+
+      '<span class="why">'+why+'</span></div>';
+  }).join('');
+}
+function renderTree(f){
+  stage.textContent='';
+  var curKey=f.path.join('>')+'@'+f.index;
+  var chain={};
+  var t=tree.byKey[curKey];
+  if(t){var tt=t;while(tt){chain[tt.key]=true;tt=tt.parent>=0?tree.nodes[tt.parent]:null;}}
+  tree.nodes.forEach(function(nd){
+    if(nd.parent<0)return;
+    var p=tree.nodes[nd.parent];
+    var onPath=chain[nd.key]&&chain[p.key];
+    stage.appendChild(svgEl('line',{x1:p.x,y1:p.y+14,x2:nd.x,y2:nd.y-14,
+      stroke:onPath?'#9C7412':'rgba(19,23,24,.2)','stroke-width':onPath?2.2:1.2}));
+  });
+  tree.nodes.forEach(function(nd){
+    var isCur=nd.key===curKey;
+    var fill,stroke,tcol;
+    if(nd.kind==='over'){fill='#fff';stroke='#9E3529';tcol='#9E3529';}
+    else if(nd.kind==='hit'){fill='#9C7412';stroke='#9C7412';tcol='#F8F9F5';}
+    else{fill='#fff';stroke='rgba(19,23,24,.32)';tcol='#4A5257';}
+    if(isCur){fill='#1A5470';stroke='#1A5470';tcol='#F8F9F5';}
+    stage.appendChild(svgEl('circle',{cx:nd.x,cy:nd.y,r:13,fill:fill,stroke:stroke,'stroke-width':1.4}));
+    var tx=svgEl('text',{x:nd.x,y:nd.y+4,'text-anchor':'middle','font-size':11.5,fill:tcol});
+    tx.textContent=nd.depth===0?'∅':nd.path[nd.path.length-1];
+    stage.appendChild(tx);
+    if(nd.kind==='over'){
+      var x2=svgEl('text',{x:nd.x,y:nd.y+28,'text-anchor':'middle','font-size':10,fill:'#9E3529'});
+      x2.textContent='剪枝';stage.appendChild(x2);
+    }
+  });
+}
+function renderStats(f){
+  var pathBox=document.getElementById('pathBox');
+  pathBox.innerHTML=f.path.length
+    ?f.path.map(function(v,i){
+        var cls=(i===f.path.length-1)?(f.over?' over':' cur'):'';
+        return '<span class="pill'+(cls?' '+cls:'')+'">'+v+'</span>';}).join('')
+    :'<span class="res-empty">空（尚未选数字）</span>';
+  document.getElementById('sumVal').textContent=f.sum;
+  document.getElementById('tgtVal').textContent=curTarget;
+  var pct=Math.min(100,Math.round(f.sum/curTarget*100));
+  var bar=document.getElementById('sumBar');
+  bar.style.width=pct+'%';
+  bar.classList.toggle('over',f.sum>curTarget);
+  var rest=curTarget-f.sum;
+  document.getElementById('sumRest').textContent=
+    f.sum>curTarget?('已超出 '+(-rest)):('还差 '+(rest===0?0:rest));
+  document.getElementById('resBox').innerHTML=f.collected.length
+    ?f.collected.map(function(p){return '<span class="res-item">['+p.join(',')+']</span>';}).join('')
+    :'<span class="res-empty">尚未收集</span>';
+}
+function renderText(f){
+  var host=document.getElementById('stepText'),s;
+  switch(f.phase){
+    case 'enter':
+      s='sum='+f.sum+' 未达 target，从 index='+f.index+' 开始逐个尝试'; break;
+    case 'pick':
+      s='加上 '+f.cand[f.i].val+' 后 <b>sum='+f.sum+'</b>，递归（仍可从位置 '+f.i+' 选）'; break;
+    case 'over':
+      s='<span class="red">sum='+f.sum+' &gt; target，剪枝返回</span>，不再往下加'; break;
+    case 'hit':
+      s='<span class="gold">sum 正好等于 target，收集组合 ['+f.path.join(',')+']</span>'; break;
+    case 'undo':
+      s='子层返回，撤销 '+f.cand[f.i].val+'，sum 减回 '+f.sum+'，试下一个'; break;
+    case 'done':
+      s='全部回溯结束，共收集 <b>'+f.collected.length+'</b> 个组合'; break;
+  }
+  host.innerHTML=s+'。';
+}
+function renderCode(f){
+  document.querySelectorAll('#srcCode .ln').forEach(function(ln){
+    ln.classList.toggle('act',Number(ln.getAttribute('data-l'))===f.line);
+  });
+}
+
+var playTimer=null;
+function stopPlay(){if(playTimer){clearInterval(playTimer);playTimer=null;}document.getElementById('btnPlay').textContent='自动播放';}
+document.getElementById('btnNext').addEventListener('click',function(){stopPlay();if(step<steps.length-1){step++;render();}});
+document.getElementById('btnPrev').addEventListener('click',function(){stopPlay();if(step>0){step--;render();}});
+document.getElementById('btnReset').addEventListener('click',function(){stopPlay();step=0;render();});
+document.getElementById('btnPlay').addEventListener('click',function(){
+  if(playTimer){stopPlay();return;}
+  if(step===steps.length-1){step=0;render();}
+  document.getElementById('btnPlay').textContent='暂停';
+  playTimer=setInterval(function(){
+    if(step>=steps.length-1){stopPlay();toast('演示结束：共 '+steps[steps.length-1].collected.length+' 个组合');return;}
+    step++;render();
+  },600);
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'){e.preventDefault();stopPlay();if(step<steps.length-1){step++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();stopPlay();if(step>0){step--;render();}}
+  else if(e.key===' '){e.preventDefault();document.getElementById('btnPlay').click();}
+  else if(e.key==='Home'){e.preventDefault();stopPlay();step=0;render();}
+  else if(e.key==='End'){e.preventDefault();stopPlay();step=steps.length-1;render();}
+});
+
+var seg=document.getElementById('caseSeg');
+CASES.forEach(function(cs,i){
+  var b=document.createElement('button');
+  b.setAttribute('aria-pressed',i===0?'true':'false');
+  b.textContent='['+cs.c.join(',')+'] t='+cs.t;
+  b.addEventListener('click',function(){switchCase(i);});
+  seg.appendChild(b);
+});
+function switchCase(i){
+  stopPlay();step=0;
+  var cs=CASES[i];curTarget=cs.t;
+  tree=buildDecisionTree(cs.c,cs.t);
+  stage.setAttribute('viewBox','0 0 920 '+tree.height);
+  steps=buildSteps(cs.c,cs.t);
+  render();
+  document.querySelectorAll('#caseSeg button').forEach(function(b,j){
+    b.setAttribute('aria-pressed',j===i?'true':'false');
+  });
+}
+
+tree=buildDecisionTree(CASES[0].c,CASES[0].t);
+stage.setAttribute('viewBox','0 0 920 '+tree.height);
+steps=buildSteps(CASES[0].c,CASES[0].t);
+render();
+</script>
+</body>
+</html>

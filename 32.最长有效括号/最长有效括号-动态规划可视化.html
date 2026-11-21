@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>32. 最长有效括号 · 动态规划可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>()</text></svg>">
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+    --purple:#bc8cff;--orange:#e3b341;--red:#f85149;--mono:"Cascadia Code",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.5;padding:22px;max-width:1180px;margin:0 auto}
+  .top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:21px;font-weight:700}
+  .diff{font-size:12px;color:var(--red);border:1px solid var(--red);border-radius:6px;padding:2px 8px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:var(--mono);font-size:13px}
+  .casebtn.active{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px}
+  .rule{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .rule h3{font-size:13px;margin-bottom:8px}
+  .rule.c1 h3{color:var(--blue)}
+  .rule.c2 h3{color:var(--purple)}
+  .rule p{font-size:12px;color:var(--muted)}
+  .rule code{color:var(--text);font-size:12px}
+  .vizwrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+  .vizwrap h2{font-size:14px;margin-bottom:14px;color:var(--muted);font-weight:600}
+  .strrow{display:flex;gap:0;overflow-x:auto;padding:30px 6px 8px;min-height:120px;position:relative}
+  .cell{flex:0 0 auto;width:60px;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;padding:6px 0;border-radius:8px;border:1.5px solid transparent}
+  .cell .idx{font-size:10px;color:var(--muted)}
+  .cell .ch{font-size:22px;font-weight:700;width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--panel2);border:1px solid var(--border)}
+  .cell.lp .ch{color:var(--green)}
+  .cell.rp .ch{color:var(--orange)}
+  .cell .lv{font-size:12px;font-weight:700;color:var(--muted);min-height:16px}
+  .cell .lv.has{color:var(--blue)}
+  .cell.cur{border-color:var(--orange)}
+  .cell.cur .ch{box-shadow:0 0 0 2px var(--orange)}
+  .cell.pair .ch{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue)}
+  .cell.valid{background:rgba(63,185,80,.12)}
+  .cell.maxbest{border-color:var(--purple)}
+  .cell.maxbest .ch{box-shadow:0 0 0 2px var(--purple)}
+  .cell.skip{opacity:.55}
+  .arc{position:absolute;top:0;height:18px;border-top:2px solid var(--blue);border-radius:12px 12px 0 0;pointer-events:none}
+  .msg{background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px;min-height:44px}
+  .infobar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .icard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .icard .val{font-size:19px;font-weight:700}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  button.ctl{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 14px;cursor:pointer;font-family:var(--mono);font-size:13px}
+  button.ctl:hover{border-color:var(--blue)}
+  button.ctl.primary{background:var(--blue);color:#0d1117;border-color:var(--blue);font-weight:700}
+  .slider{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-size:12px;color:var(--muted);min-width:64px;text-align:right}
+  .speed{display:flex;gap:4px;margin-left:auto}
+  .spd{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;font-family:var(--mono);font-size:11px}
+  .spd.active{border-color:var(--green);color:var(--green)}
+  .codewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto}
+  .codewrap h2{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .ln{display:block;padding:2px 10px;font-size:13px;white-space:pre;border-left:3px solid transparent}
+  .ln.on{background:rgba(88,166,255,.13);border-left-color:var(--blue)}
+  .kw{color:#ff7b72}.str{color:#a5d6ff}.cmt{color:#8b949e;font-style:italic}.num{color:#79c0ff}
+  .methodbar{display:flex;gap:8px;margin-bottom:16px}
+  .mbtn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:9px 18px;cursor:pointer;font-family:var(--mono);font-size:14px;font-weight:700}
+  .mbtn.active{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+  .stackpanel{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .splab{font-size:11px;color:var(--muted)}
+  .stkbox{display:flex;gap:6px;align-items:flex-end;min-height:42px}
+  .stkel{width:38px;height:38px;border-radius:8px;background:var(--panel2);border:1.5px solid var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--green);animation:popIn .25s ease}
+  .stkel.top{box-shadow:0 0 0 2px var(--green)}
+  .stktop-tag{font-size:10px;color:var(--green);margin-left:4px}
+  .cell .mk{font-size:11px;font-weight:700;min-height:16px;color:var(--muted)}
+  .cell.marked .ch{border-color:var(--green)}
+  .cell.marked .mk{color:var(--green)}
+  .cell.badmark .ch{border-color:var(--red);box-shadow:0 0 0 2px var(--red)}
+  .cell.scan{border-color:var(--orange)}
+  .cell.bestrun{background:rgba(188,140,255,.14)}
+  @media(max-width:760px){.cards{grid-template-columns:1fr}.infobar{grid-template-columns:1fr}.cell{width:52px}.cell .ch{width:32px;height:32px;font-size:18px}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>32. 最长有效括号</h1>
+    <span class="diff">困难</span>
+  </div>
+  <div class="sub">两种方法都是 O(n) 时间 O(n) 空间 · 可在下方切换</div>
+
+  <div class="methodbar" id="methodbar">
+    <button class="mbtn active" data-m="dp">动态规划</button>
+    <button class="mbtn" data-m="stack">栈标记法</button>
+  </div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="cards" id="dpCards">
+    <div class="rule c1">
+      <h3>情况1：s[i-1] = '('　形如 ....()</h3>
+      <p>最后两个直接配对，再拼上更前面的长度：<br><code>len[i] = len[i-2] + 2</code>（i-2 越界只取 2）</p>
+    </div>
+    <div class="rule c2">
+      <h3>情况2：s[i-1] = ')'　形如 ....))</h3>
+      <p>跨过前面有效子串找左括号：<code>m = i-len[i-1]-1</code>，若 s[m]='(' 则<br><code>len[i] = len[i-1]+2+len[m-1]</code></p>
+    </div>
+  </div>
+
+  <div class="cards" id="stackCards" style="display:none">
+    <div class="rule c1">
+      <h3>阶段1：标记配对位置</h3>
+      <p>栈存"未配对左括号的下标"。遇 '(' 压栈；遇 ')' 且栈非空就弹出，把这两个位置 isValid 都标 true。</p>
+    </div>
+    <div class="rule c2">
+      <h3>阶段2：找最长连续 true</h3>
+      <p>遍历 isValid，连续 true 用 cnt 计数、ans 记最大值；遇 false 就 cnt 清零。</p>
+    </div>
+  </div>
+
+  <div class="vizwrap">
+    <h2 id="vizTitle">字符串与 len 数组（蓝框=本次配对，绿底=当前有效区间，紫框=历史最长）</h2>
+    <div class="stackpanel" id="stackpanel" style="display:none">
+      <span class="splab">栈（未配对左括号下标）</span>
+      <div class="stkbox" id="stkbox"></div>
+    </div>
+    <div class="strrow" id="strrow"></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar" id="dpInfo">
+    <div class="icard"><div class="lab">当前位置 i</div><div class="val" id="curI" style="color:var(--orange)">—</div></div>
+    <div class="icard"><div class="lab">len[i]</div><div class="val" id="curLen" style="color:var(--blue)">—</div></div>
+    <div class="icard"><div class="lab">maxLen</div><div class="val" id="maxLen" style="color:var(--purple)">0</div></div>
+  </div>
+
+  <div class="infobar" id="stackInfo" style="display:none">
+    <div class="icard"><div class="lab">阶段</div><div class="val" id="stPhase" style="color:var(--orange)">1 标记</div></div>
+    <div class="icard"><div class="lab">cnt 连续计数</div><div class="val" id="stCnt" style="color:var(--blue)">0</div></div>
+    <div class="icard"><div class="lab">ans 最长</div><div class="val" id="stAns" style="color:var(--purple)">0</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl primary" id="play"><span id="playtxt">播放</span></button>
+    <button class="ctl" id="prev">上一步</button>
+    <button class="ctl" id="next">下一步</button>
+    <button class="ctl" id="reset">重置</button>
+    <input type="range" class="slider" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+    <div class="speed">
+      <button class="spd" data-ms="1200">0.5x</button>
+      <button class="spd active" data-ms="800">1x</button>
+      <button class="spd" data-ms="400">2x</button>
+    </div>
+  </div>
+
+  <div class="codewrap">
+    <h2 id="codeTitle">Java 动态规划代码</h2>
+    <div id="code"></div>
+  </div>
+
+<script>
+const CASES=['(()',')()())','(())','()(())'];
+const CODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public int</span> longestValidParentheses(String s) {',
+  '      <span class="kw">int</span>[] len = <span class="kw">new int</span>[s.length()];',
+  '      <span class="kw">int</span> maxLen = 0;',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i=1;i&lt;s.length();i++){',
+  '          <span class="kw">if</span> (s.charAt(i)==<span class="str">\')\'</span>){',
+  '              <span class="kw">if</span> (s.charAt(i-1)==<span class="str">\'(\'</span>){',
+  '                  <span class="kw">if</span> (i-2&gt;=0){',
+  '                      len[i] = len[i-2]+2;',
+  '                  } <span class="kw">else</span> {',
+  '                      len[i] = 2;',
+  '                  }',
+  '              } <span class="kw">else</span> {',
+  '                  <span class="kw">int</span> m = i-len[i-1]-1;',
+  '                  <span class="kw">if</span> (m&gt;=0 &amp;&amp; s.charAt(m)==<span class="str">\'(\'</span>){',
+  '                      <span class="kw">if</span> (m-1&gt;=0){',
+  '                          len[i] = len[i-1]+2+len[m-1];',
+  '                      } <span class="kw">else</span> {',
+  '                          len[i] = len[i-1]+2;',
+  '                      }',
+  '                  }',
+  '              }',
+  '              <span class="kw">if</span> (len[i]&gt;maxLen){',
+  '                  maxLen = len[i];',
+  '              }',
+  '          }',
+  '      }',
+  '      <span class="kw">return</span> maxLen;',
+  '  }',
+  '}'
+];
+const SCODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public int</span> longestValidParentheses(String s) {',
+  '      <span class="kw">int</span> n = s.length();',
+  '      <span class="kw">boolean</span>[] isValid = <span class="kw">new boolean</span>[n];',
+  '      Deque&lt;Integer&gt; st = <span class="kw">new</span> ArrayDeque&lt;&gt;();',
+  '      <span class="cmt">// 阶段1：标记哪些括号是配对的</span>',
+  '      <span class="kw">for</span> (<span class="kw">int</span> i=0;i&lt;n;i++){',
+  '          <span class="kw">if</span> (s.charAt(i)==<span class="str">\'(\'</span>){',
+  '              st.push(i);',
+  '          } <span class="kw">else if</span> (!st.isEmpty()){',
+  '              isValid[i] = isValid[st.pop()] = <span class="kw">true</span>;',
+  '          }',
+  '      }',
+  '      <span class="kw">int</span> ans=0, cnt=0;',
+  '      <span class="kw">for</span> (<span class="kw">boolean</span> b : isValid){',
+  '          <span class="kw">if</span> (b){',
+  '              cnt++;',
+  '              ans = Math.max(ans,cnt);',
+  '          } <span class="kw">else</span> {',
+  '              cnt = 0;',
+  '          }',
+  '      }',
+  '      <span class="kw">return</span> ans;',
+  '  }',
+  '}'
+];
+
+function buildSteps(s){
+  const n=s.length;
+  const len=new Array(n).fill(0);
+  let maxLen=0,maxRange=null;
+  const out=[];
+  const base=()=>({len:len.slice(),maxLen,cur:-1,pair:null,valid:null,maxbest:maxRange?maxRange.slice():null,m:null,skip:null});
+  const push=e=>out.push(Object.assign(base(),e));
+  push({msg:'初始化：len 数组全为 0，maxLen=0。从 i=1 开始扫描（i=0 前面没字符，无法配对）。',line:3});
+  for(let i=1;i<n;i++){
+    if(s[i]===')'){
+      if(s[i-1]==='('){
+        push({cur:i,msg:`位置 ${i} 是 ')'，前面 i-1=${i-1} 是 '('，最后两个直接配对（情况1）。`,line:6});
+        if(i-2>=0){
+          len[i]=len[i-2]+2;
+          push({cur:i,pair:[i-1,i],valid:[i-len[i]+1,i],msg:`i-2=${i-2} 合法，len[${i}] = len[${i-2}]+2 = ${len[i-2]}+2 = <b>${len[i]}</b>。`,line:8});
+        }else{
+          len[i]=2;
+          push({cur:i,pair:[i-1,i],valid:[i-1,i],msg:`i-2 越界，len[${i}] = <b>2</b>。`,line:10});
+        }
+      }else{
+        const m=i-len[i-1]-1;
+        push({cur:i,m,msg:`位置 ${i} 是 ')'，前面也是 ')'（情况2）。先算 m = ${i}-len[${i-1}]-1 = ${i}-${len[i-1]}-1 = <b>${m}</b>。`,line:13});
+        if(m>=0 && s[m]==='('){
+          if(m-1>=0){
+            len[i]=len[i-1]+2+len[m-1];
+            push({cur:i,m,pair:[m,i],valid:[i-len[i]+1,i],msg:`s[${m}]='(' 配上了，m-1=${m-1} 合法：len[${i}] = ${len[i-1]}+2+${len[m-1]} = <b>${len[i]}</b>。`,line:16});
+          }else{
+            len[i]=len[i-1]+2;
+            push({cur:i,m,pair:[m,i],valid:[i-len[i]+1,i],msg:`s[${m}]='(' 配上了，m-1 越界：len[${i}] = ${len[i-1]}+2 = <b>${len[i]}</b>。`,line:18});
+          }
+        }else{
+          push({cur:i,m,msg:`m=${m} 处${m<0?'越界':`是 ')' 不是 '('`}，找不到配对的左括号，len[${i}] 保持 0。`,line:14});
+        }
+      }
+      if(len[i]>maxLen){
+        maxLen=len[i];maxRange=[i-len[i]+1,i];
+        push({cur:i,valid:maxRange.slice(),maxbest:maxRange.slice(),msg:`len[${i}]=${len[i]} 超过 maxLen，更新 <b>maxLen=${maxLen}</b>，区间 [${maxRange[0]}, ${maxRange[1]}]。`,line:23});
+      }else{
+        push({cur:i,valid:[i-len[i]+1,i],msg:`len[${i}]=${len[i]} 没有超过 maxLen=${maxLen}，最大值不变。`,line:22});
+      }
+    }else{
+      push({cur:i,skip:i,msg:`位置 ${i} 是 '('，以左括号结尾不可能合法，len[${i}]=0，跳过。`,line:5});
+    }
+  }
+  push({msg:`扫描结束，maxLen = <b>${maxLen}</b>，即为答案。`,line:27,maxbest:maxRange?maxRange.slice():null});
+  return out;
+}
+
+function buildStackSteps(s){
+  const n=s.length;
+  const isValid=new Array(n).fill(false);
+  const st=[];
+  const out=[];
+  const base=()=>({phase:1,cur:-1,stack:st.slice(),isValid:isValid.slice(),pair:null,bad:null,cnt:0,ans:0,scan:-1,best:null});
+  const push=e=>out.push(Object.assign(base(),e));
+  push({msg:'阶段1：标记配对。栈里存"未配对左括号的下标"，isValid 初始全 false。',line:4});
+  for(let i=0;i<n;i++){
+    if(s[i]==='('){
+      st.push(i);
+      push({cur:i,msg:`位置 ${i} 是 '('，下标 ${i} 压入栈，等待右括号来配对。`,line:8});
+    }else{
+      if(st.length>0){
+        const a=st.pop();
+        isValid[a]=true;isValid[i]=true;
+        push({cur:i,pair:[a,i],msg:`位置 ${i} 是 ')'，栈非空，弹出左括号下标 ${a}，位置 ${a} 和 ${i} 都标记 isValid=true。`,line:10});
+      }else{
+        push({cur:i,bad:i,msg:`位置 ${i} 是 ')'，但栈空，没有左括号可配，isValid[${i}] 保持 false。`,line:9});
+      }
+    }
+  }
+  push({msg:'阶段1结束，配对位置已标记。进入阶段2：扫描 isValid 找最长连续 true。',line:13});
+  let cnt=0,ans=0,best=null;
+  for(let i=0;i<n;i++){
+    if(isValid[i]){
+      cnt++;
+      if(cnt>ans){ans=cnt;best=[i-cnt+1,i];}
+      push({phase:2,scan:i,cnt,ans,best:best?best.slice():null,msg:`isValid[${i}]=true，连续 cnt=${cnt}，更新 ans=${ans}。`,line:17});
+    }else{
+      cnt=0;
+      push({phase:2,scan:i,cnt,ans,best:best?best.slice():null,msg:`isValid[${i}]=false，连续被打断，cnt 重置为 0，ans 保持 ${ans}。`,line:19});
+    }
+  }
+  push({phase:2,msg:`扫描结束，最长连续 true 长度 ans = <b>${ans}</b>，即为答案。`,line:22,cnt,ans,best:best?best.slice():null});
+  return out;
+}
+let steps=[],posIdx=0,curCase=0,timer=null,playMs=800,curMethod='dp';
+function $(id){return document.getElementById(id);}
+function inR(r,i){return r&&i>=r[0]&&i<=r[1];}
+function render(){if(curMethod==='stack'){renderStack();return;}renderDP();}
+function renderDP(){
+  const s=steps[posIdx],str=CASES[curCase];
+  $('msg').innerHTML=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('curI').textContent=s.cur<0?'—':s.cur;
+  $('curLen').textContent=s.cur<0?'—':s.len[s.cur];
+  $('maxLen').textContent=s.maxLen;
+  let h='';
+  for(let i=0;i<str.length;i++){
+    let cls='cell '+(str[i]==='('?'lp':'rp');
+    if(s.cur===i)cls+=' cur';
+    if(s.pair&&s.pair.includes(i))cls+=' pair';
+    if(inR(s.valid,i))cls+=' valid';
+    if(inR(s.maxbest,i))cls+=' maxbest';
+    if(s.skip===i)cls+=' skip';
+    const lv=s.len[i];
+    h+=`<div class="${cls}"><span class="idx">${i}</span><span class="ch">${str[i]}</span><span class="lv${lv>0?' has':''}">${lv}</span></div>`;
+  }
+  if(s.pair){
+    const a=s.pair[0];
+    const left=6+a*60+30,w=(s.pair[1]-s.pair[0])*60;
+    h+=`<div class="arc" style="left:${left}px;width:${w}px"></div>`;
+  }
+  $('strrow').innerHTML=h;
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+function renderStack(){
+  const s=steps[posIdx],str=CASES[curCase];
+  $('msg').innerHTML=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('stPhase').textContent=s.phase===1?'1 标记':'2 扫描';
+  $('stCnt').textContent=s.cnt;
+  $('stAns').textContent=s.ans;
+  let sh='';
+  for(let k=0;k<s.stack.length;k++){
+    sh+=`<div class="stkel${k===s.stack.length-1?' top':''}">${s.stack[k]}</div>`;
+  }
+  if(s.stack.length>0)sh+=`<span class="stktop-tag">TOP</span>`;
+  $('stkbox').innerHTML=sh;
+  let h='';
+  for(let i=0;i<str.length;i++){
+    let cls='cell '+(str[i]==='('?'lp':'rp');
+    if(s.cur===i||s.scan===i)cls+=' scan';
+    if(s.pair&&s.pair.includes(i))cls+=' pair';
+    if(s.bad===i)cls+=' badmark';
+    if(s.isValid[i])cls+=' marked';
+    if(inR(s.best,i))cls+=' bestrun';
+    h+=`<div class="${cls}"><span class="idx">${i}</span><span class="ch">${str[i]}</span><span class="mk">${s.isValid[i]?'true':'false'}</span></div>`;
+  }
+  if(s.pair){
+    const a=s.pair[0];
+    const left=6+a*60+30,w=(s.pair[1]-s.pair[0])*60;
+    h+=`<div class="arc" style="left:${left}px;width:${w}px"></div>`;
+  }
+  $('strrow').innerHTML=h;
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}
+}
+function loadCase(i){
+  curCase=i;
+  steps=curMethod==='stack'?buildStackSteps(CASES[i]):buildSteps(CASES[i]);posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+function switchMethod(m){
+  curMethod=m;
+  document.querySelectorAll('.mbtn').forEach(b=>b.classList.toggle('active',b.dataset.m===m));
+  $('dpCards').style.display=m==='dp'?'grid':'none';
+  $('stackCards').style.display=m==='stack'?'grid':'none';
+  $('dpInfo').style.display=m==='dp'?'grid':'none';
+  $('stackInfo').style.display=m==='stack'?'grid':'none';
+  $('stackpanel').style.display=m==='stack'?'flex':'none';
+  $('vizTitle').textContent=m==='dp'
+    ?'字符串与 len 数组（蓝框=本次配对，绿底=当前有效区间，紫框=历史最长）'
+    :'字符串与 isValid（绿框=已配对，红框=无法配对，紫底=当前最长连续段）';
+  $('codeTitle').textContent=m==='dp'?'Java 动态规划代码':'Java 栈标记法代码';
+  $('code').innerHTML=(m==='dp'?CODE:SCODE).map(l=>`<span class="ln">${l}</span>`).join('');
+  loadCase(curCase);
+}
+document.querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>switchMethod(b.dataset.m));
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">"${c}"</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeetCode 90 子集 II：去重回溯分步图解</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23131718'/%3E%3Ccircle cx='11' cy='11' r='4' fill='%231A5470'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%239C7412'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#EDEEE9; --paper-hi:#F8F9F5;
+  --ink:#131718; --ink-2:#4A5257; --ink-3:#7B8387;
+  --rule:rgba(19,23,24,.15); --rule-2:rgba(19,23,24,.075);
+  --blue:#1A5470; --blue-bg:#D8E6EC;
+  --gold:#9C7412; --gold-bg:rgba(156,116,18,.12);
+  --green:#2F6B3A; --green-bg:rgba(47,107,58,.12);
+  --gline:rgba(19,23,24,.045);
+  --sans:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --serif:"Songti SC","SimSun","STSong","Noto Serif SC",Georgia,serif;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.8;-webkit-font-smoothing:antialiased}
+.grid-layer{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--gline) 1px,transparent 1px),linear-gradient(90deg,var(--gline) 1px,transparent 1px);background-size:34px 34px}
+
+.wrap{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:0 20px}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.05em;color:var(--ink-3);display:flex;align-items:center;gap:10px;margin-top:38px}
+.kicker::before{content:"";width:22px;height:1px;background:var(--ink-3)}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(27px,4.6vw,40px);line-height:1.25;margin:14px 0 0}
+.lede{margin:16px 0 0;font-size:16px;color:var(--ink-2);max-width:48em}
+.lede b{color:var(--ink)}
+
+.console{margin-top:26px;border:1px solid var(--rule);background:var(--paper-hi)}
+.console-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px;border-bottom:1px solid var(--rule-2)}
+.btn{font-family:var(--sans);font-size:14px;padding:7px 15px;border:1px solid rgba(19,23,24,.55);background:transparent;color:var(--ink);cursor:pointer;min-height:40px;line-height:1.4}
+.btn:hover{background:rgba(19,23,24,.06)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.32;cursor:default}
+.btn.primary{background:var(--ink);color:var(--paper-hi);border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.ghost{border-color:var(--rule);color:var(--ink-2)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule)}
+.seg button{font-family:var(--sans);font-size:13px;padding:8px 10px;border:0;background:transparent;color:var(--ink-2);cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper-hi)}
+.seg button+button{border-left:1px solid var(--rule)}
+.step-ind{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-left:auto}
+
+.cand-wrap{padding:14px 18px 6px}
+.cand-title{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-bottom:8px}
+.cand-row{display:flex;gap:8px;flex-wrap:wrap}
+.cand{border:1px solid var(--rule);background:#fff;min-width:62px;padding:7px 6px 6px;text-align:center;transition:border-color .15s,background .15s}
+.cand .idx{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);display:block}
+.cand .v{font-family:var(--mono);font-size:17px;font-weight:600;color:var(--ink-2);display:block;line-height:1.3}
+.cand .why{font-size:11px;line-height:1.3;display:block;margin-top:2px;min-height:15px}
+.cand.cur{border-width:2.2px}
+.cand.out{opacity:.55;background:var(--paper)} .cand.out .why{color:var(--ink-3)}
+.cand.idle{opacity:.8}
+.cand.ok{border-color:var(--green);background:var(--green-bg)} .cand.ok .v{color:var(--green)} .cand.ok .why{color:var(--green)}
+.cand.dup{border-color:var(--gold);background:var(--gold-bg)} .cand.dup .v{color:var(--gold)} .cand.dup .why{color:var(--gold)}
+.cand.picked{border-color:var(--blue);background:var(--blue-bg)} .cand.picked .v{color:var(--blue)} .cand.picked .why{color:var(--blue)}
+
+.tree-svg{padding:6px 10px 2px}
+.tree-svg svg{display:block;width:100%;height:auto}
+.console-text{padding:12px 16px 14px;font-size:14.5px;line-height:1.8;color:var(--ink-2);border-top:1px solid var(--rule-2);min-height:66px}
+.console-text b{color:var(--ink)}
+.console-text .gold{color:var(--gold);font-weight:600}
+.console-text .green{color:var(--green);font-weight:600}
+
+.stat-grid{display:grid;gap:12px;margin-top:16px}
+@media(min-width:760px){.stat-grid{grid-template-columns:repeat(3,1fr)}}
+.stat{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.stat h3{font-family:var(--mono);font-size:11.5px;font-weight:400;margin:0 0 9px;color:var(--ink-3)}
+.path-box{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+.pill{font-family:var(--mono);font-size:13px;padding:3px 9px;border:1px solid rgba(19,23,24,.4);color:var(--ink)}
+.pill.cur{border-color:var(--gold);background:var(--gold-bg)}
+.idx-val{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--blue)}
+.res-list{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.res-item{font-family:var(--mono);font-size:12px;border:1px solid rgba(26,84,112,.4);background:rgba(216,230,236,.55);padding:2px 7px;color:var(--blue)}
+.res-empty{font-size:13px;color:var(--ink-3)}
+
+.code-panel{margin-top:22px;display:grid;gap:14px}
+@media(min-width:880px){.code-panel{grid-template-columns:1.24fr .76fr}}
+.codebox{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.codebox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px;font-weight:700}
+.code-scroll{max-height:480px;overflow:auto}
+pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.9;color:var(--ink-2);white-space:pre}
+pre .ln{display:block;padding:0 6px;margin:0 -6px;border-left:2px solid transparent}
+pre .ln.act{background:var(--gold-bg);border-left-color:var(--gold);color:var(--ink)}
+.tipbox{border:1px solid var(--rule);background:var(--paper-hi);padding:14px 16px}
+.tipbox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px}
+.tipbox ul{margin:0;padding-left:1.2em;font-size:14px;color:var(--ink-2);line-height:1.85}
+.tipbox li{margin:5px 0}
+.tipbox b{color:var(--ink)}
+
+.note{border-left:2px solid var(--gold);background:var(--gold-bg);padding:14px 16px;margin-top:22px;font-size:14.5px;color:var(--ink-2);line-height:1.8;max-width:54em}
+.note b{color:var(--ink)}
+.note.blue{border-left-color:var(--blue);background:rgba(26,84,112,.07)}
+.key-point{margin-top:26px;border:2.5px solid var(--gold);background:var(--gold-bg);max-width:54em}
+.key-point .kp-head{display:flex;align-items:center;gap:9px;background:var(--gold);color:var(--paper-hi);padding:8px 15px;font-family:var(--serif);font-size:16.5px;font-weight:700;letter-spacing:.06em}
+.key-point .kp-body{padding:15px 17px 16px;font-size:15.5px;line-height:1.9;color:var(--ink)}
+.key-point .kp-body b{color:var(--ink)}
+.key-point .kp-cond{font-family:var(--mono);display:block;background:#fff;border:1px solid rgba(156,116,18,.4);padding:9px 13px;margin:11px 0;font-size:13.5px;color:var(--gold);font-weight:600;line-height:1.5}
+.key-point .kp-sum{display:block;margin-top:9px;padding-top:10px;border-top:1px dashed rgba(156,116,18,.45);font-weight:700}
+code{font-family:var(--mono);font-size:.92em;background:rgba(19,23,24,.06);padding:1px 5px}
+
+footer{margin-top:60px;padding:26px 0 40px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink-3);line-height:1.9}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--paper-hi);font-size:14px;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.001s !important;animation-duration:.001s !important}}
+</style>
+</head>
+<body>
+<div class="grid-layer" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="kicker">LeetCode 90 · 中等 · 回溯 / 去重</div>
+  <h1>子集 II：有重复数字时<br>怎么不收集到重复子集</h1>
+  <p class="lede">题目：数组<b>可能含重复元素</b>，返回所有不重复的子集。你的写法先 <b>Arrays.sort 排序</b>，进入节点照常收集，再用 <b>index 控制起点 + 同层相邻同值跳过</b>去重。下面把每个候选能不能选、为什么跳过都标出来，建议直接点自动播放。</p>
+
+  <div class="console">
+    <div class="console-bar">
+      <button class="btn primary" id="btnPrev">上一步</button>
+      <button class="btn primary" id="btnNext">下一步</button>
+      <button class="btn" id="btnPlay">自动播放</button>
+      <button class="btn ghost" id="btnReset">重置</button>
+      <div class="seg" role="group" id="caseSeg"></div>
+      <span class="step-ind" id="stepInd"></span>
+    </div>
+
+    <div class="cand-wrap">
+      <div class="cand-title">本层候选逐个判定（for 从 index 开始）</div>
+      <div class="cand-row" id="candRow"></div>
+    </div>
+
+    <div class="tree-svg">
+      <svg id="stage" viewBox="0 0 920 400" role="img" aria-label="子集 II 去重决策树"></svg>
+    </div>
+    <div class="console-text" id="stepText"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <h3>当前路径 path</h3>
+      <div class="path-box" id="pathBox"></div>
+    </div>
+    <div class="stat">
+      <h3>本层起始 index</h3>
+      <div class="idx-val" id="indexVal"></div>
+    </div>
+    <div class="stat">
+      <h3>已收集子集（无重复）</h3>
+      <div class="res-list" id="resBox"></div>
+    </div>
+  </div>
+
+  <div class="code-panel">
+    <div class="codebox">
+      <h3>你的代码（当前执行行高亮）</h3>
+      <div class="code-scroll">
+<pre id="srcCode"><span class="ln" data-l="1">class Solution {</span>
+<span class="ln" data-l="2">    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();</span>
+<span class="ln" data-l="3"></span>
+<span class="ln" data-l="4">    public List&lt;List&lt;Integer&gt;&gt; subsetsWithDup(int[] nums) {</span>
+<span class="ln" data-l="5">        Arrays.sort(nums);</span>
+<span class="ln" data-l="6">        List&lt;Integer&gt; path = new ArrayList&lt;&gt;();</span>
+<span class="ln" data-l="7">        backtracing(nums,path,0);</span>
+<span class="ln" data-l="8">        return res;    </span>
+<span class="ln" data-l="9">    }</span>
+<span class="ln" data-l="10">    public void backtracing(int[] nums,List&lt;Integer&gt; path, int index){</span>
+<span class="ln" data-l="11">        res.add(new ArrayList&lt;&gt;(path));</span>
+<span class="ln" data-l="12"></span>
+<span class="ln" data-l="13">        for(int i = index;i&lt;nums.length;i++){</span>
+<span class="ln" data-l="14">            if(i&gt;index && nums[i-1]==nums[i]){</span>
+<span class="ln" data-l="15">                continue;</span>
+<span class="ln" data-l="16">            }</span>
+<span class="ln" data-l="17">            path.add(nums[i]);</span>
+<span class="ln" data-l="18">            backtracing(nums,path,i+1);</span>
+<span class="ln" data-l="19">            path.remove(path.size()-1);</span>
+<span class="ln" data-l="20">        }</span>
+<span class="ln" data-l="21">    }</span>
+<span class="ln" data-l="22">}</span></pre>
+      </div>
+    </div>
+    <div class="tipbox">
+      <h3>看图抓三个点</h3>
+      <ul>
+        <li><b>先排序</b>：相同数字相邻，才能用相邻比较发现重复。</li>
+        <li><b>同层去重</b>：i&gt;index 且跟前一个同值，说明是平行重复分支，跳过。</li>
+        <li><b>不同层不误杀</b>：i==index 是本层第一个，即使和上层同值也保留。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="key-point">
+    <div class="kp-head">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7.2" fill="#F8F9F5"/><rect x="7.2" y="3.6" width="1.6" height="5.2" fill="#9C7412"/><circle cx="8" cy="11.4" r="1" fill="#9C7412"/></svg>
+      重点 · 同层去重
+    </div>
+    <div class="kp-body">
+      <b>同层去重：</b>当 <code>i &gt; index</code>（同层里、不是第一个）且<b>跟前一个同值</b>，就说明这是一条会产生重复子集的<b>平行重复分支</b>，直接 <code>continue</code> 跳过。
+      <span class="kp-cond">if (i &gt; index &amp;&amp; nums[i-1] == nums[i]) { continue; }</span>
+      <span class="kp-sum">一句话：同一层里相同的值只让第一个走，后面的全部拦掉；不同层（i == index）不受影响。</span>
+    </div>
+  </div>
+
+  <div class="note blue"><b>复杂度：</b>设去重后子集数为 S（S ≤ 2^n），每个子集拷贝长度不超过 n 的 path，时间 <b>O(n × S)</b>；排序 O(n log n)，递归栈与 path 占 <b>O(n)</b> 辅助空间。</div>
+  <div class="note"><b>为什么用 i&gt;index 而不是 i&gt;0：</b>index 是本层起点，<code>i&gt;index</code> 表示「同层里、不是本层第一个」。本层第一个位置（i==index）即使值和上层相同也必须保留——它代表的是新一层的选择；只有同层后面再出现相同值，才是会产生重复子集的平行分支，要跳过。</div>
+  <div class="note"><b>和全排列 II 去重的关系：</b>思路一致，都是「排序 + 同层相同值只留第一个」。全排列用 <code>used[i-1]==false</code> 判断前一个同值是否空闲，这里因为有 index 限定起点，直接用 <code>i&gt;index</code> 就表达了同样的意思，写法更简洁。</div>
+
+  <footer>
+    LeetCode 90 子集 II · 去重回溯分步图解<br>
+    绿色可选、金色同层重复跳过、蓝色已选；决策树只画不重复的子集分支。
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+var NS='http://www.w3.org/2000/svg';
+function svgEl(tag,attrs){var e=document.createElementNS(NS,tag);if(attrs)for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
+var toastTimer=null;
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('on');},2200);}
+
+var CASES=[
+  [1,2,2],[0],[1,2,3],[1,1,2,2],
+  [2,2,2],[1,1,2],[-1,0,1],[1,2,2,3]
+];
+
+/* 去重后实际决策树 */
+function buildDecisionTree(nums0){
+  var nums=nums0.slice().sort(function(a,b){return a-b;});
+  var nodes=[],path=[];
+  function rec(parentId,index){
+    var id=nodes.length;
+    nodes.push({path:path.slice(),parent:parentId,children:[],depth:path.length,index:index});
+    if(parentId>=0)nodes[parentId].children.push(id);
+    for(var i=index;i<nums.length;i++){
+      if(i>index && nums[i-1]===nums[i])continue;
+      path.push(nums[i]);
+      rec(id,i+1);
+      path.pop();
+    }
+  }
+  rec(-1,0);
+  var leaves=nodes.filter(function(nd){return nd.children.length===0;});
+  var W=920,m=72;
+  var sp=leaves.length>1?(W-2*m)/(leaves.length-1):0;
+  leaves.forEach(function(nd,i){nd.x=m+i*sp;});
+  for(var k=nodes.length-1;k>=0;k--){
+    var nd=nodes[k];
+    if(nd.children.length){nd.x=nd.children.reduce(function(s,c){return s+nodes[c].x;},0)/nd.children.length;}
+    nd.y=42+nd.depth*84;
+  }
+  var byKey={};
+  nodes.forEach(function(nd){nd.key=nd.path.join('>');byKey[nd.key]=nd;});
+  return {nodes:nodes,byKey:byKey};
+}
+
+/* 帧（含排序帧、同层去重）*/
+function buildSteps(nums0){
+  var nums=nums0.slice().sort(function(a,b){return a-b;});
+  var n=nums.length,path=[];
+  var steps=[],collected=[],visited={};
+  function idleCand(index){
+    return nums.map(function(v,i){return {i:i,val:v,status:i<index?'out':'idle',cur:false};});
+  }
+  function snap(phase,line,cand,index,ci,extra){
+    extra=extra||{};
+    steps.push({phase:phase,line:line,path:path.slice(),index:index,i:ci,
+      cand:cand.map(function(c){return {i:c.i,val:c.val,status:c.status,cur:c.cur};}),
+      collected:collected.map(function(p){return p.slice();}),
+      visited:Object.assign({},visited),
+      before:extra.before,after:extra.after});
+  }
+  snap('sort',5,idleCand(0),0,-1,{before:nums0.slice(),after:nums.slice()});
+  function bt(index){
+    visited[path.join('>')]=true;
+    collected.push(path.slice());
+    var cand=idleCand(index);
+    snap('collect',11,cand,index,-1);
+    for(var i=index;i<n;i++){
+      cand[i].cur=true;
+      if(i>index && nums[i-1]===nums[i]){
+        cand[i].status='dup';
+        snap('eval',15,cand,index,i);
+        cand[i].cur=false;
+        continue;
+      }
+      cand[i].status='ok';
+      snap('eval',14,cand,index,i);
+      path.push(nums[i]);
+      cand[i].status='picked';cand[i].cur=false;
+      snap('pick',17,cand,index,i);
+      bt(i+1);
+      path.pop();
+      snap('undo',19,cand,index,i);
+    }
+  }
+  bt(0);
+  snap('done',8,idleCand(n),n,-1);
+  return steps;
+}
+
+var tree=null,steps=null,step=0;
+var stage=document.getElementById('stage');
+function render(){
+  var f=steps[step];
+  renderCand(f);renderTree(f);renderStats(f);renderText(f);renderCode(f);
+  document.getElementById('stepInd').textContent='步骤 '+(step+1)+' / '+steps.length;
+  document.getElementById('btnPrev').disabled=step===0;
+  document.getElementById('btnNext').disabled=step===steps.length-1;
+}
+function renderCand(f){
+  document.getElementById('candRow').innerHTML=f.cand.map(function(c){
+    var why='';
+    if(c.status==='out')why='不在本层';
+    else if(c.status==='ok')why='可选';
+    else if(c.status==='dup')why='重复跳过';
+    else if(c.status==='picked')why='已选';
+    return '<div class="cand '+c.status+(c.cur?' cur':'')+'">'+
+      '<span class="idx">i='+c.i+'</span><span class="v">'+c.val+'</span>'+
+      '<span class="why">'+why+'</span></div>';
+  }).join('');
+}
+function renderTree(f){
+  stage.textContent='';
+  var curKey=f.path.join('>');
+  var chain={};
+  var t=tree.byKey[curKey];
+  if(t){var tt=t;while(tt){chain[tt.key]=true;tt=tt.parent>=0?tree.nodes[tt.parent]:null;}}
+  tree.nodes.forEach(function(nd){
+    if(nd.parent<0)return;
+    var p=tree.nodes[nd.parent];
+    var onPath=chain[nd.key]&&chain[p.key];
+    var seen=!!f.visited[nd.key];
+    stage.appendChild(svgEl('line',{x1:p.x,y1:p.y+15,x2:nd.x,y2:nd.y-15,
+      stroke:onPath?'#9C7412':(seen?'#1A5470':'rgba(19,23,24,.18)'),'stroke-width':onPath?2.2:1.3}));
+  });
+  tree.nodes.forEach(function(nd){
+    var isCur=nd.key===curKey,seen=!!f.visited[nd.key];
+    var fill,stroke,tcol;
+    if(isCur){fill='#9C7412';stroke='#9C7412';tcol='#F8F9F5';}
+    else if(seen){fill='#1A5470';stroke='#1A5470';tcol='#F8F9F5';}
+    else{fill='#fff';stroke='rgba(19,23,24,.3)';tcol='#7B8387';}
+    stage.appendChild(svgEl('circle',{cx:nd.x,cy:nd.y,r:15,fill:fill,stroke:stroke,'stroke-width':1.2}));
+    var tx=svgEl('text',{x:nd.x,y:nd.y+4,'text-anchor':'middle','font-size':12,fill:tcol});
+    tx.textContent=nd.depth===0?'∅':nd.path[nd.path.length-1];
+    stage.appendChild(tx);
+  });
+  tree.nodes.forEach(function(nd){
+    if(nd.children.length===0&&f.collected.some(function(p){return p.join('>')===nd.key;})){
+      var tx=svgEl('text',{x:nd.x,y:nd.y+32,'text-anchor':'middle','font-size':10,fill:'#1A5470'});
+      tx.textContent='['+nd.path.join(',')+']';
+      stage.appendChild(tx);
+    }
+  });
+}
+function renderStats(f){
+  var pathBox=document.getElementById('pathBox');
+  pathBox.innerHTML=f.path.length
+    ?f.path.map(function(v,i){return '<span class="pill'+(i===f.path.length-1?' cur':'')+'">'+v+'</span>';}).join('')
+    :'<span class="res-empty">空集（根节点）</span>';
+  document.getElementById('indexVal').textContent=f.index;
+  document.getElementById('resBox').innerHTML=f.collected.length
+    ?f.collected.map(function(p){return '<span class="res-item">['+p.join(',')+']</span>';}).join('')
+    :'<span class="res-empty">尚未收集</span>';
+}
+function renderText(f){
+  var host=document.getElementById('stepText'),s;
+  switch(f.phase){
+    case 'sort':
+      s='先排序：['+f.before.join(',')+'] → <b>['+f.after.join(',')+']</b>，让相同数字相邻'; break;
+    case 'collect':
+      s='进入节点先收集，<span class="gold">得到子集 ['+f.path.join(',')+']</span>'; break;
+    case 'eval':
+      if(f.cand[f.i].status==='dup')s='位置 '+f.i+'：跟前一个同值且是同层，<span class="gold">重复分支，跳过</span>';
+      else s='位置 '+f.i+'：本层可选范围内，<span class="green">选中 '+f.cand[f.i].val+'</span>';
+      break;
+    case 'pick': s='path.add 后递归，下一层起点 index='+(f.i+1); break;
+    case 'undo': s='子层走完，撤销位置 '+f.i+'，继续试本层下一个候选'; break;
+    case 'done': s='全部回溯结束，共收集 <b>'+f.collected.length+'</b> 个不重复子集'; break;
+  }
+  host.innerHTML=s+'。';
+}
+function renderCode(f){
+  document.querySelectorAll('#srcCode .ln').forEach(function(ln){
+    ln.classList.toggle('act',Number(ln.getAttribute('data-l'))===f.line);
+  });
+}
+
+var playTimer=null;
+function stopPlay(){if(playTimer){clearInterval(playTimer);playTimer=null;}document.getElementById('btnPlay').textContent='自动播放';}
+document.getElementById('btnNext').addEventListener('click',function(){stopPlay();if(step<steps.length-1){step++;render();}});
+document.getElementById('btnPrev').addEventListener('click',function(){stopPlay();if(step>0){step--;render();}});
+document.getElementById('btnReset').addEventListener('click',function(){stopPlay();step=0;render();});
+document.getElementById('btnPlay').addEventListener('click',function(){
+  if(playTimer){stopPlay();return;}
+  if(step===steps.length-1){step=0;render();}
+  document.getElementById('btnPlay').textContent='暂停';
+  playTimer=setInterval(function(){
+    if(step>=steps.length-1){stopPlay();toast('演示结束：共 '+steps[steps.length-1].collected.length+' 个子集');return;}
+    step++;render();
+  },750);
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'){e.preventDefault();stopPlay();if(step<steps.length-1){step++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();stopPlay();if(step>0){step--;render();}}
+  else if(e.key===' '){e.preventDefault();document.getElementById('btnPlay').click();}
+  else if(e.key==='Home'){e.preventDefault();stopPlay();step=0;render();}
+  else if(e.key==='End'){e.preventDefault();stopPlay();step=steps.length-1;render();}
+});
+
+var seg=document.getElementById('caseSeg');
+CASES.forEach(function(c0,i){
+  var b=document.createElement('button');
+  b.setAttribute('aria-pressed',i===0?'true':'false');
+  b.textContent='['+c0.join(',')+']';
+  b.addEventListener('click',function(){switchCase(i);});
+  seg.appendChild(b);
+});
+function switchCase(i){
+  stopPlay();step=0;
+  tree=buildDecisionTree(CASES[i]);
+  steps=buildSteps(CASES[i]);
+  render();
+  document.querySelectorAll('#caseSeg button').forEach(function(b,j){
+    b.setAttribute('aria-pressed',j===i?'true':'false');
+  });
+}
+
+tree=buildDecisionTree(CASES[0]);
+steps=buildSteps(CASES[0]);
+render();
+</script>
+</body>
+</html>

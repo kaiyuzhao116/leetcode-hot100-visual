@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>54. 螺旋矩阵 · 四边界可视化</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230d1117'/%3E%3Cpath d='M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5' fill='none' stroke='%2358a6ff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+  --orange:#e3b341;--purple:#bc8cff;--red:#f85149
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;line-height:1.6;padding:28px 20px 60px}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tag{font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--orange);color:var(--orange)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:18px}
+.intro{border-left:3px solid var(--blue)}
+.intro p{font-size:14.5px}
+.intro b{color:var(--blue)}
+.cases{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.case-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+.case-btn:hover{border-color:var(--blue);color:var(--text)}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+.dir-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+.dc{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:13px;transition:.2s;min-width:0;position:relative}
+.dc .dnum{font-size:11.5px;font-weight:700;letter-spacing:1px;color:var(--muted)}
+.dc .dname{font-size:14px;font-weight:600;margin-top:4px}
+.dc .ddesc{font-size:12px;color:var(--muted);margin-top:3px}
+.dc.d1{border-color:var(--blue)} .dc.d1 .dnum{color:var(--blue)}
+.dc.d2{border-color:var(--purple)} .dc.d2 .dnum{color:var(--purple)}
+.dc.d3{border-color:var(--orange)} .dc.d3 .dnum{color:var(--orange)}
+.dc.d4{border-color:var(--green)} .dc.d4 .dnum{color:var(--green)}
+.dc.on{box-shadow:0 0 0 1px currentColor}
+.dc.done{opacity:.55}
+.dc .tick{position:absolute;top:9px;right:9px;width:15px;height:15px;display:none}
+.dc.done .tick{display:block}
+
+.viz-title{font-size:15px;font-weight:600;margin-bottom:14px}
+.viz-scroll{overflow:auto;max-width:100%}
+.m-wrap{display:inline-block}
+.col-nums{display:grid;gap:8px;margin-bottom:8px;margin-left:36px}
+.cn{display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);font-family:Consolas,monospace}
+.m-grid-area{display:flex;gap:8px}
+.row-nums{display:grid;gap:8px}
+.rn{display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);font-family:Consolas,monospace}
+.matrix-grid{display:grid;gap:8px}
+.m-cell{width:56px;height:56px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;font-family:Consolas,monospace;position:relative;transition:all .25s}
+.m-cell.v1{border-color:var(--blue);background:rgba(88,166,255,.16)}
+.m-cell.v2{border-color:var(--purple);background:rgba(188,140,255,.16)}
+.m-cell.v3{border-color:var(--orange);background:rgba(227,179,65,.16)}
+.m-cell.v4{border-color:var(--green);background:rgba(63,185,80,.16)}
+.m-cell.cur{border:2px solid #fff;transform:scale(1.08);z-index:2;box-shadow:0 0 16px rgba(255,255,255,.25)}
+.m-cell.cur .arrow{position:absolute;top:3px;right:5px;width:13px;height:13px}
+.m-cell.edge-top{box-shadow:inset 0 3px 0 var(--blue)}
+.m-cell.edge-bottom{box-shadow:inset 0 -3px 0 var(--orange)}
+.m-cell.edge-left{box-shadow:inset 3px 0 0 var(--green)}
+.m-cell.edge-right{box-shadow:inset -3px 0 0 var(--purple)}
+
+.bound-info{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.bi{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+.bi .k{font-size:12px;color:var(--muted)}
+.bi .v{font-size:18px;font-weight:700;margin-top:2px;font-family:Consolas,monospace}
+.bi.b-top .v{color:var(--blue)} .bi.b-bottom .v{color:var(--orange)}
+.bi.b-left .v{color:var(--green)} .bi.b-right .v{color:var(--purple)}
+
+.result-block{margin-top:18px}
+.result-label{font-size:13.5px;font-weight:600;margin-bottom:10px;color:var(--muted)}
+.result-cells{display:flex;flex-wrap:wrap;gap:7px}
+.r-cell{min-width:38px;height:38px;padding:0 8px;border:1px solid var(--border);border-radius:7px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;font-family:Consolas,monospace;animation:pop .35s ease}
+.r-cell.r1{border-color:var(--blue);color:var(--blue)}
+.r-cell.r2{border-color:var(--purple);color:var(--purple)}
+.r-cell.r3{border-color:var(--orange);color:var(--orange)}
+.r-cell.r4{border-color:var(--green);color:var(--green)}
+.r-empty{color:var(--muted);font-size:13px;padding:8px 0}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+
+.msg{margin-top:16px;font-size:14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.msg .act{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;margin-right:8px}
+.act.a1{background:rgba(88,166,255,.18);color:var(--blue)}
+.act.a2{background:rgba(188,140,255,.18);color:var(--purple)}
+.act.a3{background:rgba(227,179,65,.18);color:var(--orange)}
+.act.a4{background:rgba(63,185,80,.18);color:var(--green)}
+.act.a0{background:rgba(139,148,158,.18);color:var(--muted)}
+
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:18px}
+.code-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border)}
+.dot{width:12px;height:12px;border-radius:50%}
+.cdot1{background:var(--red)}.cdot2{background:var(--orange)}.cdot3{background:var(--green)}
+.code-fname{margin-left:8px;font-size:13px;color:var(--muted)}
+.code-body{padding:12px 0;overflow:auto;max-height:440px}
+.code-line{display:flex;align-items:flex-start;padding:1.5px 14px;font-family:Consolas,monospace;font-size:13.5px;white-space:pre}
+.code-line .ln{width:26px;text-align:right;color:#48505c;margin-right:14px;flex-shrink:0;user-select:none}
+.code-line.hl{background:rgba(88,166,255,.16)}
+.code-line.hl .ln{color:var(--blue)}
+.t-kw{color:#ff7b72}.t-type{color:#79c0ff}.t-num{color:#a5d6ff}.t-meth{color:#d2a8ff}
+
+.controls{position:sticky;bottom:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.4)}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:42px;height:42px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn:hover{border-color:var(--blue)}
+.btn.play{width:auto;padding:0 20px;gap:8px;background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:700;font-size:14px}
+.btn.play:hover{filter:brightness(1.1)}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.scrub{flex:1;min-width:140px;accent-color:var(--blue);height:6px}
+.step-txt{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:56px;text-align:right}
+.speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+@media(max-width:760px){
+  .dir-cards{grid-template-columns:repeat(2,1fr)}
+  .bound-info{grid-template-columns:repeat(2,1fr)}
+  .m-cell{width:44px;height:44px;font-size:14px}
+  body{padding:18px 12px 50px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>54. 螺旋矩阵 <span class="tag">中等</span></h1>
+  <div class="sub">四边界模拟法 · 时间 O(m×n) · 空间 O(1)（不计结果）</div>
+
+  <div class="panel intro">
+    <p>用 <b>top / bottom / left / right</b> 四条边界夹住当前要走的这一层：依次沿上边左→右、右边上→下、下边右→左、左边下→上，每走完一条边就把对应边界向内收缩一格。两个 <b>break</b> 负责在没有剩余行/列时及时停止，避免单行单列重复访问。</p>
+  </div>
+
+  <div class="cases" id="caseBox"></div>
+  <div class="dir-cards" id="dirBox"></div>
+
+  <div class="panel">
+    <div class="viz-title">矩阵（格子内彩色边为当前四边界，数字格按访问方向着色）</div>
+    <div class="viz-scroll">
+      <div class="m-wrap">
+        <div class="col-nums" id="colNums"></div>
+        <div class="m-grid-area">
+          <div class="row-nums" id="rowNums"></div>
+          <div class="matrix-grid" id="matrixGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bound-info">
+      <div class="bi b-top"><div class="k">top</div><div class="v" id="bTop">0</div></div>
+      <div class="bi b-bottom"><div class="k">bottom</div><div class="v" id="bBottom">0</div></div>
+      <div class="bi b-left"><div class="k">left</div><div class="v" id="bLeft">0</div></div>
+      <div class="bi b-right"><div class="k">right</div><div class="v" id="bRight">0</div></div>
+    </div>
+
+    <div class="result-block">
+      <div class="result-label">result 结果列表（按 add 顺序）</div>
+      <div class="result-cells" id="resultCells"></div>
+    </div>
+
+    <div class="msg" id="msgBox"></div>
+  </div>
+
+  <div class="code-panel">
+    <div class="code-bar"><span class="dot cdot1"></span><span class="dot cdot2"></span><span class="dot cdot3"></span><span class="code-fname">Solution.java</span></div>
+    <div class="code-body" id="codeBody"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn play" id="playBtn">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playTxt">播放</span>
+    </button>
+    <button class="btn" id="prevBtn" title="上一步（左箭头）"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+    <button class="btn" id="nextBtn" title="下一步（右箭头）"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+    <button class="btn" id="resetBtn" title="重置"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <input type="range" class="scrub" id="scrub" min="0" max="0" value="0">
+    <span class="step-txt" id="stepTxt">0 / 0</span>
+    <select class="speed" id="speedSel"><option value="1000">0.5x</option><option value="600" selected>1x</option><option value="320">2x</option><option value="170">4x</option></select>
+  </div>
+</div>
+
+<script>
+const CASES=[
+  {mat:[[1,2,3],[4,5,6],[7,8,9]],label:'3x3 标准'},
+  {mat:[[1,2,3,4],[5,6,7,8],[9,10,11,12]],label:'3x4 非方阵'},
+  {mat:[[1,2,3,4]],label:'1x4 单行'},
+  {mat:[[1],[2],[3],[4]],label:'4x1 单列'},
+  {mat:[[1,2],[3,4]],label:'2x2'},
+  {mat:[[1,2,3],[4,5,6]],label:'2x3'}
+];
+
+const CODE_HTML=[
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '  <span class="t-kw">public</span> <span class="t-type">List</span>&lt;<span class="t-type">Integer</span>&gt; <span class="t-meth">spiralOrder</span>(<span class="t-kw">int</span>[][] matrix) {',
+  '    <span class="t-type">List</span>&lt;<span class="t-type">Integer</span>&gt; result = <span class="t-kw">new</span> <span class="t-type">ArrayList</span>&lt;&gt;();',
+  '    <span class="t-kw">if</span> (matrix.length==<span class="t-num">0</span> || matrix[<span class="t-num">0</span>].length==<span class="t-num">0</span>) <span class="t-kw">return</span> result;',
+  '    <span class="t-kw">int</span> top = <span class="t-num">0</span>;',
+  '    <span class="t-kw">int</span> bottom = matrix.length-<span class="t-num">1</span>;',
+  '    <span class="t-kw">int</span> right = matrix[<span class="t-num">0</span>].length-<span class="t-num">1</span>;',
+  '    <span class="t-kw">int</span> left = <span class="t-num">0</span>;',
+  '    <span class="t-kw">while</span> (top &lt;= bottom &amp;&amp; right &gt;= left) {',
+  '      <span class="t-kw">for</span> (<span class="t-kw">int</span> i = left; i &lt;= right; i++) {',
+  '        result.add(matrix[top][i]);',
+  '      }',
+  '      top++;',
+  '      <span class="t-kw">for</span> (<span class="t-kw">int</span> i = top; i &lt;= bottom; i++) {',
+  '        result.add(matrix[i][right]);',
+  '      }',
+  '      right--;',
+  '      <span class="t-kw">if</span> (top &gt; bottom) <span class="t-kw">break</span>;',
+  '      <span class="t-kw">for</span> (<span class="t-kw">int</span> i = right; i &gt;= left; i--) {',
+  '        result.add(matrix[bottom][i]);',
+  '      }',
+  '      bottom--;',
+  '      <span class="t-kw">if</span> (left &gt; right) <span class="t-kw">break</span>;',
+  '      <span class="t-kw">for</span> (<span class="t-kw">int</span> i = bottom; i &gt;= top; i--) {',
+  '        result.add(matrix[i][left]);',
+  '      }',
+  '      left++;',
+  '    }',
+  '    <span class="t-kw">return</span> result;',
+  '  }',
+  '}'
+];
+
+const DIR_DEFS=[
+  {cls:'d1',name:'左 → 右',desc:'沿 top 行，后 top++'},
+  {cls:'d2',name:'上 → 下',desc:'沿 right 列，后 right--'},
+  {cls:'d3',name:'右 → 左',desc:'沿 bottom 行，后 bottom--'},
+  {cls:'d4',name:'下 → 上',desc:'沿 left 列，后 left++'}
+];
+const ARROW_SVG={
+  1:'<svg class="arrow" viewBox="0 0 24 24" fill="#58a6ff"><path d="M4 11h13l-5-5 1.5-1.5L21 12l-7.5 7.5L12 18l5-5H4z"/></svg>',
+  2:'<svg class="arrow" viewBox="0 0 24 24" fill="#bc8cff"><path d="M11 4v13l-5-5-1.5 1.5L12 21l7.5-7.5L18 12l-5 5V4z"/></svg>',
+  3:'<svg class="arrow" viewBox="0 0 24 24" fill="#e3b341"><path d="M20 11H7l5-5-1.5-1.5L3 12l7.5 7.5L12 18l-5-5h13z"/></svg>',
+  4:'<svg class="arrow" viewBox="0 0 24 24" fill="#3fb950"><path d="M13 20V7l5 5 1.5-1.5L12 3 4.5 10.5 6 12l5-5v13z"/></svg>'
+};
+
+function buildSteps(c){
+  const matrix=c.mat;
+  const m=matrix.length,n=matrix[0].length;
+  let top=0,bottom=m-1,right=n-1,left=0;
+  const result=[];
+  const resultDir=[];
+  const dirOf={};
+  const steps=[];
+  const key=(i,j)=>i+'-'+j;
+  const snap=(o)=>steps.push(Object.assign({
+    line:0,phase:0,top,bottom,left,right,
+    result:result.slice(),resultDir:resultDir.slice(),dirOf:Object.assign({},dirOf),
+    cur:null,dir:0,action:'',msg:''
+  },o));
+
+  snap({line:9,action:'init',
+    msg:'四边界初始化：top=0, bottom='+bottom+', left=0, right='+right+'，开始顺时针螺旋'});
+
+  while(top<=bottom&&right>=left){
+    for(let i=left;i<=right;i++){
+      result.push(matrix[top][i]);resultDir.push(1);dirOf[key(top,i)]=1;
+      snap({line:11,phase:1,cur:[top,i],dir:1,action:'add',
+        msg:'左→右，add matrix['+top+']['+i+']='+matrix[top][i]});
+    }
+    top++;
+    snap({line:13,phase:1,dir:1,action:'shrink',
+      msg:'走完上边，top++ 收缩到 '+top});
+
+    for(let i=top;i<=bottom;i++){
+      result.push(matrix[i][right]);resultDir.push(2);dirOf[key(i,right)]=2;
+      snap({line:15,phase:2,cur:[i,right],dir:2,action:'add',
+        msg:'上→下，add matrix['+i+']['+right+']='+matrix[i][right]});
+    }
+    right--;
+    snap({line:17,phase:2,dir:2,action:'shrink',
+      msg:'走完右边，right-- 收缩到 '+right});
+
+    if(top>bottom){
+      snap({line:18,phase:2,dir:2,action:'break',
+        msg:'top('+top+') &gt; bottom('+bottom+')，已没有剩余行，break 退出，避免重复访问'});
+      break;
+    }
+    for(let i=right;i>=left;i--){
+      result.push(matrix[bottom][i]);resultDir.push(3);dirOf[key(bottom,i)]=3;
+      snap({line:20,phase:3,cur:[bottom,i],dir:3,action:'add',
+        msg:'右→左，add matrix['+bottom+']['+i+']='+matrix[bottom][i]});
+    }
+    bottom--;
+    snap({line:22,phase:3,dir:3,action:'shrink',
+      msg:'走完下边，bottom-- 收缩到 '+bottom});
+
+    if(left>right){
+      snap({line:23,phase:3,dir:3,action:'break',
+        msg:'left('+left+') &gt; right('+right+')，已没有剩余列，break 退出'});
+      break;
+    }
+    for(let i=bottom;i>=top;i--){
+      result.push(matrix[i][left]);resultDir.push(4);dirOf[key(i,left)]=4;
+      snap({line:25,phase:4,cur:[i,left],dir:4,action:'add',
+        msg:'下→上，add matrix['+i+']['+left+']='+matrix[i][left]});
+    }
+    left++;
+    snap({line:27,phase:4,dir:4,action:'shrink',
+      msg:'走完左边，left++ 收缩到 '+left});
+  }
+  snap({line:29,phase:0,action:'end',
+    msg:'螺旋遍历完成，共 '+result.length+' 个元素，返回 result'});
+  return steps;
+}
+
+let caseIdx=0,steps=[],posIdx=0,timer=null,playing=false;
+const $=(id)=>document.getElementById(id);
+
+function renderCaseButtons(){
+  $('caseBox').innerHTML=CASES.map((c,i)=>
+    '<button class="case-btn'+(i===caseIdx?' active':'')+'" data-k="'+i+'">用例 '+(i+1)+': '+c.label+'</button>').join('');
+  document.querySelectorAll('.case-btn').forEach(b=>b.addEventListener('click',
+    ()=>loadCase(parseInt(b.dataset.k,10))));
+}
+function renderDirCards(snap){
+  $('dirBox').innerHTML=DIR_DEFS.map((d,i)=>{
+    const cur=snap.phase===i+1&&snap.action!=='end';
+    const done=snap.phase>i+1;
+    return '<div class="dc '+d.cls+(cur?' on':'')+(done?' done':'')+'">'+
+      '<svg class="tick" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+      '<div class="dnum">DIR '+(i+1)+'</div><div class="dname">'+d.name+'</div>'+
+      '<div class="ddesc">'+d.desc+'</div></div>';
+  }).join('');
+}
+function renderMatrix(snap){
+  const m=CASES[caseIdx].mat.length,n=CASES[caseIdx].mat[0].length;
+  $('colNums').style.gridTemplateColumns='repeat('+n+',56px)';
+  $('rowNums').style.gridTemplateRows='repeat('+m+',56px)';
+  $('matrixGrid').style.gridTemplateColumns='repeat('+n+',56px)';
+  $('matrixGrid').style.gridTemplateRows='repeat('+m+',56px)';
+  $('colNums').innerHTML=Array.from({length:n},(_,j)=>'<div class="cn">'+j+'</div>').join('');
+  $('rowNums').innerHTML=Array.from({length:m},(_,i)=>'<div class="rn">'+i+'</div>').join('');
+
+  const k=(i,j)=>i+'-'+j;
+  $('matrixGrid').innerHTML=CASES[caseIdx].mat.map((row,i)=>row.map((v,j)=>{
+    let cls='m-cell';
+    const d=snap.dirOf[k(i,j)];
+    if(d)cls+=' v'+d;
+    if(snap.cur&&snap.cur[0]===i&&snap.cur[1]===j)cls+=' cur';
+    if(i===snap.top)cls+=' edge-top';
+    if(i===snap.bottom)cls+=' edge-bottom';
+    if(j===snap.left)cls+=' edge-left';
+    if(j===snap.right)cls+=' edge-right';
+    const arrow=(snap.cur&&snap.cur[0]===i&&snap.cur[1]===j)?ARROW_SVG[snap.dir]:'';
+    return '<div class="'+cls+'">'+v+arrow+'</div>';
+  }).join('')).join('');
+}
+function renderResult(snap){
+  if(snap.result.length===0){
+    $('resultCells').innerHTML='<div class="r-empty">result 为空</div>';return;
+  }
+  $('resultCells').innerHTML=snap.result.map((v,i)=>
+    '<div class="r-cell r'+snap.resultDir[i]+'">'+v+'</div>').join('');
+}
+function renderCode(){
+  $('codeBody').innerHTML=CODE_HTML.map((h,i)=>
+    '<div class="code-line" data-line="'+(i+1)+'"><span class="ln">'+(i+1)+'</span><span>'+h+'</span></div>').join('');
+}
+function render(){
+  const snap=steps[posIdx];
+  renderDirCards(snap);renderMatrix(snap);renderResult(snap);
+  $('bTop').textContent=snap.top;$('bBottom').textContent=snap.bottom;
+  $('bLeft').textContent=snap.left;$('bRight').textContent=snap.right;
+  const actName={init:'初始化',add:'加入',shrink:'收缩',break:'break',end:'完成'}[snap.action];
+  const acls=snap.dir?('a'+snap.dir):'a0';
+  $('msgBox').innerHTML='<span class="act '+acls+'">'+actName+'</span>'+snap.msg;
+  $('codeBody').querySelectorAll('.code-line').forEach(el=>
+    el.classList.toggle('hl',parseInt(el.dataset.line,10)===snap.line));
+  $('scrub').max=steps.length-1;$('scrub').value=posIdx;
+  $('stepTxt').textContent=posIdx+' / '+(steps.length-1);
+  const hlEl=$('codeBody').querySelector('.code-line.hl');
+  if(hlEl)hlEl.scrollIntoView({block:'nearest'});
+}
+function pause(){
+  playing=false;clearInterval(timer);timer=null;
+  $('playTxt').textContent='播放';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M8 5v14l11-7z"/>';
+}
+function play(){
+  if(playing){pause();return;}
+  playing=true;$('playTxt').textContent='暂停';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
+  if(posIdx>=steps.length-1){posIdx=0;render();}
+  timer=setInterval(()=>{
+    if(posIdx>=steps.length-1){pause();return;}
+    posIdx++;render();
+  },parseInt($('speedSel').value,10));
+}
+function loadCase(k){
+  pause();caseIdx=k;posIdx=0;
+  steps=buildSteps(CASES[k]);
+  renderCaseButtons();render();
+}
+$('playBtn').addEventListener('click',play);
+$('prevBtn').addEventListener('click',()=>{pause();if(posIdx>0){posIdx--;render();}});
+$('nextBtn').addEventListener('click',()=>{pause();if(posIdx<steps.length-1){posIdx++;render();}});
+$('resetBtn').addEventListener('click',()=>{pause();posIdx=0;render();});
+$('scrub').addEventListener('input',()=>{pause();posIdx=parseInt($('scrub').value,10);render();});
+$('speedSel').addEventListener('change',()=>{if(playing){pause();play();}});
+document.addEventListener('keydown',(e)=>{
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();if(posIdx<steps.length-1){posIdx++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(posIdx>0){posIdx--;render();}}
+  else if(e.key===' '){e.preventDefault();play();}
+});
+renderCode();steps=buildSteps(CASES[0]);renderCaseButtons();render();
+</script>
+</body>
+</html>

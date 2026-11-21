@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='5' r='3' fill='%2358a6ff'/><circle cx='6' cy='18' r='3' fill='%233fb950'/><circle cx='18' cy='18' r='3' fill='%23e3b341'/></svg>">
+<title>102. 二叉树的层序遍历 - 队列 BFS 可视化</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  line-height:1.6; padding:28px 18px 60px;
+}
+.wrap{max-width:1180px; margin:0 auto;}
+h1{font-size:26px; margin:0 0 4px; font-weight:700;}
+.sub{color:var(--muted); font-size:14px; margin-bottom:20px;}
+.tag{display:inline-block; font-size:12px; padding:2px 10px; border-radius:20px;
+  background:rgba(227,179,65,.15); color:var(--orange); border:1px solid rgba(227,179,65,.4);
+  vertical-align:middle; margin-left:8px;}
+.panel{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:18px;}
+.note{font-size:13.5px; color:var(--muted); margin:0 0 14px;}
+.note b{color:var(--text);}
+.note .b{color:var(--blue);} .note .o{color:var(--orange);}
+.cases{display:flex; flex-wrap:wrap; gap:8px;}
+.case-btn{background:var(--panel2); color:var(--text); border:1px solid var(--border);
+  border-radius:8px; padding:7px 13px; font-size:13px; cursor:pointer; transition:border-color .15s,background .15s;}
+.case-btn:hover{border-color:var(--blue);}
+.case-btn.active{background:rgba(88,166,255,.15); border-color:var(--blue); color:var(--blue);}
+.main-grid{display:grid; grid-template-columns:1fr 420px; gap:18px;}
+@media(max-width:980px){.main-grid{grid-template-columns:1fr;}}
+.stage-box{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px;}
+.stage{position:relative; width:560px; height:300px; margin:0 auto;}
+@media(max-width:620px){.stage{transform:scale(.82); transform-origin:top center;}}
+.tnode{position:absolute; width:38px; height:38px; border-radius:50%;
+  background:var(--panel2); border:2px solid var(--border); color:var(--text);
+  display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600;
+  z-index:3; transition:background .25s,border-color .25s;}
+.tnode.active{background:rgba(88,166,255,.18); border-color:var(--blue); color:var(--blue);}
+.tnode.done{background:rgba(63,185,80,.15); border-color:var(--green); color:var(--green);}
+.edge{position:absolute; height:2px; background:var(--border); transform-origin:0 50%; z-index:1;}
+.q-item{position:absolute; width:36px; height:36px; border-radius:8px;
+  background:rgba(88,166,255,.12); border:1px solid var(--blue); color:var(--blue);
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; z-index:3;}
+.q-item.head{box-shadow:0 0 7px rgba(88,166,255,.6); border-width:2px;}
+.q-label{position:absolute; left:0; top:218px; font-size:11px; color:var(--muted);}
+.legend{display:flex; flex-wrap:wrap; gap:16px; font-size:12px; color:var(--muted); margin-top:10px; justify-content:center;}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.dot{width:11px; height:11px; border-radius:50%;}
+.result-bar{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+.layer-box{display:flex; gap:4px; padding:6px 9px; border-radius:8px;
+  background:rgba(63,185,80,.12); border:1px solid var(--green);}
+.layer-box.current{background:rgba(88,166,255,.12); border-color:var(--blue); border-style:dashed;}
+.layer-box .lv{min-width:22px; height:22px; padding:0 5px; border-radius:6px; font-size:12px;
+  background:var(--panel2); color:var(--green); display:flex; align-items:center; justify-content:center; font-family:Consolas,monospace;}
+.layer-box.current .lv{color:var(--blue);}
+.layer-title{font-size:11.5px; color:var(--muted); margin-top:12px;}
+.code-box{background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden;}
+.code-head{padding:9px 14px; font-size:12px; color:var(--muted); border-bottom:1px solid var(--border); background:var(--panel2);}
+.code-body{display:flex; font-family:"Cascadia Code",Consolas,"Courier New",monospace; font-size:12.5px; line-height:1.7;}
+.line-nums{padding:12px 10px 12px 14px; color:#484f58; text-align:right; user-select:none; background:var(--panel2);}
+.code-lines{padding:12px 16px; flex:1; min-width:0; overflow-x:auto;}
+.code-line{white-space:pre; border-left:3px solid transparent; padding-left:8px; margin-left:-11px; border-radius:0 4px 4px 0;}
+.code-line.hl{background:rgba(88,166,255,.12); border-left-color:var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;}
+.controls{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;}
+.btn{background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:8px;
+  width:40px; height:38px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:border-color .15s;}
+.btn:hover:not(:disabled){border-color:var(--blue);}
+.btn:disabled{opacity:.4; cursor:not-allowed;}
+.btn.wide{width:auto; padding:0 16px; gap:7px; font-size:13px;}
+.btn svg{width:18px; height:18px; fill:var(--text);}
+input[type=range]{flex:1; min-width:120px; accent-color:var(--blue); height:38px;}
+select{background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:8px;
+  height:38px; padding:0 8px; cursor:pointer;}
+.kbd-hint{font-size:11.5px; color:var(--muted); width:100%;}
+.cards{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
+@media(max-width:620px){.cards{grid-template-columns:repeat(2,1fr);}}
+.info-card{background:var(--panel2); border:1px solid var(--border); border-radius:9px; padding:10px 12px;}
+.info-card .k{font-size:11.5px; color:var(--muted); margin-bottom:3px;}
+.info-card .val{font-size:18px; font-weight:700; font-family:Consolas,monospace;}
+.val.blue{color:var(--blue);} .val.green{color:var(--green);} .val.orange{color:var(--orange);}
+.msg{margin-top:12px; padding:11px 14px; background:var(--panel2); border-left:3px solid var(--blue);
+  border-radius:0 8px 8px 0; font-size:13.5px; min-height:22px;}
+#pcount{font-family:Consolas,monospace; color:var(--muted); font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>102. 二叉树的层序遍历<span class="tag">中等</span></h1>
+  <div class="sub">队列 BFS · 每层用 <code>pq.size()</code> 界定，从左到右逐层收集</div>
+
+  <div class="panel">
+    <p class="note">
+      每轮先记下本层节点数 <b class="b">x = pq.size()</b>，再用 for 循环恰好处理 x 个节点：
+      <b>poll 出队 → 加入本层 res → 把左右孩子入队</b>。处理完一层把 res 加入总结果，队列里剩下的就是下一层。
+    </p>
+    <div class="cases" id="cases"></div>
+  </div>
+
+  <div class="main-grid">
+    <div>
+      <div class="stage-box">
+        <div class="stage" id="stage">
+          <div class="q-label">队列（队首在左，待处理节点）</div>
+        </div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--blue)"></i>当前出队节点</span>
+          <span><i class="dot" style="background:var(--green)"></i>已加入结果</span>
+          <span><i class="dot" style="background:#58a6ff"></i>队列中等待</span>
+        </div>
+        <div class="layer-title">分层结果（绿色为已完成层，蓝色虚线为当前层）</div>
+        <div class="result-bar" id="resultBar"></div>
+      </div>
+      <div class="panel" style="margin-bottom:0">
+        <div class="controls">
+          <button class="btn wide" id="btnPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playLabel">播放</span></button>
+          <button class="btn" id="btnPrev"><svg viewBox="0 0 24 24"><path d="M16 6l-8 6 8 6z"/></svg></button>
+          <button class="btn" id="btnNext"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7z"/></svg></button>
+          <button class="btn" id="btnReset"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+          <input type="range" id="slider" min="0" value="0">
+          <span id="pcount"></span>
+          <select id="speed">
+            <option value="1400">0.7x</option>
+            <option value="900" selected>1x</option>
+            <option value="550">1.5x</option>
+            <option value="320">2.5x</option>
+          </select>
+        </div>
+        <div class="kbd-hint">键盘：← / → 单步 · 空格 播放暂停 · Home / End 首末</div>
+        <div class="cards">
+          <div class="info-card"><div class="k">当前动作</div><div class="val blue" id="i-phase">—</div></div>
+          <div class="info-card"><div class="k">本层进度 i / x</div><div class="val" id="i-prog">—</div></div>
+          <div class="info-card"><div class="k">本层 res</div><div class="val blue" id="i-level">—</div></div>
+          <div class="info-card"><div class="k">已完成层数</div><div class="val green" id="i-layers">0</div></div>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <div class="code-box">
+      <div class="code-head">Solution.java</div>
+      <div class="code-body">
+        <div class="line-nums" id="lineNums"></div>
+        <div class="code-lines" id="codeLines"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// ===== 数据：测试用例（层序数组，null 为空位）=====
+var CASES = [
+  { name: '用例 1：题目示例', tree: [3, 9, 20, null, null, 15, 7] },
+  { name: '用例 2：空树', tree: [] },
+  { name: '用例 3：单节点', tree: [1] },
+  { name: '用例 4：三层满树', tree: [1, 2, 3, 4, 5, 6, 7] },
+  { name: '用例 5：左偏斜', tree: [1, 2, null, 3, null, 4, null] },
+  { name: '用例 6：右偏斜', tree: [1, null, 2, null, 3, null, 4] },
+  { name: '用例 7：左重右轻', tree: [1, 2, 3, 4, 5] },
+  { name: '用例 8：四层满树', tree: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] }
+];
+
+// ===== 几何常量 =====
+var STAGE_W = 560, NODE_R = 19;
+var QUEUE_TOP = 232, QUEUE_START = 20, QUEUE_W = 36, QUEUE_GAP = 5;
+function rowY(d) { return 26 + d * 46; }
+
+// ===== 树构建（层序数组，id 用数组下标）=====
+function buildTreeFromArr(arr) {
+  if (arr.length === 0) return null;
+  var nodes = arr.map(function (v, i) {
+    return v === null ? null : { id: i, val: v, left: null, right: null };
+  });
+  var root = nodes[0];
+  var q = [root];
+  var i = 1;
+  while (q.length && i < nodes.length) {
+    var cur = q.shift();
+    if (i < nodes.length) { cur.left = nodes[i]; if (nodes[i]) q.push(nodes[i]); i++; }
+    if (i < nodes.length) { cur.right = nodes[i]; if (nodes[i]) q.push(nodes[i]); i++; }
+  }
+  return root;
+}
+
+function prepare(root) {
+  var flat = {};
+  (function walk(n, d, path) {
+    if (!n) return;
+    n.depth = d; n.path = path.slice();
+    flat[n.id] = n;
+    walk(n.left, d + 1, path.concat(['L']));
+    walk(n.right, d + 1, path.concat(['R']));
+  })(root, 0, []);
+  return flat;
+}
+
+function slotX(node) {
+  var k = 0;
+  for (var j = 0; j < node.path.length; j++) {
+    k = (k << 1) | (node.path[j] === 'R' ? 1 : 0);
+  }
+  return (k + 0.5) * STAGE_W / Math.pow(2, node.depth);
+}
+
+// ===== 代码（26 行，含空行）=====
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-id">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-type">List</span>&lt;<span class="t-type">List</span>&lt;<span class="t-type">Integer</span>&gt;&gt; <span class="t-fn">levelOrder</span>(<span class="t-type">TreeNode</span> <span class="t-id">root</span>) {',
+  '        <span class="t-type">List</span>&lt;<span class="t-type">List</span>&lt;<span class="t-type">Integer</span>&gt;&gt; <span class="t-id">restust</span> = <span class="t-kw">new</span> <span class="t-fn">ArrayList</span>&lt;&gt;();',
+  '        <span class="t-kw">if</span>(<span class="t-id">root</span> == <span class="t-bool">null</span>) <span class="t-kw">return</span> <span class="t-id">restust</span>;',
+  '        <span class="t-type">Deque</span>&lt;<span class="t-type">TreeNode</span>&gt; <span class="t-id">pq</span> = <span class="t-kw">new</span> <span class="t-fn">LinkedList</span>&lt;&gt;();',
+  '        <span class="t-id">pq</span>.<span class="t-fn">offer</span>(<span class="t-id">root</span>);',
+  '        <span class="t-kw">while</span>(!<span class="t-id">pq</span>.isEmpty()){',
+  '            <span class="t-kw">int</span> <span class="t-id">x</span> = <span class="t-id">pq</span>.size();',
+  '            <span class="t-type">List</span>&lt;<span class="t-type">Integer</span>&gt; <span class="t-id">res</span> = <span class="t-kw">new</span> <span class="t-fn">ArrayList</span>&lt;&gt;();',
+  '            <span class="t-kw">for</span>(<span class="t-kw">int</span> <span class="t-id">i</span> = <span class="t-num">0</span>; <span class="t-id">i</span> &lt; <span class="t-id">x</span>; <span class="t-id">i</span>++){',
+  '                <span class="t-type">TreeNode</span> <span class="t-id">node</span> = <span class="t-id">pq</span>.<span class="t-fn">poll</span>();',
+  '',
+  '                <span class="t-id">res</span>.<span class="t-fn">add</span>(<span class="t-id">node</span>.val);',
+  '                <span class="t-kw">if</span>(<span class="t-id">node</span>.left != <span class="t-bool">null</span>){',
+  '                    <span class="t-id">pq</span>.<span class="t-fn">offer</span>(<span class="t-id">node</span>.left);',
+  '                }',
+  '                <span class="t-kw">if</span>(<span class="t-id">node</span>.right != <span class="t-bool">null</span>){',
+  '                    <span class="t-id">pq</span>.<span class="t-fn">offer</span>(<span class="t-id">node</span>.right);',
+  '                }',
+  '            }',
+  '            <span class="t-id">restust</span>.<span class="t-fn">add</span>(<span class="t-id">res</span>);',
+  '        }',
+  '        <span class="t-kw">return</span> <span class="t-id">restust</span>;',
+  '',
+  '    }',
+  '}'
+];
+var PHASE_CN = { start: '开始', init: '根入队', levelstart: '新的一层', poll: '出队', add: '加入本层', enqueue: '孩子入队', levelend: '层完成', done: '完成' };
+
+// ===== 帧生成 =====
+function buildSteps(root) {
+  var steps = [], queue = [], result = [], doneIds = [];
+  var levelRes = [], levelSize = 0;
+  function snap(phase, line, node) {
+    steps.push({ phase: phase, line: line, node: node,
+      queue: queue.map(function (n) { return n.id; }),
+      levelRes: levelRes.slice(), levelSize: levelSize,
+      result: result.map(function (r) { return r.slice(); }),
+      doneIds: doneIds.slice() });
+  }
+  snap('start', 2, null);
+  if (root === null) { snap('done', 4, null); return steps; }
+  queue.push(root);
+  snap('init', 6, null);
+  while (queue.length > 0) {
+    levelSize = queue.length;
+    levelRes = [];
+    snap('levelstart', 8, null);
+    for (var i = 0; i < levelSize; i++) {
+      var node = queue.shift();
+      snap('poll', 11, node.id);
+      levelRes.push(node.val);
+      doneIds.push(node.id);
+      snap('add', 13, node.id);
+      if (node.left) queue.push(node.left);
+      if (node.right) queue.push(node.right);
+      snap('enqueue', 15, node.id);
+    }
+    result.push(levelRes.slice());
+    snap('levelend', 21, null);
+  }
+  snap('done', 23, null);
+  return steps;
+}
+
+// ===== 运行状态 =====
+var stage = document.getElementById('stage');
+var curCase = 0, frames = [], flat = {}, cur = 0, playing = false, timer = null;
+var nodeEls = {}, edgeEls = {};
+
+function compute(caseIdx) {
+  var root = buildTreeFromArr(CASES[caseIdx].tree);
+  flat = root === null ? {} : prepare(root);
+  frames = buildSteps(root);
+}
+
+function ensureElements() {
+  Object.keys(nodeEls).forEach(function (id) { nodeEls[id].remove(); });
+  Object.keys(edgeEls).forEach(function (k) { edgeEls[k].remove(); });
+  Array.prototype.slice.call(stage.querySelectorAll('.q-item')).forEach(function (q) { q.remove(); });
+  nodeEls = {}; edgeEls = {};
+  Object.keys(flat).forEach(function (id) {
+    var n = flat[id];
+    if (n.left) { var e = document.createElement('div'); edgeEls[id + '-' + n.left.id] = e; stage.appendChild(e); }
+    if (n.right) { var e2 = document.createElement('div'); edgeEls[id + '-' + n.right.id] = e2; stage.appendChild(e2); }
+  });
+  Object.keys(flat).forEach(function (id) {
+    var d = document.createElement('div'); stage.appendChild(d); nodeEls[id] = d;
+  });
+}
+
+function nodeCenter(id) {
+  var n = flat[id];
+  return { x: slotX(n), y: rowY(n.depth) };
+}
+
+function makeMsg(fr) {
+  var nv = fr.node !== null ? flat[fr.node].val : '';
+  switch (fr.phase) {
+    case 'start': return '开始层序遍历，准备逐层从左到右收集节点';
+    case 'init': return '把根节点 root 入队，队列初始为 [root]';
+    case 'levelstart': return '新的一层：记下本层节点数 x=' + fr.levelSize + '，新建本层 res';
+    case 'poll': return '队首节点 ' + nv + ' 出队（poll），准备加入本层';
+    case 'add': return '把 ' + nv + ' 加入本层 res，节点变绿';
+    case 'enqueue':
+      var n = flat[fr.node];
+      var kids = [];
+      if (n.left) kids.push(n.left.val);
+      if (n.right) kids.push(n.right.val);
+      return kids.length ? '把 ' + nv + ' 的孩子（' + kids.join(',') + '）入队，排在队尾' : nv + ' 没有孩子，无新节点入队';
+    case 'levelend': return '本层 ' + fr.levelSize + ' 个节点处理完，res 加入总结果';
+    case 'done': return '队列已空，层序遍历完成，共 ' + fr.result.length + ' 层';
+  }
+}
+
+function renderResultBar(fr) {
+  var bar = document.getElementById('resultBar');
+  bar.innerHTML = '';
+  function makeLayer(vals, current) {
+    var box = document.createElement('div');
+    box.className = 'layer-box' + (current ? ' current' : '');
+    if (vals.length === 0) {
+      var empty = document.createElement('span');
+      empty.className = 'lv'; empty.textContent = '…';
+      box.appendChild(empty);
+    } else {
+      vals.forEach(function (v) {
+        var s = document.createElement('span');
+        s.className = 'lv'; s.textContent = v;
+        box.appendChild(s);
+      });
+    }
+    bar.appendChild(box);
+  }
+  fr.result.forEach(function (r) { makeLayer(r, false); });
+  if (['levelstart', 'poll', 'add', 'enqueue'].indexOf(fr.phase) >= 0) {
+    makeLayer(fr.levelRes, true);
+  }
+}
+
+function renderFrame() {
+  var fr = frames[cur];
+  // 边
+  Object.keys(edgeEls).forEach(function (k) {
+    var ids = k.split('-');
+    var p1 = nodeCenter(ids[0]), p2 = nodeCenter(ids[1]);
+    var dx = p2.x - p1.x, dy = p2.y - p1.y;
+    var len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    var el = edgeEls[k];
+    el.style.left = p1.x + 'px'; el.style.top = p1.y + 'px';
+    el.style.width = len + 'px'; el.style.transform = 'rotate(' + ang + 'deg)';
+    el.className = 'edge';
+  });
+  // 节点
+  Object.keys(flat).forEach(function (id) {
+    var n = flat[id];
+    var p = nodeCenter(id);
+    var el = nodeEls[id];
+    el.style.left = (p.x - NODE_R) + 'px'; el.style.top = (p.y - NODE_R) + 'px';
+    el.textContent = n.val;
+    var cls = 'tnode';
+    if (fr.node === Number(id) && fr.phase === 'poll') cls += ' active';
+    else if (fr.doneIds.indexOf(Number(id)) >= 0) cls += ' done';
+    el.className = cls;
+  });
+  // 队列
+  Array.prototype.slice.call(stage.querySelectorAll('.q-item')).forEach(function (q) { q.remove(); });
+  fr.queue.forEach(function (id, idx) {
+    var d = document.createElement('div');
+    d.className = 'q-item' + (idx === 0 ? ' head' : '');
+    d.style.left = (QUEUE_START + idx * (QUEUE_W + QUEUE_GAP)) + 'px';
+    d.style.top = (QUEUE_TOP - 18) + 'px';
+    d.textContent = flat[id].val;
+    stage.appendChild(d);
+  });
+  // 分层结果
+  renderResultBar(fr);
+  // 信息卡片
+  document.getElementById('i-phase').textContent = PHASE_CN[fr.phase];
+  var progEl = document.getElementById('i-prog');
+  if (fr.levelSize > 0) { progEl.textContent = fr.levelRes.length + ' / ' + fr.levelSize; progEl.className = 'val blue'; }
+  else { progEl.textContent = '—'; progEl.className = 'val'; }
+  var lvEl = document.getElementById('i-level');
+  lvEl.textContent = fr.levelRes.length ? fr.levelRes.join(',') : '—';
+  document.getElementById('i-layers').textContent = fr.result.length;
+  // 代码高亮
+  document.querySelectorAll('.code-line').forEach(function (l) { l.classList.remove('hl'); });
+  var hl = document.getElementById('cl-' + fr.line);
+  if (hl) hl.classList.add('hl');
+  // 消息与进度
+  document.getElementById('msg').textContent = makeMsg(fr);
+  document.getElementById('pcount').textContent = (cur + 1) + ' / ' + frames.length;
+  var slider = document.getElementById('slider');
+  slider.max = frames.length - 1; slider.value = cur;
+  document.getElementById('btnPrev').disabled = (cur === 0);
+  document.getElementById('btnNext').disabled = (cur === frames.length - 1);
+}
+
+// ===== 播放控制 =====
+function stepDelay() { return Number(document.getElementById('speed').value); }
+function setPlaying(on) {
+  playing = on;
+  document.getElementById('playLabel').textContent = on ? '暂停' : '播放';
+  document.querySelector('#btnPlay svg').innerHTML = on ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+}
+function play() {
+  setPlaying(true);
+  timer = setInterval(function () {
+    if (cur >= frames.length - 1) { stop(); return; }
+    cur++; renderFrame();
+  }, stepDelay());
+}
+function stop() {
+  setPlaying(false);
+  if (timer) { clearInterval(timer); timer = null; }
+}
+function nextStep() { if (cur < frames.length - 1) { cur++; renderFrame(); } }
+function prevStep() { if (cur > 0) { cur--; renderFrame(); } }
+
+function switchCase(idx) {
+  stop();
+  curCase = idx; cur = 0;
+  compute(idx); ensureElements(); renderFrame();
+  document.querySelectorAll('.case-btn').forEach(function (b, i) {
+    b.classList.toggle('active', i === idx);
+  });
+}
+
+function renderCode() {
+  document.getElementById('lineNums').innerHTML = CODE.map(function (_, i) { return i + 1; }).join('<br>');
+  document.getElementById('codeLines').innerHTML = CODE.map(function (c, i) {
+    return '<div class="code-line" id="cl-' + (i + 1) + '">' + (c === '' ? '&nbsp;' : c) + '</div>';
+  }).join('');
+}
+
+function renderCases() {
+  var box = document.getElementById('cases');
+  CASES.forEach(function (c, i) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (i === 0 ? ' active' : '');
+    b.textContent = c.name;
+    b.onclick = function () { switchCase(i); };
+    box.appendChild(b);
+  });
+}
+
+document.getElementById('btnPlay').onclick = function () { playing ? stop() : play(); };
+document.getElementById('btnNext').onclick = nextStep;
+document.getElementById('btnPrev').onclick = prevStep;
+document.getElementById('btnReset').onclick = function () { stop(); cur = 0; renderFrame(); };
+document.getElementById('slider').addEventListener('input', function (e) {
+  stop(); cur = Number(e.target.value); renderFrame();
+});
+document.getElementById('speed').onchange = function () { if (playing) { stop(); play(); } };
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); nextStep(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); prevStep(); }
+  else if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
+  else if (e.key === 'Home') { e.preventDefault(); stop(); cur = 0; renderFrame(); }
+  else if (e.key === 'End') { e.preventDefault(); stop(); cur = frames.length - 1; renderFrame(); }
+});
+
+renderCode();
+renderCases();
+compute(0);
+ensureElements();
+renderFrame();
+</script>
+</body>
+</html>

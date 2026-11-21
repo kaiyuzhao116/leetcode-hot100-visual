@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>56. 合并区间 - 排序可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%233fb950'/><rect x='3' y='8' width='12' height='4' rx='2' fill='%230d1117'/><rect x='9' y='13' width='12' height='4' rx='2' fill='%230d1117'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.mono{font-family:"Cascadia Code",Consolas,"Courier New",monospace}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 22px 60px}
+
+.head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.head h1{font-size:26px;font-weight:700;letter-spacing:.3px}
+.tag{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--border)}
+.tag.mid{color:var(--orange);border-color:rgba(227,179,65,.45);background:rgba(227,179,65,.1)}
+.sub{color:var(--muted);font-size:13.5px;margin-bottom:18px}
+.idea{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--green);
+  border-radius:8px;padding:14px 16px;font-size:14px;margin-bottom:18px;line-height:1.7}
+.idea b{color:var(--green)}
+.idea .kw{color:var(--purple);font-weight:600}
+
+.cases{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:20px}
+.case-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);
+  padding:7px 14px;border-radius:7px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+.case-btn:hover{border-color:var(--blue);color:var(--text)}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+.grid{display:grid;grid-template-columns:1fr;gap:18px}
+@media(min-width:980px){.grid{grid-template-columns:1.6fr 1fr}}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px}
+.panel h3{font-size:14px;color:var(--muted);font-weight:600;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;letter-spacing:.3px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+/* 数轴 */
+.axis{position:relative;margin-top:6px}
+.ticks{position:relative;height:18px;margin-left:74px}
+.tick{position:absolute;top:0;transform:translateX(-50%);font-size:11px;color:var(--muted);
+  font-family:Consolas,monospace}
+.tick::after{content:"";position:absolute;left:50%;top:13px;width:1px;height:5px;background:var(--border)}
+.track-row{display:flex;align-items:center;margin-bottom:9px}
+.track-label{width:74px;flex-shrink:0;font-size:11.5px;color:var(--muted);font-family:Consolas,monospace;
+  text-align:right;padding-right:11px;white-space:nowrap}
+.track{position:relative;flex:1;height:30px;background:repeating-linear-gradient(90deg,
+  transparent 0,transparent calc(10% - 1px),rgba(255,255,255,.03) calc(10% - 1px),rgba(255,255,255,.03) 10%)}
+.bar{position:absolute;top:3px;height:24px;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:700;font-family:Consolas,monospace;
+  transition:all .35s cubic-bezier(.4,0,.2,1);border:1.5px solid var(--border);overflow:hidden;
+  white-space:nowrap}
+.bar .bt{padding:0 7px}
+.bar.idle{background:var(--panel2);color:var(--muted)}
+.bar.next{border-color:var(--orange);background:rgba(227,179,65,.16);color:var(--orange)}
+.bar.merged{border-color:var(--purple);background:rgba(188,140,255,.14);color:var(--purple)}
+.bar.done{border-color:var(--green);background:rgba(63,185,80,.13);color:var(--green)}
+.cur-track{margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);
+  display:flex;align-items:center}
+.cur-bar{position:relative;height:38px;flex:1;min-width:0}
+.bar.cur{top:0;height:38px;border-color:var(--purple);background:rgba(188,140,255,.2);
+  color:var(--purple);font-size:14px;box-shadow:0 0 18px rgba(188,140,255,.25)}
+.bar.cur.empty-cur{background:var(--panel2);color:var(--muted);border-style:dashed}
+
+/* 判断面板 */
+.judge{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:12px}
+.jbox{background:var(--panel2);border:1.5px solid var(--border);border-radius:9px;padding:11px 14px;
+  text-align:center;min-width:78px}
+.jbox .jl{font-size:11px;color:var(--muted);font-family:Consolas,monospace}
+.jbox .jv{font-size:22px;font-weight:700;font-family:Consolas,monospace;margin-top:2px}
+.jbox.cur .jv{color:var(--purple)}
+.jbox.next .jv{color:var(--orange)}
+.jop{font-size:18px;font-weight:700;color:var(--muted);font-family:Consolas,monospace}
+.judge-result{font-size:13.5px;text-align:center;min-height:24px;font-weight:600}
+.judge-result.overlap{color:var(--purple)}
+.judge-result.apart{color:var(--blue)}
+
+/* 结果区间 */
+.result-list{display:flex;flex-direction:column;gap:8px}
+.r-item{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--green);
+  border-radius:8px;padding:9px 12px;font-family:Consolas,monospace;font-size:14px;
+  animation:slidein .3s ease}
+.r-item .ri{color:var(--green);font-weight:700}
+.r-empty{color:var(--muted);font-size:13px;background:var(--panel2);border:1px dashed var(--border);
+  border-radius:8px;padding:11px;text-align:center}
+@keyframes slidein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+/* 代码 */
+.code-wrap{background:#0b0f16;border:1px solid var(--border);border-radius:10px;overflow:hidden;
+  display:flex;flex-direction:column}
+.code-bar{background:var(--panel2);padding:9px 14px;display:flex;gap:7px;align-items:center;
+  border-bottom:1px solid var(--border)}
+.code-bar .bd{width:12px;height:12px;border-radius:50%}
+.code-title{font-size:12.5px;color:var(--muted);margin-left:6px;font-family:Consolas,monospace}
+.code-body{padding:12px 0;overflow:auto;max-height:380px}
+.code-line{display:flex;align-items:flex-start;padding:1.5px 14px;font-family:Consolas,monospace;
+  font-size:13px;line-height:1.7;white-space:pre;transition:background .15s}
+.code-line .ln{width:26px;text-align:right;color:#48505c;margin-right:14px;flex-shrink:0;user-select:none}
+.code-line.hl{background:rgba(88,166,255,.16)}
+.code-line.hl .ln{color:var(--blue)}
+.t-kw{color:#ff7b72}.t-type{color:#ffa657}.t-num{color:#79c0ff}.t-id{color:#d2a8ff}.t-meth{color:#d2a8ff}
+
+/* 控制条 */
+.controls{position:sticky;bottom:0;background:rgba(22,27,34,.96);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-top:18px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 24px rgba(0,0,0,.35)}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:42px;height:42px;
+  border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.play{width:auto;padding:0 18px;gap:8px;font-weight:600;font-size:14px;background:var(--blue);
+  border-color:var(--blue);color:#0d1117}
+.btn.play:hover{opacity:.9;color:#0d1117}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.scrub{flex:1;min-width:160px;display:flex;align-items:center;gap:11px}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:5px;border-radius:3px;
+  background:var(--border);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--blue);cursor:pointer;border:2px solid var(--bg)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--blue);
+  cursor:pointer;border:2px solid var(--bg)}
+.step-txt{font-size:12.5px;color:var(--muted);font-family:Consolas,monospace;white-space:nowrap}
+.speed{background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:8px;
+  padding:8px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+.msg-line{width:100%;font-size:13.5px;padding-top:10px;min-height:22px;border-top:1px solid var(--border)}
+.msg-line .act{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;
+  margin-right:9px;font-family:Consolas,monospace;vertical-align:1px}
+.act-init{background:rgba(88,166,255,.2);color:var(--blue)}
+.act-sort{background:rgba(63,185,80,.2);color:var(--green)}
+.act-compare{background:rgba(227,179,65,.2);color:var(--orange)}
+.act-merge{background:rgba(188,140,255,.2);color:var(--purple)}
+.act-separate{background:rgba(88,166,255,.2);color:var(--blue)}
+.act-end{background:rgba(88,166,255,.2);color:var(--blue)}
+@media(max-width:600px){
+  .wrap{padding:18px 13px 50px}
+  .track-label{width:52px;font-size:10.5px}
+  .ticks{margin-left:52px}
+  .controls{gap:9px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>56. 合并区间</h1>
+    <span class="tag mid">中等</span>
+  </div>
+  <div class="sub">排序 + 一次线性扫描 · 时间 O(n log n) 主要在排序 · 空间 O(log n) 排序栈（不计结果）</div>
+
+  <div class="idea">
+    先按每个区间的<b>起点从小到大排序</b>，这样可能重叠的区间一定相邻。维护一个当前区间 <b>cur</b>，
+    逐个看下一个区间 <b>next</b>：若 <span class="kw">cur 的终点 ≥ next 的起点</span>，说明重叠，把 cur 终点拉长到两者较大值；
+    否则 cur 已经独立，收进结果，再让 next 成为新的 cur。
+  </div>
+
+  <div class="cases" id="cases"></div>
+
+  <div class="grid">
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div class="panel">
+        <h3><span class="dot" style="background:var(--purple)"></span>数轴上的区间（排序后）</h3>
+        <div class="axis" id="axis"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div class="panel">
+        <h3><span class="dot" style="background:var(--orange)"></span>重叠判断</h3>
+        <div class="judge">
+          <div class="jbox cur"><div class="jl">cur 终点</div><div class="jv" id="jCur">—</div></div>
+          <div class="jop" id="jOp">≥ ?</div>
+          <div class="jbox next"><div class="jl">next 起点</div><div class="jv" id="jNext">—</div></div>
+        </div>
+        <div class="judge-result" id="judgeResult"></div>
+      </div>
+
+      <div class="panel">
+        <h3><span class="dot" style="background:var(--green)"></span>已确定的不重叠区间</h3>
+        <div class="result-list" id="resultList"></div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-bar">
+          <span class="bd" style="background:#ff5f56"></span>
+          <span class="bd" style="background:#ffbd2e"></span>
+          <span class="bd" style="background:#27c93f"></span>
+          <span class="code-title">Solution.java</span>
+        </div>
+        <div class="code-body" id="codeBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn play" id="playBtn">
+      <svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+      <span id="playLabel">播放</span>
+    </button>
+    <button class="btn" id="prevBtn" title="上一步（←）">
+      <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+    </button>
+    <button class="btn" id="nextBtn" title="下一步（→）">
+      <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
+    <button class="btn" id="resetBtn" title="重置">
+      <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
+    </button>
+    <div class="scrub">
+      <input type="range" id="scrubber" min="0" value="0" step="1">
+      <span class="step-txt" id="stepTxt">0 / 0</span>
+    </div>
+    <select class="speed" id="speedSel">
+      <option value="1400">0.5x</option>
+      <option value="900" selected>1x</option>
+      <option value="550">1.5x</option>
+      <option value="300">2x</option>
+    </select>
+    <div class="msg-line" id="msgLine"></div>
+  </div>
+</div>
+
+<script>
+/* ===== 数据 ===== */
+const CASES = [
+  [[1,3],[2,6],[8,10],[15,18]],
+  [[1,4],[4,5]],
+  [[1,4],[2,3]],
+  [[1,4],[0,4]],
+  [[1,4],[2,3],[5,9],[8,10]]
+];
+
+const CODE_HTML = [
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '  <span class="t-kw">public</span> <span class="t-kw">int</span>[][] <span class="t-meth">merge</span>(<span class="t-kw">int</span>[][] intervals) {',
+  '    ArrayList&lt;<span class="t-kw">int</span>[]&gt; res = <span class="t-kw">new</span> ArrayList&lt;&gt;();',
+  '',
+  '    Arrays.<span class="t-meth">sort</span>(intervals,(a,b)-&gt;(a[<span class="t-num">0</span>]-b[<span class="t-num">0</span>]));',
+  '    <span class="t-kw">int</span>[] cur = intervals[<span class="t-num">0</span>];',
+  '    <span class="t-kw">for</span>(<span class="t-kw">int</span> i=<span class="t-num">1</span>;i&lt;intervals.length;i++){',
+  '      <span class="t-kw">int</span>[] next = intervals[i];',
+  '      <span class="t-kw">if</span>(cur[<span class="t-num">1</span>]&gt;=next[<span class="t-num">0</span>]){',
+  '        cur[<span class="t-num">1</span>] = <span class="t-type">Math</span>.<span class="t-meth">max</span>(cur[<span class="t-num">1</span>],next[<span class="t-num">1</span>]);',
+  '      }<span class="t-kw">else</span>{',
+  '        res.<span class="t-meth">add</span>(cur);',
+  '        cur = next;',
+  '      }',
+  '    }',
+  '    res.<span class="t-meth">add</span>(cur);',
+  '    <span class="t-kw">int</span>[][] result = <span class="t-kw">new</span> <span class="t-kw">int</span>[res.size()][];',
+  '    <span class="t-kw">for</span>(<span class="t-kw">int</span> i=<span class="t-num">0</span>;i&lt;res.size();i++){',
+  '      result[i] = res.<span class="t-meth">get</span>(i);',
+  '    }',
+  '    <span class="t-kw">return</span> result;',
+  '  }',
+  '}'
+];
+
+const ACT_NAME = {init:'准备', sort:'排序', compare:'判断', merge:'合并', separate:'独立', end:'返回'};
+
+/* ===== 构建步骤 ===== */
+function buildSteps(raw){
+  const intervals = raw.map(x=>x.slice()).sort((a,b)=>a[0]-b[0]);
+  const n = intervals.length;
+  const steps = [];
+  const result = [];
+  let states = new Array(n).fill('idle');
+  let cur = intervals[0].slice();
+  let curStart = 0;
+
+  const push = (o)=>steps.push(Object.assign({
+    line:0, action:'', cur:cur.slice(), nextIdx:-1,
+    result:result.map(x=>x.slice()), states:states.slice()
+  }, o));
+
+  push({line:5, action:'sort', cur:null,
+    msg:'按区间起点从小到大排序，可能重叠的区间变得相邻，只需比较相邻区间'});
+
+  states[0]='merged';
+  push({line:6, action:'init',
+    msg:'取第一个区间作为当前合并区间 cur = ['+cur[0]+','+cur[1]+']'});
+
+  for(let i=1;i<n;i++){
+    states[i]='next';
+    const next = intervals[i];
+    push({line:9, action:'compare', nextIdx:i,
+      msg:'next = ['+next[0]+','+next[1]+']，比较 cur 终点 '+cur[1]+' 与 next 起点 '+next[0]});
+    if(cur[1] >= next[0]){
+      cur[1] = Math.max(cur[1], next[1]);
+      states[i]='merged';
+      push({line:10, action:'merge',
+        msg:cur[1]+' ≥ '+next[0]+'，区间重叠，cur 终点拉长到 '+cur[1]+'，合并为 ['+cur[0]+','+cur[1]+']'});
+    }else{
+      result.push(cur.slice());
+      for(let k=curStart;k<i;k++) states[k]='done';
+      cur = next.slice();
+      curStart = i;
+      states[i]='merged';
+      push({line:12, action:'separate',
+        msg:next[0]+' 大于 cur 终点，不重叠，把 ['+result[result.length-1][0]+','+result[result.length-1][1]+'] 收进结果，cur 换成 ['+cur[0]+','+cur[1]+']'});
+    }
+  }
+  result.push(cur.slice());
+  for(let k=curStart;k<n;k++) states[k]='done';
+  push({line:16, action:'end',
+    msg:'循环结束，res.add(cur) 把最后一个 cur 也加进结果，共得到 '+result.length+' 个不重叠区间'});
+  push({line:21, action:'end',
+    msg:'再用 for 把 ArrayList 逐个 res.get(i) 装进二维数组 result，return 返回'});
+  return {steps, intervals};
+}
+
+/* ===== 状态与元素 ===== */
+let caseIdx=0, steps=[], sorted=[], posIdx=0, timer=null, playing=false;
+const $=(id)=>document.getElementById(id);
+const axis=$('axis'), resultList=$('resultList'), codeBody=$('codeBody'),
+  msgLine=$('msgLine'), scrubber=$('scrubber'), stepTxt=$('stepTxt'),
+  speedSel=$('speedSel'), playBtn=$('playBtn'), playIcon=$('playIcon'),
+  playLabel=$('playLabel'), jCur=$('jCur'), jNext=$('jNext'),
+  jOp=$('jOp'), judgeResult=$('judgeResult');
+
+function renderCaseButtons(){
+  $('cases').innerHTML = CASES.map((c,k)=>
+    '<button class="case-btn'+(k===caseIdx?' active':'')+'" data-k="'+k+'">用例 '+(k+1)+': '+JSON.stringify(c)+'</button>'
+  ).join('');
+  document.querySelectorAll('.case-btn').forEach(b=>b.addEventListener('click',
+    ()=>loadCase(parseInt(b.dataset.k,10))));
+}
+function renderCode(){
+  codeBody.innerHTML = CODE_HTML.map((h,k)=>
+    '<div class="code-line" data-line="'+(k+1)+'"><span class="ln">'+(k+1)+'</span><span>'+h+'</span></div>'
+  ).join('');
+}
+const pct=(v,min,span)=>((v-min)/span)*100;
+
+function renderAxis(snap){
+  let min=Infinity,max=-Infinity;
+  sorted.forEach(it=>{min=Math.min(min,it[0]);max=Math.max(max,it[1]);});
+  const span=max-min;
+  let ticks='<div class="ticks">';
+  for(let t=min;t<=max;t++) ticks+='<span class="tick" style="left:'+pct(t,min,span)+'%">'+t+'</span>';
+  ticks+='</div>';
+  let rows=sorted.map((it,k)=>{
+    const l=pct(it[0],min,span), w=pct(it[1],min,span)-l;
+    return '<div class="track-row"><div class="track-label">['+it[0]+','+it[1]+']</div>'+
+      '<div class="track"><div class="bar '+snap.states[k]+'" style="left:'+l+'%;width:'+w+'%"><span class="bt">['+it[0]+','+it[1]+']</span></div></div></div>';
+  }).join('');
+  let curHtml;
+  if(snap.cur){
+    const l=pct(snap.cur[0],min,span), w=pct(snap.cur[1],min,span)-l;
+    curHtml='<div class="cur-track"><div class="track-label">当前 cur</div><div class="cur-bar"><div class="bar cur" style="left:'+l+'%;width:'+w+'%"><span class="bt">['+snap.cur[0]+','+snap.cur[1]+']</span></div></div></div>';
+  }else{
+    curHtml='<div class="cur-track"><div class="track-label">当前 cur</div><div class="cur-bar"><div class="bar cur empty-cur" style="left:0;width:100%"><span class="bt">尚未设置</span></div></div></div>';
+  }
+  axis.innerHTML=ticks+rows+curHtml;
+}
+
+function renderJudge(snap){
+  if(snap.nextIdx>=0){
+    const next=sorted[snap.nextIdx];
+    jCur.textContent=snap.cur? snap.cur[1]:'';
+    jNext.textContent=next[0];
+    jOp.textContent='≥';
+    if(snap.action==='compare'){
+      const overlap=snap.cur[1]>=next[0];
+      judgeResult.className='judge-result '+(overlap?'overlap':'apart');
+      judgeResult.textContent=overlap?'数值上满足重叠条件，即将合并':'数值上不重叠，即将独立收尾';
+    }else if(snap.action==='merge'){
+      judgeResult.className='judge-result overlap';
+      judgeResult.textContent='重叠：cur 终点 ≥ next 起点，拉长 cur';
+    }
+  }else{
+    jCur.textContent='—';jNext.textContent='—';jOp.textContent='≥ ?';
+    judgeResult.className='judge-result';judgeResult.textContent='';
+  }
+}
+
+function renderResult(snap){
+  if(snap.result.length===0){
+    resultList.innerHTML='<div class="r-empty">还没有独立完成的区间</div>';
+  }else{
+    resultList.innerHTML=snap.result.map(r=>
+      '<div class="r-item"><span class="ri">['+r[0]+','+r[1]+']</span></div>').join('');
+  }
+}
+
+function render(){
+  const snap=steps[posIdx];
+  renderAxis(snap);
+  renderJudge(snap);
+  renderResult(snap);
+  codeBody.querySelectorAll('.code-line').forEach(el=>
+    el.classList.toggle('hl',parseInt(el.dataset.line,10)===snap.line));
+  msgLine.innerHTML='<span class="act act-'+snap.action+'">'+ACT_NAME[snap.action]+'</span>'+snap.msg;
+  scrubber.max=steps.length-1;scrubber.value=posIdx;
+  stepTxt.textContent=posIdx+' / '+(steps.length-1);
+}
+
+/* ===== 播放 ===== */
+function updatePlayUI(){
+  if(playing){
+    playIcon.innerHTML='<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';playLabel.textContent='暂停';
+  }else{
+    playIcon.innerHTML='<path d="M8 5v14l11-7z"/>';playLabel.textContent='播放';
+  }
+}
+function play(){
+  if(posIdx>=steps.length-1){posIdx=0;render();}
+  playing=true;updatePlayUI();
+  const sp=parseInt(speedSel.value,10);
+  timer=setInterval(()=>{
+    if(posIdx>=steps.length-1){pause();return;}
+    posIdx++;render();
+  },sp);
+}
+function pause(){playing=false;clearInterval(timer);timer=null;updatePlayUI();}
+function loadCase(k){
+  pause();caseIdx=k;posIdx=0;
+  const r=buildSteps(CASES[k]);steps=r.steps;sorted=r.intervals;
+  renderCaseButtons();render();
+}
+
+playBtn.addEventListener('click',()=>playing?pause():play());
+$('prevBtn').addEventListener('click',()=>{pause();if(posIdx>0){posIdx--;render();}});
+$('nextBtn').addEventListener('click',()=>{pause();if(posIdx<steps.length-1){posIdx++;render();}});
+$('resetBtn').addEventListener('click',()=>{pause();posIdx=0;render();});
+scrubber.addEventListener('input',()=>{pause();posIdx=parseInt(scrubber.value,10);render();});
+speedSel.addEventListener('change',()=>{if(playing){pause();play();}});
+document.addEventListener('keydown',(e)=>{
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();if(posIdx<steps.length-1){posIdx++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(posIdx>0){posIdx--;render();}}
+  else if(e.key===' '){e.preventDefault();playing?pause():play();}
+});
+
+renderCaseButtons();renderCode();
+const r0=buildSteps(CASES[0]);steps=r0.steps;sorted=r0.intervals;render();
+
+</script>
+</body>
+</html>

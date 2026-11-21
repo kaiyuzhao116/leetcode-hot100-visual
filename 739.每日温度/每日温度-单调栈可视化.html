@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>T</text></svg>">
+<title>739. 每日温度 · 单调栈可视化</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --fg:#e6edf3; --muted:#8b949e;
+    --blue:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149; --purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;line-height:1.6;overflow:hidden;height:100vh;
+    display:flex;flex-direction:column;
+  }
+  header{
+    display:flex;justify-content:space-between;align-items:center;gap:14px;
+    padding:13px 20px;border-bottom:1px solid var(--border);background:var(--panel);flex-wrap:wrap;
+  }
+  h1{font-size:18px}
+  .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{background:var(--bg);color:var(--muted);border:none;padding:7px 11px;cursor:pointer;font-family:var(--mono);font-size:11.5px}
+  .seg button.on{background:var(--blue);color:#fff}
+  .btn{background:var(--panel2);color:var(--fg);border:1px solid var(--border);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12.5px}
+  .btn:hover{background:#272e3a}
+  .btn.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  select{background:var(--panel2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:7px 6px;font-size:12px}
+  .progress-bar{display:flex;align-items:center;gap:12px;padding:8px 20px;background:var(--panel);border-bottom:1px solid var(--border)}
+  .pl{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+  input[type=range]{flex:1;accent-color:var(--blue)}
+  main{flex:1;display:grid;grid-template-columns:1.15fr 1fr;gap:14px;padding:14px 20px;overflow:hidden}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;font-family:var(--mono);color:var(--muted)}
+  .left-body{padding:15px;overflow:auto;display:flex;flex-direction:column;gap:18px}
+  .sec-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px}
+  .temps{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end}
+  .tcell{
+    font-family:var(--mono);width:44px;cursor:pointer;display:flex;flex-direction:column;
+    align-items:center;justify-content:flex-end;
+  }
+  .tbar{
+    width:100%;border-radius:5px 5px 0 0;border:1px solid var(--border);
+    background:var(--panel2);display:flex;align-items:flex-start;justify-content:center;
+    padding-top:4px;font-size:12px;font-weight:700;min-height:26px;transition:height .3s ease;
+  }
+  .tcell .idx{font-size:9.5px;color:var(--muted);margin-top:4px}
+  .tcell.scan .tbar{border-color:var(--blue);background:rgba(88,166,255,.2);color:var(--blue)}
+  .tcell.pair .tbar{border-color:var(--green);background:rgba(63,185,80,.22);color:var(--green)}
+  .tcell.settled .tbar{color:var(--fg)}
+  .tcell.nowait .tbar{border-color:var(--orange);background:rgba(210,153,34,.15);color:var(--orange)}
+  .tcell.nowait .idx{color:var(--orange)}
+  .stack-wrap{display:flex;gap:14px;align-items:flex-start}
+  .vstack{display:flex;flex-direction:column-reverse;gap:6px;flex:1}
+  .scell{
+    font-family:var(--mono);border:1px solid rgba(88,166,255,.5);background:rgba(88,166,255,.12);
+    border-radius:6px;padding:7px 10px;color:var(--blue);display:flex;justify-content:space-between;gap:10px;
+    animation:pop .25s ease;
+  }
+  .scell.is-top{font-weight:700;box-shadow:0 0 0 1px var(--blue)}
+  .ghost{
+    font-family:var(--mono);border:1px dashed var(--red);color:var(--red);border-radius:6px;
+    padding:7px 10px;opacity:.65;display:flex;justify-content:space-between;gap:10px;animation:ghost .5s ease;
+  }
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes ghost{from{opacity:0;transform:translateY(8px)}to{opacity:.65;transform:translateY(0)}}
+  .res-row{display:flex;gap:6px;flex-wrap:wrap}
+  .rcell{
+    font-family:var(--mono);width:48px;border-radius:6px;border:1px solid var(--border);
+    background:var(--panel2);text-align:center;padding:6px 2px;
+  }
+  .rcell .idx{font-size:9.5px;color:var(--muted)}
+  .rcell .rv{font-size:14px;font-weight:700;margin-top:2px;color:#484f58}
+  .rcell.filled{border-color:rgba(63,185,80,.5);background:rgba(63,185,80,.12)}
+  .rcell.filled .rv{color:var(--green)}
+  .rightCol{display:flex;flex-direction:column;gap:14px;overflow:hidden}
+  .state-body{padding:13px 14px;display:flex;flex-direction:column;gap:11px}
+  .meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .meta{background:var(--panel2);border-radius:6px;padding:8px 4px;text-align:center;border:1px solid var(--border)}
+  .meta .lbl{font-size:9.5px;color:var(--muted);font-family:var(--mono)}
+  .meta .val{font-size:13.5px;font-weight:700;font-family:var(--mono);margin-top:3px}
+  .stat-bar{
+    display:flex;gap:8px;font-family:var(--mono);font-size:11px;
+  }
+  .stat-pill{
+    flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 8px;
+    background:var(--panel2);display:flex;justify-content:space-between;
+  }
+  .stat-pill b{color:var(--green)}
+  .stat-pill.wait b{color:var(--blue)}
+  .desc{background:var(--panel2);padding:9px 11px;border-radius:6px;border-left:3px solid var(--blue);font-size:12.5px;line-height:1.6}
+  .desc.ok{border-left-color:var(--green)}
+  #codeBody{padding:8px 0;font-family:var(--mono);font-size:12px;overflow:auto;flex:1}
+  .code-line{display:flex;padding:2px 12px;white-space:pre;min-height:18px;color:#c9d1d9}
+  .code-line .ln{width:24px;color:#484f58;user-select:none;text-align:right;margin-right:12px;flex-shrink:0}
+  .code-line.cur{background:rgba(56,139,253,.15);border-left:2px solid var(--blue);padding-left:10px}
+  .kw{color:#ff7b72}.ty{color:#ffa657}.fn{color:#d2a8ff}.nm{color:#79c0ff}
+  @media(max-width:900px){
+    body{overflow:auto;height:auto}
+    main{grid-template-columns:1fr;overflow:auto}
+    .rightCol{overflow:visible}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>739. 每日温度 <span style="color:var(--muted);font-weight:400">| 单调递减栈</span></h1>
+    <div class="sub">栈存索引、对应温度单调递减；遇到更高温度就弹出并计算相隔天数</div>
+  </div>
+  <div class="controls">
+    <div class="seg" id="caseSeg">
+      <button data-c="0" class="on">8 天用例</button>
+      <button data-c="1">4 天递增</button>
+      <button data-c="2">3 天用例</button>
+    </div>
+    <button class="btn" id="btnReset">重置</button>
+    <button class="btn" id="btnPrev">上一步</button>
+    <button class="btn primary" id="btnPlay">播放</button>
+    <button class="btn" id="btnNext">下一步</button>
+    <select id="speed">
+      <option value="1200">慢</option>
+      <option value="700" selected>中</option>
+      <option value="320">快</option>
+    </select>
+  </div>
+</header>
+
+<div class="progress-bar">
+  <span class="pl" id="plLabel">步骤 0 / 0</span>
+  <input type="range" id="slider" min="0" max="1" value="0">
+</div>
+
+<main>
+  <div class="panel">
+    <div class="panel-head"><span>温度 · 单调栈 · 答案</span><span id="stepInfo">步骤 0 / 0</span></div>
+    <div class="left-body">
+      <div>
+        <div class="sec-lbl">温度序列（点击格子可跳转）</div>
+        <div class="temps" id="temps"></div>
+      </div>
+      <div class="stack-wrap">
+        <div style="flex:1">
+          <div class="sec-lbl">Deque&lt;Integer&gt;（栈顶在上）</div>
+          <div class="vstack" id="stack"></div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-lbl">res 答案数组（天数）</div>
+        <div class="res-row" id="resRow"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rightCol">
+    <div class="panel" style="flex:0 0 auto">
+      <div class="panel-head"><span>当前状态</span></div>
+      <div class="state-body">
+        <div class="meta-grid">
+          <div class="meta"><div class="lbl">当前 i</div><div class="val" id="iVal" style="color:var(--blue)">—</div></div>
+          <div class="meta"><div class="lbl">温度</div><div class="val" id="tvVal" style="color:var(--orange)">—</div></div>
+          <div class="meta"><div class="lbl">栈顶</div><div class="val" id="topVal" style="color:var(--purple)">—</div></div>
+          <div class="meta"><div class="lbl">栈大小</div><div class="val" id="sizeVal">0</div></div>
+        </div>
+        <div class="stat-bar" id="statBar"></div>
+        <div class="desc" id="desc">点击「播放」「下一步」，拖动进度条，或切换上方用例。</div>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1">
+      <div class="panel-head"><span>Solution.java · 当前执行行高亮</span></div>
+      <div id="codeBody"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const CODE = [
+ [1 , 'class Solution {'],
+ [2 , '    public int[] dailyTemperatures(int[] temperatures) {'],
+ [3 , '        int length = temperatures.length;'],
+ [4 , '        int[] res = new int[length];'],
+ [5 , '        Deque<Integer> stack = new ArrayDeque<>();'],
+ [6 , '        for (int i = 0; i < length; i++) {'],
+ [7 , '            while (!stack.isEmpty() && temperatures[i] > temperatures[stack.peek()]) {'],
+ [8 , '                int pop = stack.pop();'],
+ [9 , '                res[pop] = i - pop;'],
+ [10, '            }'],
+ [11, '            stack.push(i);'],
+ [12, '        }'],
+ [13, '        return res;'],
+ [14, '    }'],
+ [15, '}'],
+];
+
+const TEMP_CASES = [
+  [73,74,75,71,69,72,76,73],
+  [30,40,50,60],
+  [30,60,90],
+];
+
+function buildSteps(temps){
+  const steps=[];
+  const stack=[];
+  const res=new Array(temps.length).fill(0);
+  const settled=new Set();
+  const snap=e=>Object.assign({stack:stack.slice(),res:res.slice(),settled:[...settled]},e);
+  for(let i=0;i<temps.length;i++){
+    while(stack.length && temps[i]>temps[stack[stack.length-1]]){
+      const popIdx=stack[stack.length-1];
+      stack.pop();
+      const dist=i-popIdx;
+      res[popIdx]=dist;
+      settled.add(popIdx);
+      steps.push(snap({
+        action:'pop',i,popIdx,line:8,
+        desc:`当前温度 ${temps[i]} 大于栈顶索引 ${popIdx} 的 ${temps[popIdx]}，弹出索引 ${popIdx}，res[${popIdx}] = ${i} − ${popIdx} = ${dist} 天。`,
+        descType:'ok'
+      }));
+    }
+    stack.push(i);
+    steps.push(snap({
+      action:'push',i,line:11,
+      desc:`栈顶没有比 ${temps[i]} 更低的了，把索引 ${i}（温度 ${temps[i]}）压入，栈内对应温度保持单调递减。`,
+      descType:''
+    }));
+  }
+  steps.push(snap({
+    action:'done',i:temps.length,line:13,
+    desc:'遍历结束，栈内剩余索引之后都没有更高温度，对应 res 保持 0，返回答案。',
+    descType:'ok'
+  }));
+  return steps;
+}
+
+let caseIdx=0;
+let temps=TEMP_CASES[0];
+let steps=buildSteps(temps);
+let stepIdx=-1,playing=false,timer=null;
+
+const tempsEl=document.getElementById('temps');
+const stackEl=document.getElementById('stack');
+const resRowEl=document.getElementById('resRow');
+const codeBody=document.getElementById('codeBody');
+const slider=document.getElementById('slider');
+const descEl=document.getElementById('desc');
+
+function hl(code){
+  return code
+    .replace(/\b(class|public|int|while|for|return|new)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(Deque|ArrayDeque|Integer)\b/g,'<span class="ty">$1</span>')
+    .replace(/\b(push|pop|peek|isEmpty|length)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(stack|temperatures|res|pop)\b/g,'<span class="nm">$1</span>');
+}
+function renderCode(curLine){
+  codeBody.innerHTML=CODE.map(([n,t])=>
+    `<div class="code-line${n===curLine?' cur':''}"><span class="ln">${n}</span><span>${hl(t)||'&nbsp;'}</span></div>`
+  ).join('');
+}
+
+function render(){
+  const s=stepIdx>=0?steps[stepIdx]:null;
+  const stk=s?s.stack:[];
+  const res=s?s.res:new Array(temps.length).fill(0);
+  const scanI=s?s.i:-1;
+  const settled=s?new Set(s.settled):new Set();
+
+  // 温度序列（柱高按用例内相对温度归一化，直观看出高低与单调性）
+  const tMin=Math.min(...temps), tMax=Math.max(...temps);
+  const tSpan=Math.max(tMax-tMin,1);
+  const noWait = s && s.action==='done' ? new Set(s.stack) : new Set();
+  tempsEl.innerHTML=temps.map((v,idx)=>{
+    let cls='tcell';
+    if(idx===scanI) cls+=' scan';
+    if(settled.has(idx)) cls+=' settled';
+    if(s && s.action==='pop' && (idx===s.popIdx||idx===scanI)) cls='tcell pair';
+    if(noWait.has(idx)) cls+=' nowait';
+    const h=30+Math.round((v-tMin)/tSpan*70);
+    return `<div class="${cls}" data-idx="${idx}"><div class="tbar" style="height:${h}px">${v}</div><div class="idx">i=${idx}</div></div>`;
+  }).join('');
+
+  // 栈
+  let sh='';
+  if(s && s.action==='pop'){
+    sh += `<div class="ghost"><span>idx ${s.popIdx}</span><span>${temps[s.popIdx]}</span></div>`;
+  }
+  sh += [...stk].reverse().map((idx,revIdx)=>{
+    const realIdx=stk.length-1-revIdx;
+    const top=realIdx===stk.length-1?' is-top':'';
+    return `<div class="scell${top}"><span>idx ${idx}</span><span>${temps[idx]}</span></div>`;
+  }).join('');
+  stackEl.innerHTML=sh;
+
+  // res
+  resRowEl.innerHTML=res.map((v,idx)=>{
+    const filled=v>0?' filled':'';
+    return `<div class="rcell${filled}"><div class="idx">i=${idx}</div><div class="rv">${v}</div></div>`;
+  }).join('');
+
+  document.getElementById('iVal').textContent=s?s.i:'—';
+  document.getElementById('tvVal').textContent=s?temps[s.i]:'—';
+  document.getElementById('topVal').textContent=stk.length?stk[stk.length-1]:'—';
+  document.getElementById('sizeVal').textContent=stk.length;
+
+  const doneCount = res.filter(v=>v>0).length;
+  const waitCount = stk.length;
+  document.getElementById('statBar').innerHTML =
+    `<div class="stat-pill"><span>已确定答案</span><b>${doneCount}</b></div>` +
+    `<div class="stat-pill wait"><span>栈内等待</span><b>${waitCount}</b></div>`;
+
+  if(s){
+    descEl.textContent=s.desc;
+    descEl.className='desc '+(s.descType||'');
+    renderCode(s.line);
+  } else {
+    descEl.textContent='点击「播放」「下一步」，拖动进度条，或切换上方用例。';
+    descEl.className='desc';renderCode(0);
+  }
+  document.getElementById('stepInfo').textContent=`步骤 ${Math.max(stepIdx+1,0)} / ${steps.length}`;
+  slider.max=Math.max(steps.length-1,0);
+  slider.value=Math.max(stepIdx,0);
+  document.getElementById('plLabel').textContent=`步骤 ${Math.max(stepIdx+1,0)} / ${steps.length}`;
+}
+
+function next(){if(stepIdx<steps.length-1){stepIdx++;render();return true;}return false;}
+function prev(){if(stepIdx>-1){stepIdx--;render();}}
+function stop(){playing=false;if(timer){clearInterval(timer);timer=null;}document.getElementById('btnPlay').textContent='播放';}
+function play(){
+  if(playing){stop();return;}
+  playing=true;document.getElementById('btnPlay').textContent='暂停';
+  if(stepIdx>=steps.length-1){stepIdx=-1;render();}
+  timer=setInterval(()=>{if(!next())stop();},Number(document.getElementById('speed').value));
+}
+function reset(){stop();stepIdx=-1;render();}
+
+document.getElementById('btnPlay').addEventListener('click',play);
+document.getElementById('btnNext').addEventListener('click',()=>{stop();next();});
+document.getElementById('btnPrev').addEventListener('click',()=>{stop();prev();});
+document.getElementById('btnReset').addEventListener('click',reset);
+slider.addEventListener('input',()=>{stop();stepIdx=Number(slider.value);render();});
+tempsEl.addEventListener('click',e=>{
+  const c=e.target.closest('.tcell');if(!c)return;
+  const idx=Number(c.dataset.idx);
+  const target=steps.findIndex(st=>st.i===idx);
+  if(target>=0){stop();stepIdx=target;render();}
+});
+document.getElementById('caseSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('#caseSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');caseIdx=Number(b.dataset.c);
+  temps=TEMP_CASES[caseIdx];
+  steps=buildSteps(temps);
+  stop();stepIdx=-1;render();
+});
+document.getElementById('speed').addEventListener('change',()=>{if(playing){stop();play();}});
+document.addEventListener('keydown',e=>{
+  const tag=e.target.tagName;
+  if(tag==='INPUT'&&e.target.type!=='range')return;
+  if(e.code==='Space'){e.preventDefault();play();}
+  else if(e.code==='ArrowRight'){e.preventDefault();stop();next();}
+  else if(e.code==='ArrowLeft'){e.preventDefault();stop();prev();}
+});
+
+render();
+</script>
+</body>
+</html>

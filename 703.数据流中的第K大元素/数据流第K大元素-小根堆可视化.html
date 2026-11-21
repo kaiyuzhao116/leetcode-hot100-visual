@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>703 数据流中的第 K 大元素 · 小根堆可视化</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#30363d;
+    --fg:#e6edf3;--muted:#8b949e;--mono:'Consolas','Courier New',monospace;
+    --blue:#58a6ff;--green:#3fb950;--red:#f85149;--orange:#e3a008;--purple:#bc8cff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);font-family:-apple-system,'Segoe UI',sans-serif;padding:28px;line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:6px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .casebar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px}
+  .casebtn.active{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.1)}
+  .controls{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .ctl{width:38px;height:38px;border-radius:8px;background:var(--panel);border:1px solid var(--border);color:var(--fg);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .ctl.play{width:auto;padding:0 18px;gap:6px;font-size:13px}
+  input[type=range]{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:64px}
+  .msg{background:var(--panel);border-left:3px solid var(--blue);border-radius:6px;padding:11px 14px;font-size:13px;margin-bottom:16px}
+  .infobar{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+  .icard{flex:1;min-width:130px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:13px 16px}
+  .icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .icard .val{font-size:22px;font-weight:700;font-family:var(--mono)}
+  .icard.ret .val{color:var(--green)}
+  .box{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+  .box h2{font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:14px}
+  .tree{position:relative}
+  .tree svg{position:absolute;top:0;left:0;width:100%;height:100%}
+  .tnode{position:absolute;width:46px;height:46px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:14px;transform:translate(-50%,-50%);transition:all .25s}
+  .tnode.hi{border-color:var(--red);box-shadow:0 0 0 2px var(--red);color:var(--red)}
+  .tnode.cmp{border-color:var(--orange);color:var(--orange)}
+  .tnode.top{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue)}
+  .hist{display:flex;gap:10px;flex-wrap:wrap}
+  .hitem{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-family:var(--mono);font-size:13px;opacity:.35;transition:all .25s}
+  .hitem .n{color:var(--muted);font-size:11px}
+  .hitem .r{color:var(--green);font-weight:700;font-size:16px}
+  .hitem.on{opacity:1;border-color:var(--green)}
+  .codebox{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:auto}
+  .codebox h2{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
+  pre{font-family:var(--mono);font-size:13px;line-height:1.7;white-space:pre}
+  .ln{display:block;padding:0 8px;border-radius:4px}
+  .ln.on{background:rgba(88,166,255,.13)}
+  .kw{color:#ff7b72}.cmt{color:#8b949e;font-style:italic}
+  @media(max-width:760px){body{padding:14px}.icard{min-width:100px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>703 数据流中的第 K 大元素 · 小根堆</h1>
+  <div class="sub">小根堆始终只保留"目前最大的 k 个"，堆顶是其中最小的，也就是第 k 大。新元素 offer 后超过 k 就 poll 堆顶。</div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="controls">
+    <button class="ctl" id="reset">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="ctl play" id="play">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <span id="playtxt">播放</span>
+    </button>
+    <button class="ctl" id="prev">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="ctl" id="next">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
+    <input type="range" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar">
+    <div class="icard"><div class="lab">k（保留个数）</div><div class="val" id="kval" style="color:var(--purple)">-</div></div>
+    <div class="icard"><div class="lab">当前堆大小</div><div class="val" id="hsize" style="color:var(--blue)">0</div></div>
+    <div class="icard ret"><div class="lab">当前第 k 大（堆顶）</div><div class="val" id="kth">—</div></div>
+  </div>
+
+  <div class="box">
+    <h2>小根堆（堆顶 = 第 k 大）</h2>
+    <div class="tree" style="height:230px">
+      <svg id="lines" viewBox="0 0 1000 230" preserveAspectRatio="none"></svg>
+      <div id="nodes"></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>每次 add 的返回值</h2>
+    <div class="hist" id="hist"></div>
+  </div>
+
+  <div class="codebox">
+    <h2>Java 代码</h2>
+    <pre id="code"></pre>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const CASES=[
+  {k:3,nums:[4,5,8,2],adds:[3,5,10,9,4],exp:[4,5,5,8,8]},
+  {k:2,nums:[6,2,7],adds:[3,8,1],exp:[6,7,8]}
+];
+let steps=[],posIdx=0,curCase=0,timer=null;
+
+function buildSteps(k,nums,adds){
+  const steps=[];
+  let heap=[],addCount=-1;
+  const snap=e=>Object.assign({heap:heap.slice(),hi:null,cmp:null,k,ret:null,addDone:-1,line:0},e);
+  const push=e=>steps.push(snap(e));
+  function siftUp(line){
+    let i=heap.length-1;
+    while(i>0){const p=(i-1)>>1;
+      if(heap[i]<heap[p]){
+        push({msg:`上浮：${heap[i]} 比父 ${heap[p]} 小，交换`,hi:i,cmp:p,line,addDone:addCount});
+        [heap[i],heap[p]]=[heap[p],heap[i]];i=p;
+      }else break;
+    }
+  }
+  function siftDown(line){
+    let p=0;
+    while(true){const l=2*p+1,r=2*p+2;let m=p;
+      if(l<heap.length&&heap[l]<heap[m])m=l;
+      if(r<heap.length&&heap[r]<heap[m])m=r;
+      if(m===p)break;
+      push({msg:`下沉：与较小子 ${heap[m]} 交换`,hi:p,cmp:m,line,addDone:addCount});
+      [heap[p],heap[m]]=[heap[m],heap[p]];p=m;
+    }
+  }
+  function feed(v,offerLine,pollLine,isAdd){
+    heap.push(v);
+    push({msg:`${v} 加到堆末尾`,hi:heap.length-1,line:offerLine,addDone:addCount});
+    siftUp(offerLine);
+    if(heap.length>k){
+      const top=heap[0];
+      push({msg:`堆大小 ${heap.length} > k=${k}，淘汰堆顶 ${top}`,hi:0,line:pollLine,addDone:addCount});
+      const last=heap.pop();
+      if(heap.length>0){heap[0]=last;siftDown(pollLine);}
+    }
+    if(isAdd){
+      push({msg:`add 返回堆顶，第 ${k} 大 = ${heap[0]}`,ret:heap[0],addDone:addCount,line:19});
+    }
+  }
+  for(const n of nums)feed(n,8,10,false);
+  for(const a of adds){addCount++;feed(a,15,17,true);}
+  return steps;
+}
+
+function nodePos(i){
+  const lvl=Math.floor(Math.log2(i+1));
+  const start=Math.pow(2,lvl),idx=i-start,count=Math.pow(2,lvl);
+  return {x:(idx+0.5)*(1000/count),y:26+lvl*52};
+}
+function renderTree(s){
+  let lh='',nh='';
+  s.heap.forEach((v,i)=>{
+    const c=nodePos(i);
+    if(i>0){const p=nodePos((i-1)>>1);lh+=`<line x1="${p.x}" y1="${p.y}" x2="${c.x}" y2="${c.y}" stroke="#30363d" stroke-width="1.5"/>`;}
+    let cls='tnode';
+    if(i===s.hi)cls+=' hi';
+    if(i===s.cmp)cls+=' cmp';
+    if(i===0)cls+=' top';
+    nh+=`<div class="${cls}" style="left:${c.x/10}%;top:${c.y/230*100}%">${v}</div>`;
+  });
+  $('lines').innerHTML=lh;$('nodes').innerHTML=nh;
+}
+function render(){
+  const s=steps[posIdx];
+  $('msg').textContent=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('kval').textContent=s.k;
+  $('hsize').textContent=s.heap.length;
+  $('kth').textContent=s.ret!==null?s.ret:(s.heap.length?s.heap[0]:'—');
+  renderTree(s);
+  document.querySelectorAll('.hitem').forEach((el,i)=>el.classList.toggle('on',i<=s.addDone));
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+
+const CODE=[
+  '<span class="kw">import</span> java.util.PriorityQueue;',
+  '<span class="kw">class</span> KthLargest {',
+  '  <span class="kw">private</span> PriorityQueue&lt;Integer&gt; heap;',
+  '  <span class="kw">private int</span> k;',
+  '  <span class="kw">public</span> KthLargest(<span class="kw">int</span> k, <span class="kw">int</span>[] nums) {',
+  '      <span class="kw">this</span>.k = k;',
+  '      heap = <span class="kw">new</span> PriorityQueue&lt;&gt;();',
+  '      <span class="kw">for</span> (<span class="kw">int</span> num : nums) {',
+  '          heap.offer(num);',
+  '          <span class="kw">if</span> (heap.size() &gt; k) {',
+  '              heap.poll();',
+  '          }',
+  '      }',
+  '  }',
+  '  <span class="kw">public int</span> add(<span class="kw">int</span> val) {',
+  '      heap.offer(val);',
+  '      <span class="kw">if</span> (heap.size() &gt; k) {',
+  '          heap.poll();',
+  '      }',
+  '      <span class="kw">return</span> heap.peek();',
+  '  }',
+  '}'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;const c=CASES[i];
+  steps=buildSteps(c.k,c.nums,c.adds);posIdx=0;
+  $('slider').max=steps.length-1;
+  $('hist').innerHTML=c.adds.map((a,j)=>`<div class="hitem"><div class="n">add(${a}) →</div><div class="r">${c.exp[j]}</div></div>`).join('');
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">k=${c.k} · ${c.nums.join(',')}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},750);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

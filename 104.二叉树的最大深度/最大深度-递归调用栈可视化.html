@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>104. 二叉树的最大深度 · 可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%233fb950'/><path d='M12 17V8M8 12l4-4 4 4' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:"Segoe UI","Microsoft YaHei",-apple-system,sans-serif;
+  font-size:15px;line-height:1.6;padding:28px 18px 60px;
+}
+.wrap{max-width:1080px;margin:0 auto;}
+h1{font-size:26px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.badge.easy{color:var(--green);border-color:rgba(63,185,80,.5);}
+.sub{color:var(--muted);font-size:14px;margin:0 0 18px;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.intro{font-size:14px;}
+.intro b.red{color:var(--red);} .intro b.blu{color:var(--blue);} .intro b.grn{color:var(--green);}
+.intro b.org{color:var(--orange);} .intro b.pur{color:var(--purple);}
+
+.case-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.case-btn{
+  background:var(--panel);color:var(--muted);border:1px solid var(--border);
+  border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;
+  transition:border-color .15s,color .15s;
+}
+.case-btn:hover{color:var(--text);border-color:var(--muted);}
+.case-btn.active{color:var(--text);border-color:var(--blue);background:rgba(88,166,255,.1);}
+
+.stage-wrap{display:flex;justify-content:center;}
+.stage{
+  position:relative;width:560px;height:312px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;
+}
+#svgLayer{position:absolute;left:0;top:0;}
+.node-layer{position:absolute;left:0;top:0;width:560px;}
+.zone-label{
+  position:absolute;left:14px;font-size:11px;font-weight:700;letter-spacing:.5px;
+  color:var(--muted);text-transform:uppercase;
+}
+.tnode{
+  position:absolute;width:38px;height:38px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--panel);border:2px solid var(--border);
+  font-size:15px;font-weight:700;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+}
+.tnode .nv{font-size:13px;line-height:1.1;}
+.tnode .nd{font-size:9px;line-height:1.1;color:var(--green);font-weight:700;}
+.tnode.active{border-color:var(--blue);box-shadow:0 0 0 3px rgba(88,166,255,.3);background:rgba(88,166,255,.15);}
+.tnode.done{border-color:var(--green);background:rgba(63,185,80,.18);}
+.dep-tag{
+  position:absolute;font-size:10px;font-weight:700;color:var(--green);
+  background:var(--panel2);border:1px solid rgba(63,185,80,.5);border-radius:6px;
+  padding:0 4px;line-height:1.4;
+}
+
+.stack-item{
+  position:absolute;min-width:40px;height:34px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--panel);border:2px solid var(--purple);
+  font-size:14px;font-weight:700;
+  transition:left .3s,opacity .3s;
+}
+.stack-item.top{background:rgba(188,140,255,.2);box-shadow:0 0 0 2px rgba(188,140,255,.4);}
+.stack-item .tag{position:absolute;top:-15px;font-size:9px;color:var(--muted);font-weight:400;}
+
+.var-item{
+  position:absolute;width:50px;height:40px;border-radius:8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--panel);border:2px solid var(--border);
+  transition:border-color .2s,background .2s;
+}
+.var-item .vn{font-size:10px;color:var(--muted);font-weight:700;line-height:1.2;}
+.var-item .vv{font-size:16px;font-weight:700;line-height:1.3;color:var(--muted);}
+.var-item.set-r{border-color:var(--blue);}
+.var-item.set-r .vv{color:var(--blue);}
+.var-item.set-l{border-color:var(--orange);}
+.var-item.set-l .vv{color:var(--orange);}
+.var-item.set-m{border-color:var(--green);background:rgba(63,185,80,.15);}
+.var-item.set-m .vv{color:var(--green);}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:12px;color:var(--muted);}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;}
+
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.info-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;min-width:0;}
+.info-card .k{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.info-card .v{font-size:18px;font-weight:700;}
+.v.grn{color:var(--green);} .v.blu{color:var(--blue);} .v.org{color:var(--orange);} .v.pur{color:var(--purple);}
+
+.msg{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:11px 16px;font-size:14px;margin-bottom:16px;}
+.msg .ph{font-weight:700;color:var(--blue);margin-right:8px;}
+
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.code-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);}
+.mac{width:11px;height:11px;border-radius:50%;}
+.code-body{display:flex;font-family:"Cascadia Code",Consolas,"Courier New",monospace;font-size:13px;line-height:1.7;overflow-x:auto;}
+.lineno{padding:12px 0;color:var(--muted);text-align:right;user-select:none;background:var(--panel2);min-width:44px;}
+.lineno div{padding:0 11px;}
+.code-lines{flex:1;padding:12px 0;min-width:0;}
+.code-lines div{padding:0 15px;white-space:pre;}
+.code-lines div.hl{background:rgba(88,166,255,.14);box-shadow:inset 3px 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;} .t-cmt{color:#8b949e;}
+
+.controls{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.ctrl-btn{
+  background:var(--panel2);color:var(--text);border:1px solid var(--border);
+  border-radius:8px;height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;
+  cursor:pointer;font-size:13px;font-family:inherit;
+}
+.ctrl-btn:hover:not(:disabled){border-color:var(--muted);}
+.ctrl-btn:disabled{opacity:.4;cursor:default;}
+.ctrl-btn.primary{background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:600;}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--blue);height:4px;}
+.step-count{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:56px;text-align:right;}
+select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;}
+.kbd-hint{width:100%;font-size:12px;color:var(--muted);}
+.kbd-hint b{color:var(--text);font-weight:600;}
+
+@media (max-width:760px){
+  .info-grid{grid-template-columns:repeat(2,1fr);}
+  .stage{width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>104. 二叉树的最大深度 <span class="badge easy">简单</span></h1>
+  <p class="sub">递归 · 先求右子树深度 right，再求左子树 left，取 Math.max · 调用栈记录递归路径</p>
+
+  <div class="panel intro">
+    <b class="purple">maxDepth</b> 先递归 <b class="blu">right</b> 再递归 <b class="org">left</b>，各自加 1；
+    遇到 <b class="red">null</b> 返回 0，最后 <b class="grn">Math.max</b> 取较大值。节点变绿并标注其返回深度。
+  </div>
+
+  <div class="case-row" id="caseRow"></div>
+
+  <div class="panel stage-wrap">
+    <div class="stage" id="stage">
+      <svg id="svgLayer" width="560" height="312"></svg>
+      <div class="node-layer" id="nodeLayer"></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--blue);"></i>当前节点</span>
+    <span><i class="dot" style="background:var(--green);"></i>已返回（标注深度）</span>
+    <span><i class="dot" style="background:var(--purple);"></i>调用栈</span>
+  </div>
+
+  <div style="height:16px;"></div>
+  <div class="info-grid">
+    <div class="info-card"><div class="k">当前动作</div><div class="v blu" id="infoPhase">—</div></div>
+    <div class="info-card"><div class="k">当前节点</div><div class="v pur" id="infoNode">—</div></div>
+    <div class="info-card"><div class="k">栈深度</div><div class="v org" id="infoDepth">—</div></div>
+    <div class="info-card"><div class="k">当前返回值</div><div class="v grn" id="infoRet">—</div></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="code-panel">
+    <div class="code-head">
+      <span class="mac" style="background:#ff5f56;"></span>
+      <span class="mac" style="background:#ffbd2e;"></span>
+      <span class="mac" style="background:#27c93f;"></span>
+      <span style="margin-left:6px;">Solution.java</span>
+    </div>
+    <div class="code-body">
+      <div class="lineno" id="lineno"></div>
+      <div class="code-lines" id="codeLines"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn primary" id="playBtn"></button>
+    <button class="ctrl-btn" id="prevBtn"></button>
+    <button class="ctrl-btn" id="nextBtn"></button>
+    <button class="ctrl-btn" id="resetBtn"></button>
+    <input type="range" id="scrub" min="0" value="0" step="1">
+    <span class="step-count" id="stepCount"></span>
+    <select id="speedSel">
+      <option value="1200">0.5x</option>
+      <option value="750" selected>1x</option>
+      <option value="420">1.5x</option>
+      <option value="240">2x</option>
+    </select>
+    <div class="kbd-hint">键盘：<b>←/→</b> 单步 · <b>空格</b> 播放暂停 · <b>Home/End</b> 首末</div>
+  </div>
+</div>
+
+<script>
+/* ===== 用例（层序数组，null 为空） ===== */
+var CASES = [
+  { label: '用例 1：题目示例', tree: [3, 9, 20, null, null, 15, 7] },
+  { label: '用例 2：空树', tree: [] },
+  { label: '用例 3：单节点', tree: [1] },
+  { label: '用例 4：满二叉树', tree: [1, 2, 3] },
+  { label: '用例 5：纯左深4', tree: [1, 2, null, 3, null, 4, null] },
+  { label: '用例 6：纯右深4', tree: [1, null, 2, null, 3, null, 4] },
+  { label: '用例 7：完整三层', tree: [1, 2, 3, 4, 5, 6, 7] },
+  { label: '用例 8：左右不对称', tree: [1, 2, 3, 4] }
+];
+
+/* ===== 几何 ===== */
+var STAGE_W = 560, NODE = 38;
+function rowY(depth) { return 30 + depth * 52; }
+function nodeX(inIdx, n) {
+  var pitch = n >= 6 ? 64 : 80;
+  var total = (n - 1) * pitch;
+  var start = (STAGE_W - total) / 2;
+  return start + inIdx * pitch;
+}
+var STACK_TOP = 228, STACK_START = 20, STACK_W = 34, STACK_GAP = 6;
+var VAR_TOP = 230, VAR_START = 180, VAR_W = 50, VAR_GAP = 7;
+
+/* ===== Java 代码（用户写法，先右后左） ===== */
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-kw">int</span> <span class="t-fn">maxDepth</span>(<span class="t-type">TreeNode</span> <span class="t-id">root</span>) {',
+  '        <span class="t-kw">if</span>(<span class="t-id">root</span> == <span class="t-bool">null</span>) <span class="t-kw">return</span> <span class="t-num">0</span>;',
+  '        <span class="t-kw">int</span> <span class="t-id">right</span> = <span class="t-fn">maxDepth</span>(<span class="t-id">root</span>.right)+<span class="t-num">1</span>;',
+  '        <span class="t-kw">int</span> <span class="t-id">left</span> = <span class="t-fn">maxDepth</span>(<span class="t-id">root</span>.left) +<span class="t-num">1</span>;',
+  '        <span class="t-kw">return</span> <span class="t-type">Math</span>.<span class="t-fn">max</span>(<span class="t-id">right</span>,<span class="t-id">left</span>);  ',
+  '    }',
+  '}'
+];
+
+/* ===== 树构建 ===== */
+function buildTreeFromArr(arr) {
+  if (!arr || arr.length === 0 || arr[0] === null) return null;
+  var nodes = arr.map(function (v, i) {
+    return v === null ? null : { id: i, val: v, left: null, right: null, depth: 0, inIdx: 0 };
+  });
+  var q = [nodes[0]], i = 1;
+  while (q.length && i < nodes.length) {
+    var cur = q.shift();
+    if (i < nodes.length) { cur.left = nodes[i]; if (nodes[i]) q.push(nodes[i]); i++; }
+    if (i < nodes.length) { cur.right = nodes[i]; if (nodes[i]) q.push(nodes[i]); i++; }
+  }
+  return nodes[0];
+}
+function prepare(root) {
+  var flat = {}, inCounter = 0;
+  (function setDepth(n, d) {
+    if (!n) return;
+    n.depth = d; flat[n.id] = n;
+    setDepth(n.left, d + 1); setDepth(n.right, d + 1);
+  })(root, 0);
+  (function setIn(n) {
+    if (!n) return;
+    setIn(n.left); n.inIdx = inCounter++; setIn(n.right);
+  })(root);
+  return flat;
+}
+
+/* ===== 步骤生成 ===== */
+var caseIndex = 0, current = 0, steps = [], playing = false, timer = null;
+
+function buildSteps(cd) {
+  var root = buildTreeFromArr(cd.tree);
+  var flat = prepare(root);
+  var nodeCount = Object.keys(flat).length;
+  var stack = [], done = [], dep = {};
+  var frames = [];
+  function snap(o) {
+    frames.push({
+      phase: o.phase,
+      active: o.active === undefined ? -1 : o.active,
+      line: o.line, msg: o.msg,
+      stack: stack.slice(), done: done.slice(), dep: Object.assign({}, dep),
+      curR: o.curR === undefined ? null : o.curR,
+      curL: o.curL === undefined ? null : o.curL,
+      retVal: o.retVal === undefined ? null : o.retVal,
+      nodeCount: nodeCount
+    });
+  }
+
+  snap({ phase: 'start', active: -1, line: 2, retVal: null, msg: 'maxDepth(root)：开始递归求最大深度' });
+
+  var finalD = (function dfs(node, side) {
+    if (node === null) {
+      snap({ phase: 'null', active: -1, line: 3, retVal: 0, msg: side + '为 null，maxDepth 返回 0' });
+      return 0;
+    }
+    stack.push(node.id);
+    snap({ phase: 'enter', active: node.id, line: 4, curR: null, curL: null, retVal: null, msg: '进入节点 ' + node.val + '，先递归右子树计算 right' });
+    var rRaw = dfs(node.right, '右子树');
+    var right = rRaw + 1;
+    snap({ phase: 'right', active: node.id, line: 5, curR: right, curL: null, retVal: null, msg: '节点 ' + node.val + ' 的右子树深度 ' + rRaw + '，right = ' + rRaw + '+1 = ' + right + '，再递归左子树' });
+    var lRaw = dfs(node.left, '左子树');
+    var left = lRaw + 1;
+    var d = Math.max(right, left);
+    dep[node.id] = d; done.push(node.id); stack.pop();
+    snap({ phase: 'ret', active: node.id, line: 6, curR: right, curL: left, retVal: d, msg: 'left = ' + lRaw + '+1 = ' + left + '，Math.max(' + right + ',' + left + ') = ' + d + '，节点 ' + node.val + ' 返回 ' + d });
+    return d;
+  })(root, '根');
+
+  snap({ phase: 'done', active: -1, line: 6, retVal: finalD, msg: '递归结束，根节点返回最大深度 ' + finalD });
+  return frames;
+}
+
+/* ===== 代码渲染 ===== */
+function renderCode() {
+  var lineno = document.getElementById('lineno');
+  var codeLines = document.getElementById('codeLines');
+  lineno.innerHTML = ''; codeLines.innerHTML = '';
+  CODE.forEach(function (src, i) {
+    var no = document.createElement('div'); no.textContent = (i + 1); lineno.appendChild(no);
+    var cl = document.createElement('div'); cl.innerHTML = (src === '' ? '&nbsp;' : src);
+    cl.setAttribute('data-line', i + 1); codeLines.appendChild(cl);
+  });
+}
+function highlightLine(line) {
+  var lines = document.getElementById('codeLines').children;
+  for (var i = 0; i < lines.length; i++) {
+    lines[i].className = (+lines[i].getAttribute('data-line') === line) ? 'hl' : '';
+  }
+}
+
+/* ===== 用例按钮 ===== */
+function renderCaseButtons() {
+  var row = document.getElementById('caseRow');
+  row.innerHTML = '';
+  CASES.forEach(function (c, idx) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (idx === caseIndex ? ' active' : '');
+    b.textContent = c.label;
+    b.addEventListener('click', function () { switchCase(idx); });
+    row.appendChild(b);
+  });
+}
+function switchCase(idx) {
+  stopPlay();
+  caseIndex = idx;
+  layout = computeLayout(CASES[idx]);
+  steps = buildSteps(CASES[idx]);
+  current = 0;
+  renderCaseButtons();
+  updateScrubRange();
+  render();
+}
+
+/* ===== SVG ===== */
+var SVG_NS = 'http://www.w3.org/2000/svg';
+var nodeLayer = document.getElementById('nodeLayer');
+var svg = document.getElementById('svgLayer');
+(function initSvg() {
+  var g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('id', 'drawG');
+  svg.appendChild(g);
+})();
+function drawG() { return document.getElementById('drawG'); }
+function edgeLine(x1, y1, x2, y2) {
+  var l = document.createElementNS(SVG_NS, 'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  l.setAttribute('stroke', '#484f58'); l.setAttribute('stroke-width', '2');
+  drawG().appendChild(l);
+}
+
+/* ===== 布局计算 ===== */
+var layout = null;
+function computeLayout(cd) {
+  var root = buildTreeFromArr(cd.tree);
+  var flat = prepare(root);
+  var n = Object.keys(flat).length;
+  var pos = {};
+  Object.keys(flat).forEach(function (id) {
+    var node = flat[id];
+    pos[id] = { x: nodeX(node.inIdx, n), y: rowY(node.depth) };
+  });
+  return { root: root, flat: flat, n: n, pos: pos };
+}
+var PHASE_CN = { start: '开始', enter: '进入', null: '空返回', right: '右已返回', ret: '计算返回', done: '完成' };
+
+function renderStage(fr) {
+  nodeLayer.innerHTML = ''; drawG().innerHTML = '';
+  addZone('二叉树', 14, 8);
+  addZone('调用栈', 16, 208);
+  addZone('变量', 180, 208);
+
+  // 边
+  Object.keys(layout.flat).forEach(function (id) {
+    var node = layout.flat[id], p = layout.pos[id];
+    if (node.left) { var c = layout.pos[node.left.id]; edgeLine(p.x, p.y, c.x, c.y); }
+    if (node.right) { var c = layout.pos[node.right.id]; edgeLine(p.x, p.y, c.x, c.y); }
+  });
+
+  // 节点
+  Object.keys(layout.flat).forEach(function (id) {
+    var p = layout.pos[id];
+    var d = document.createElement('div');
+    d.className = 'tnode';
+    var isDone = fr.done.indexOf(+id) >= 0;
+    if (fr.active === +id) d.className += ' active';
+    else if (isDone) d.className += ' done';
+    d.style.left = (p.x - NODE / 2) + 'px';
+    d.style.top = (p.y - NODE / 2) + 'px';
+    if (isDone) {
+      d.innerHTML = '<span class="nv">' + layout.flat[id].val + '</span><span class="nd">d=' + fr.dep[id] + '</span>';
+    } else {
+      d.textContent = layout.flat[id].val;
+    }
+    nodeLayer.appendChild(d);
+  });
+
+  // 调用栈
+  fr.stack.forEach(function (id, i) {
+    var s = document.createElement('div');
+    s.className = 'stack-item';
+    if (i === fr.stack.length - 1) s.className += ' top';
+    s.style.left = (STACK_START + i * (STACK_W + STACK_GAP)) + 'px';
+    s.style.top = (STACK_TOP - 17) + 'px';
+    s.innerHTML = layout.flat[id].val + '<span class="tag">' + (i === 0 ? '栈底' : (i === fr.stack.length - 1 ? '栈顶' : '')) + '</span>';
+    nodeLayer.appendChild(s);
+  });
+
+  // 变量 right / left / max
+  var vars = [
+    { name: 'right', val: fr.curR, cls: 'set-r' },
+    { name: 'left', val: fr.curL, cls: 'set-l' },
+    { name: 'max', val: (fr.curR !== null && fr.curL !== null ? fr.retVal : null), cls: 'set-m' }
+  ];
+  vars.forEach(function (v, i) {
+    var el = document.createElement('div');
+    el.className = 'var-item' + (v.val !== null ? ' ' + v.cls : '');
+    el.style.left = (VAR_START + i * (VAR_W + VAR_GAP)) + 'px';
+    el.style.top = (VAR_TOP - 20) + 'px';
+    el.innerHTML = '<span class="vn">' + v.name + '</span><span class="vv">' + (v.val === null ? '—' : v.val) + '</span>';
+    nodeLayer.appendChild(el);
+  });
+}
+function addZone(text, x, top) {
+  var t = document.createElement('div');
+  t.className = 'zone-label'; t.textContent = text;
+  t.style.left = x + 'px'; t.style.top = top + 'px';
+  nodeLayer.appendChild(t);
+}
+
+function renderInfo(fr) {
+  document.getElementById('infoPhase').textContent = PHASE_CN[fr.phase] || fr.phase;
+  document.getElementById('infoNode').textContent = (fr.active >= 0 ? layout.flat[fr.active].val : '—');
+  document.getElementById('infoDepth').textContent = fr.stack.length;
+  document.getElementById('infoRet').textContent = (fr.retVal === null ? '—' : fr.retVal);
+  var msg = document.getElementById('msg');
+  msg.className = 'msg';
+  msg.innerHTML = '<span class="ph">' + (PHASE_CN[fr.phase] || fr.phase) + '</span>' + fr.msg;
+}
+
+function render() {
+  var fr = steps[current];
+  renderStage(fr);
+  renderInfo(fr);
+  highlightLine(fr.line);
+  document.getElementById('scrub').value = current;
+  document.getElementById('stepCount').textContent = current + ' / ' + (steps.length - 1);
+  updateCtrlButtons();
+}
+
+var ICONS = {
+  play: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>',
+  pause: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>',
+  prev: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M18 6v12l-9-6z" fill="currentColor"/><rect x="5" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  next: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M6 6v12l9-6z" fill="currentColor"/><rect x="17" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  reset: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>'
+};
+var playBtn = document.getElementById('playBtn');
+var prevBtn = document.getElementById('prevBtn');
+var nextBtn = document.getElementById('nextBtn');
+var resetBtn = document.getElementById('resetBtn');
+var scrub = document.getElementById('scrub');
+var speedSel = document.getElementById('speedSel');
+prevBtn.innerHTML = ICONS.prev; nextBtn.innerHTML = ICONS.next; resetBtn.innerHTML = ICONS.reset;
+
+function updatePlayLabel() {
+  playBtn.innerHTML = (playing ? ICONS.pause : ICONS.play) + '<span>' + (playing ? '暂停' : '播放') + '</span>';
+}
+function updateCtrlButtons() {
+  prevBtn.disabled = (current === 0);
+  nextBtn.disabled = (current === steps.length - 1);
+}
+function updateScrubRange() { scrub.max = steps.length - 1; scrub.value = current; }
+function stepNext() { if (current < steps.length - 1) { current++; render(); } else { stopPlay(); } }
+function stepPrev() { if (current > 0) { current--; render(); } }
+
+function tick() {
+  if (!playing) return;
+  if (current >= steps.length - 1) { stopPlay(); return; }
+  current++;
+  render();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function startPlay() {
+  if (current >= steps.length - 1) current = 0;
+  playing = true;
+  updatePlayLabel();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function stopPlay() {
+  playing = false;
+  if (timer) { clearTimeout(timer); timer = null; }
+  updatePlayLabel();
+}
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+
+playBtn.addEventListener('click', togglePlay);
+nextBtn.addEventListener('click', stepNext);
+prevBtn.addEventListener('click', stepPrev);
+resetBtn.addEventListener('click', function () { stopPlay(); current = 0; render(); });
+scrub.addEventListener('input', function () { stopPlay(); current = +scrub.value; render(); });
+
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  switch (e.key) {
+    case 'ArrowRight': e.preventDefault(); stepNext(); break;
+    case 'ArrowLeft': e.preventDefault(); stepPrev(); break;
+    case ' ': e.preventDefault(); togglePlay(); break;
+    case 'Home': e.preventDefault(); stopPlay(); current = 0; render(); break;
+    case 'End': e.preventDefault(); stopPlay(); current = steps.length - 1; render(); break;
+  }
+});
+
+layout = computeLayout(CASES[0]);
+steps = buildSteps(CASES[0]);
+renderCode();
+renderCaseButtons();
+updateScrubRange();
+updatePlayLabel();
+render();
+
+
+
+
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>146. LRU 缓存 · 可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%2358a6ff'/><path d='M4 17h16M7 12h10M10 7h4' stroke='white' stroke-width='2'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:"Segoe UI","Microsoft YaHei",-apple-system,sans-serif;
+  font-size:15px;line-height:1.6;padding:28px 18px 60px;
+}
+.wrap{max-width:1080px;margin:0 auto;}
+h1{font-size:26px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.badge.mid{color:var(--orange);border-color:rgba(227,179,65,.5);}
+.sub{color:var(--muted);font-size:14px;margin:0 0 18px;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.intro{font-size:14px;}
+.intro b.red{color:var(--red);} .intro b.blu{color:var(--blue);} .intro b.grn{color:var(--green);}
+.intro b.org{color:var(--orange);} .intro b.pur{color:var(--purple);}
+
+.case-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.case-btn{
+  background:var(--panel);color:var(--muted);border:1px solid var(--border);
+  border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;
+  transition:border-color .15s,color .15s;
+}
+.case-btn:hover{color:var(--text);border-color:var(--muted);}
+.case-btn.active{color:var(--text);border-color:var(--blue);background:rgba(88,166,255,.1);}
+
+.stage-wrap{display:flex;justify-content:center;}
+.stage{
+  position:relative;width:600px;height:300px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;
+}
+#svgLayer{position:absolute;left:0;top:0;}
+.node-layer{position:absolute;left:0;top:0;width:600px;}
+.zone-label{
+  position:absolute;left:14px;font-size:11px;font-weight:700;letter-spacing:.5px;
+  color:var(--muted);text-transform:uppercase;
+}
+.dnode{
+  position:absolute;width:60px;height:46px;border-radius:9px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--panel);border:2px solid var(--border);
+  transition:left .35s ease,top .35s ease,border-color .2s,box-shadow .2s,background .2s,opacity .3s;
+}
+.dnode .nk{font-size:10px;color:var(--muted);line-height:1.2;}
+.dnode .nv{font-size:15px;font-weight:700;line-height:1.2;}
+.dnode.sentinel{
+  width:44px;height:46px;background:var(--panel2);
+  border:2px dashed var(--border);font-size:12px;font-weight:700;color:var(--muted);
+}
+.dnode.active{border-color:var(--blue);box-shadow:0 0 0 2px rgba(88,166,255,.35);}
+.dnode.evict{border-color:var(--red);box-shadow:0 0 0 2px rgba(248,81,73,.35);}
+.dnode.fresh{border-color:var(--green);box-shadow:0 0 0 2px rgba(63,185,80,.35);}
+.dnode.gone{opacity:0;}
+
+.map-slot{
+  position:absolute;min-width:58px;height:44px;border-radius:8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--panel);border:1px solid var(--border);
+  transition:left .3s,opacity .3s,border-color .2s;
+}
+.map-slot .mk{font-size:10px;color:var(--muted);}
+.map-slot .mv{font-size:14px;font-weight:700;}
+.map-slot.hit{border-color:var(--purple);box-shadow:0 0 0 2px rgba(188,140,255,.3);}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:12px;color:var(--muted);}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;}
+
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.info-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;min-width:0;}
+.info-card .k{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.info-card .v{font-size:18px;font-weight:700;}
+.v.grn{color:var(--green);} .v.blu{color:var(--blue);} .v.org{color:var(--orange);} .v.pur{color:var(--purple);} .v.red{color:var(--red);}
+
+.msg{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:11px 16px;font-size:14px;margin-bottom:16px;}
+.msg .ph{font-weight:700;color:var(--blue);margin-right:8px;}
+.msg.good{border-left-color:var(--green);} .msg.good .ph{color:var(--green);}
+
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.code-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);}
+.mac{width:11px;height:11px;border-radius:50%;}
+.code-body{display:flex;font-family:"Cascadia Code",Consolas,"Courier New",monospace;font-size:13px;line-height:1.7;overflow-x:auto;}
+.lineno{padding:12px 0;color:var(--muted);text-align:right;user-select:none;background:var(--panel2);min-width:44px;}
+.lineno div{padding:0 11px;}
+.code-lines{flex:1;padding:12px 0;min-width:0;}
+.code-lines div{padding:0 15px;white-space:pre;}
+.code-lines div.hl{background:rgba(88,166,255,.14);box-shadow:inset 3px 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;} .t-cmt{color:#8b949e;}
+
+.controls{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.ctrl-btn{
+  background:var(--panel2);color:var(--text);border:1px solid var(--border);
+  border-radius:8px;height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;
+  cursor:pointer;font-size:13px;font-family:inherit;
+}
+.ctrl-btn:hover:not(:disabled){border-color:var(--muted);}
+.ctrl-btn:disabled{opacity:.4;cursor:default;}
+.ctrl-btn.primary{background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:600;}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--blue);height:4px;}
+.step-count{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:52px;text-align:right;}
+select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;}
+.kbd-hint{width:100%;font-size:12px;color:var(--muted);}
+.kbd-hint b{color:var(--text);font-weight:600;}
+
+@media (max-width:760px){
+  .info-grid{grid-template-columns:repeat(2,1fr);}
+  .stage{width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>146. LRU 缓存 <span class="badge mid">中等</span></h1>
+  <p class="sub">哈希表 + 双向链表 · 头部最近使用、尾部最久未用 · get/put 平均 O(1)</p>
+
+  <div class="panel intro">
+    <b class="grn">head/tail</b> 是哨兵，新节点 <b class="blu">HeadAdd</b> 插到 head 后；访问或更新已有节点先 <b class="purple">remove</b> 再移到头部；
+    容量满时淘汰 <b class="red">tail.pre</b>（最久未用）。哈希表负责 O(1) 定位。
+  </div>
+
+  <div class="case-row" id="caseRow"></div>
+
+  <div class="panel stage-wrap">
+    <div class="stage" id="stage">
+      <svg id="svgLayer" width="600" height="300"></svg>
+      <div class="node-layer" id="nodeLayer"></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--blue);"></i>当前操作节点</span>
+    <span><i class="dot" style="background:var(--green);"></i>新插入</span>
+    <span><i class="dot" style="background:var(--red);"></i>淘汰</span>
+    <span><i class="dot" style="background:var(--purple);"></i>哈希命中</span>
+  </div>
+
+  <div style="height:16px;"></div>
+  <div class="info-grid">
+    <div class="info-card"><div class="k">当前操作</div><div class="v blu" id="infoOp">—</div></div>
+    <div class="info-card"><div class="k">操作 key</div><div class="v pur" id="infoKey">—</div></div>
+    <div class="info-card"><div class="k">返回值</div><div class="v org" id="infoRet">—</div></div>
+    <div class="info-card"><div class="k">缓存条目</div><div class="v grn" id="infoSize">—</div></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="code-panel">
+    <div class="code-head">
+      <span class="mac" style="background:#ff5f56;"></span>
+      <span class="mac" style="background:#ffbd2e;"></span>
+      <span class="mac" style="background:#27c93f;"></span>
+      <span style="margin-left:6px;">LRUCache.java</span>
+    </div>
+    <div class="code-body">
+      <div class="lineno" id="lineno"></div>
+      <div class="code-lines" id="codeLines"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn primary" id="playBtn"></button>
+    <button class="ctrl-btn" id="prevBtn"></button>
+    <button class="ctrl-btn" id="nextBtn"></button>
+    <button class="ctrl-btn" id="resetBtn"></button>
+    <input type="range" id="scrub" min="0" value="0" step="1">
+    <span class="step-count" id="stepCount"></span>
+    <select id="speedSel">
+      <option value="1200">0.5x</option>
+      <option value="800" selected>1x</option>
+      <option value="450">1.5x</option>
+      <option value="250">2x</option>
+    </select>
+    <div class="kbd-hint">键盘：<b>←/→</b> 单步 · <b>空格</b> 播放暂停 · <b>Home/End</b> 首末</div>
+  </div>
+</div>
+
+<script>
+/* ===== 用例 ===== */
+var CASES = [
+  { cap: 2, label: '用例 1：题目示例', ops: ['LRUCache', 'put', 'put', 'get', 'put', 'get', 'put', 'get', 'get', 'get'],
+    args: [[2], [1, 1], [2, 2], [1], [3, 3], [2], [4, 4], [1], [3], [4]] },
+  { cap: 1, label: '用例 2：容量 1', ops: ['LRUCache', 'put', 'get', 'put', 'get', 'get'],
+    args: [[1], [5, 50], [5], [6, 60], [5], [6]] },
+  { cap: 2, label: '用例 3：更新已存在', ops: ['LRUCache', 'put', 'put', 'put', 'get', 'get'],
+    args: [[2], [1, 1], [2, 2], [1, 9], [1], [2]] },
+  { cap: 3, label: '用例 4：get 未命中', ops: ['LRUCache', 'put', 'get', 'put', 'get', 'put', 'get'],
+    args: [[3], [1, 1], [9], [2, 2], [1], [3, 3], [3]] },
+  { cap: 2, label: '用例 5：访问后改淘汰', ops: ['LRUCache', 'put', 'put', 'get', 'put', 'get', 'get'],
+    args: [[2], [10, 100], [20, 200], [10], [30, 300], [20], [30]] },
+  { cap: 2, label: '用例 6：重复访问', ops: ['LRUCache', 'put', 'get', 'put', 'get', 'put', 'get'],
+    args: [[2], [1, 1], [1], [2, 2], [2], [3, 3], [1]] },
+  { cap: 3, label: '用例 7：容量 3 淘汰', ops: ['LRUCache', 'put', 'put', 'put', 'put', 'get', 'get', 'get'],
+    args: [[3], [1, 1], [2, 2], [3, 3], [4, 4], [4], [3], [1]] },
+  { cap: 2, label: '用例 8：连续插入', ops: ['LRUCache', 'put', 'put', 'put', 'put', 'get'],
+    args: [[2], [1, 1], [2, 2], [3, 3], [4, 4], [2]] }
+];
+
+/* ===== 几何 ===== */
+var STAGE_W = 600, NW = 60, NH = 46, SENT_W = 44, GAP = 26;
+var LIST_CY = 92, MAP_CY = 232;
+function slotCount(cap) { return cap + 3; }
+function slotX(cap, slot) {
+  var total = slotCount(cap) * NW + (slotCount(cap) - 1) * GAP;
+  var start = (STAGE_W - total) / 2;
+  return start + slot * (NW + GAP);
+}
+function nodeWidth(slot) { return slot === 0 ? SENT_W : NW; }
+function mapSlotX(cap, i) {
+  var n = cap, w = 58, gap = 22;
+  var total = n * w + (n - 1) * gap;
+  var start = (STAGE_W - total) / 2;
+  return start + i * (w + gap);
+}
+
+/* ===== Java 代码 ===== */
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-type">LRUCache</span> {',
+  '    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">Node</span>{',
+  '        <span class="t-kw">int</span> <span class="t-id">key</span>;',
+  '        <span class="t-kw">int</span> <span class="t-id">value</span>;',
+  '        <span class="t-type">Node</span> <span class="t-id">next</span>;',
+  '        <span class="t-type">Node</span> <span class="t-id">pre</span>;',
+  '        <span class="t-type">Node</span>(<span class="t-kw">int</span> <span class="t-id">key</span>,<span class="t-kw">int</span> <span class="t-id">value</span>){',
+  '            <span class="t-kw">this</span>.key = <span class="t-id">key</span>;',
+  '            <span class="t-kw">this</span>.value = <span class="t-id">value</span>;',
+  '        }',
+  '    }',
+  '    <span class="t-type">Node</span> <span class="t-id">head</span>;',
+  '    <span class="t-type">Node</span> <span class="t-id">tail</span>;',
+  '    <span class="t-kw">public</span> <span class="t-type">Map</span>&lt;<span class="t-type">Integer</span>,<span class="t-type">Node</span>&gt; <span class="t-id">map</span>;',
+  '    <span class="t-kw">int</span> <span class="t-id">capacity</span>;',
+  '    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">remove</span>(<span class="t-type">Node</span> <span class="t-id">node</span>){',
+  '        <span class="t-id">node</span>.next.pre = <span class="t-id">node</span>.pre;',
+  '        <span class="t-id">node</span>.pre.next = <span class="t-id">node</span>.next;',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">HeadAdd</span>(<span class="t-type">Node</span> <span class="t-id">node</span>){',
+  '        <span class="t-id">node</span>.next = <span class="t-id">head</span>.next;',
+  '        <span class="t-id">node</span>.pre = <span class="t-id">head</span>;',
+  '        <span class="t-id">head</span>.next.pre = <span class="t-id">node</span>;',
+  '        <span class="t-id">head</span>.next= <span class="t-id">node</span>;',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">removeToHaed</span>(<span class="t-type">Node</span> <span class="t-id">node</span>){',
+  '        <span class="t-fn">remove</span>(<span class="t-id">node</span>);',
+  '        <span class="t-fn">HeadAdd</span>(<span class="t-id">node</span>);',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-type">LRUCache</span>(<span class="t-kw">int</span> <span class="t-id">capacity</span>) {',
+  '        <span class="t-kw">this</span>.capacity = <span class="t-id">capacity</span>;',
+  '        <span class="t-id">map</span> = <span class="t-kw">new</span> <span class="t-type">HashMap</span>&lt;&gt;();',
+  '        <span class="t-id">head</span> = <span class="t-kw">new</span> <span class="t-type">Node</span>(<span class="t-num">0</span>,<span class="t-num">0</span>);',
+  '        <span class="t-id">tail</span> = <span class="t-kw">new</span> <span class="t-type">Node</span>(<span class="t-num">0</span>,<span class="t-num">0</span>);',
+  '        <span class="t-id">head</span>.next = <span class="t-id">tail</span>;',
+  '        <span class="t-id">tail</span>.pre = <span class="t-id">head</span>;',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-kw">int</span> <span class="t-fn">get</span>(<span class="t-kw">int</span> <span class="t-id">key</span>) {',
+  '        <span class="t-type">Node</span> <span class="t-id">node</span> = <span class="t-id">map</span>.<span class="t-fn">get</span>(<span class="t-id">key</span>);',
+  '        <span class="t-kw">if</span>(<span class="t-id">node</span> == <span class="t-bool">null</span>) <span class="t-kw">return</span> -<span class="t-num">1</span>;',
+  '        <span class="t-fn">removeToHaed</span>(<span class="t-id">node</span>);',
+  '        <span class="k">return</span> <span class="t-id">node</span>.value;',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">put</span>(<span class="t-kw">int</span> <span class="t-id">key</span>, <span class="t-kw">int</span> <span class="t-id">value</span>) {',
+  '        <span class="t-type">Node</span> <span class="t-id">node</span> = <span class="t-id">map</span>.<span class="t-fn">get</span>(<span class="t-id">key</span>);',
+  '        <span class="t-kw">if</span>(<span class="t-id">node</span> != <span class="t-bool">null</span>){',
+  '            <span class="t-id">node</span>.value = <span class="t-id">value</span>;',
+  '            <span class="t-fn">removeToHaed</span>(<span class="t-id">node</span>);',
+  '        }<span class="t-kw">else</span>{',
+  '            <span class="t-id">node</span> = <span class="t-kw">new</span> <span class="t-type">Node</span>(<span class="t-id">key</span>,<span class="t-id">value</span>);',
+  '            <span class="t-fn">HeadAdd</span>(<span class="t-id">node</span>);',
+  '            <span class="t-id">map</span>.<span class="t-fn">put</span>(<span class="t-id">key</span>,<span class="t-id">node</span>);',
+  '            <span class="t-kw">if</span>(<span class="t-id">map</span>.size() &gt; <span class="t-id">capacity</span>){',
+  '                <span class="t-type">Node</span> <span class="t-id">last</span> = <span class="t-id">tail</span>.pre;',
+  '                <span class="t-fn">remove</span>(<span class="t-id">last</span>);',
+  '                <span class="t-id">map</span>.<span class="t-fn">remove</span>(<span class="t-id">last</span>.key);',
+  '            }',
+  '        }',
+  '    }',
+  '}'
+];
+
+/* ===== 步骤生成 ===== */
+var caseIndex = 0, current = 0, steps = [], playing = false, timer = null;
+
+function buildSteps(cd) {
+  var cap = cd.cap;
+  var order = [];
+  var mapStore = {};
+  var frames = [];
+  function snap(o) {
+    var mapVals = {};
+    Object.keys(mapStore).forEach(function (k) { mapVals[k] = mapStore[k]; });
+    frames.push({
+      phase: o.phase, active: o.active || -1, activeCls: o.activeCls || '',
+      hitKey: o.hitKey || -1, ret: o.ret,
+      opName: o.opName, opKey: o.opKey, line: o.line, msg: o.msg,
+      order: order.slice(), mapKeys: Object.keys(mapStore).map(Number), mapVals: mapVals
+    });
+  }
+
+  snap({ phase: 'init', opName: '初始化', opKey: '—', ret: '—', line: 35,
+    msg: '容量 ' + cap + '，head/tail 哨兵相连，哈希表为空' });
+
+  for (var oi = 1; oi < cd.ops.length; oi++) {
+    var op = cd.ops[oi], arg = cd.args[oi];
+    if (op === 'get') {
+      var key = arg[0];
+      if (mapStore[key] === undefined) {
+        snap({ phase: 'miss', opName: 'get', opKey: key, ret: -1, line: 40,
+          msg: 'get(' + key + ')：哈希表无此 key，返回 -1' });
+      } else {
+        snap({ phase: 'remove', opName: 'get', opKey: key, ret: '…', line: 17,
+          active: key, activeCls: 'active',
+          msg: 'get(' + key + ') 命中：remove 摘除节点' });
+        order.splice(order.indexOf(key), 1);
+        order.unshift(key);
+        snap({ phase: 'headadd', opName: 'get', opKey: key, ret: mapStore[key], line: 24,
+          active: key, activeCls: 'active',
+          msg: 'HeadAdd 移到头部（最近使用），返回 ' + mapStore[key] });
+      }
+    } else {
+      var key = arg[0], val = arg[1];
+      if (mapStore[key] !== undefined) {
+        mapStore[key] = val;
+        snap({ phase: 'update', opName: 'put', opKey: key, ret: '—', line: 47,
+          active: key, activeCls: 'active',
+          msg: 'put(' + key + ',' + val + ')：key 已存在，更新 value' });
+        order.splice(order.indexOf(key), 1);
+        order.unshift(key);
+        snap({ phase: 'headadd', opName: 'put', opKey: key, ret: '—', line: 24,
+          active: key, activeCls: 'active',
+          msg: 'removeToHead 移到头部' });
+      } else {
+        mapStore[key] = val;
+        order.unshift(key);
+        snap({ phase: 'headadd', opName: 'put', opKey: key, ret: '—', line: 51,
+          active: key, activeCls: 'fresh',
+          msg: 'put(' + key + ',' + val + ')：新节点 HeadAdd 到头部' });
+        if (Object.keys(mapStore).length > cap) {
+          var last = order[order.length - 1];
+          snap({ phase: 'evict', opName: 'put', opKey: key, ret: '—', line: 55,
+            active: last, activeCls: 'evict',
+            msg: '容量超限，淘汰 tail.pre：key=' + last + '（最久未用）' });
+          order.pop();
+          delete mapStore[last];
+        }
+      }
+    }
+  }
+  return frames;
+}
+
+/* ===== 代码渲染 ===== */
+function renderCode() {
+  var lineno = document.getElementById('lineno');
+  var codeLines = document.getElementById('codeLines');
+  lineno.innerHTML = ''; codeLines.innerHTML = '';
+  CODE.forEach(function (src, i) {
+    var no = document.createElement('div'); no.textContent = (i + 1); lineno.appendChild(no);
+    var cl = document.createElement('div'); cl.innerHTML = (src === '' ? '&nbsp;' : src);
+    cl.setAttribute('data-line', i + 1); codeLines.appendChild(cl);
+  });
+}
+function highlightLine(line) {
+  var lines = document.getElementById('codeLines').children;
+  for (var i = 0; i < lines.length; i++) {
+    lines[i].className = (+lines[i].getAttribute('data-line') === line) ? 'hl' : '';
+  }
+}
+
+/* ===== 用例按钮 ===== */
+function renderCaseButtons() {
+  var row = document.getElementById('caseRow');
+  row.innerHTML = '';
+  CASES.forEach(function (c, idx) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (idx === caseIndex ? ' active' : '');
+    b.textContent = c.label;
+    b.addEventListener('click', function () { switchCase(idx); });
+    row.appendChild(b);
+  });
+}
+function switchCase(idx) {
+  stopPlay();
+  caseIndex = idx;
+  steps = buildSteps(CASES[idx]);
+  current = 0;
+  renderCaseButtons();
+  updateScrubRange();
+  render();
+}
+
+/* ===== SVG ===== */
+var SVG_NS = 'http://www.w3.org/2000/svg';
+var nodeLayer = document.getElementById('nodeLayer');
+var svg = document.getElementById('svgLayer');
+var stage = document.getElementById('stage');
+(function initSvg() {
+  var defs = document.createElementNS(SVG_NS, 'defs');
+  var marker = document.createElementNS(SVG_NS, 'marker');
+  marker.setAttribute('id', 'arHead');
+  marker.setAttribute('markerWidth', '8'); marker.setAttribute('markerHeight', '8');
+  marker.setAttribute('refX', '6'); marker.setAttribute('refY', '4');
+  marker.setAttribute('orient', 'auto'); marker.setAttribute('markerUnits', 'userSpaceOnUse');
+  var mp = document.createElementNS(SVG_NS, 'path');
+  mp.setAttribute('d', 'M0,0 L7,4 L0,8 Z'); mp.setAttribute('fill', '#7d8590');
+  marker.appendChild(mp); defs.appendChild(marker);
+  var g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('id', 'drawG');
+  svg.appendChild(defs); svg.appendChild(g);
+})();
+function drawG() { return document.getElementById('drawG'); }
+function linkLine(x1, y1, x2, y2, color, dashed) {
+  var l = document.createElementNS(SVG_NS, 'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  l.setAttribute('stroke', color); l.setAttribute('stroke-width', '2');
+  if (dashed) l.setAttribute('stroke-dasharray', '4 4');
+  drawG().appendChild(l);
+}
+
+function addZone(text, top) {
+  var t = document.createElement('div');
+  t.className = 'zone-label'; t.textContent = text; t.style.top = top + 'px';
+  nodeLayer.appendChild(t);
+}
+function nodeCenter(cap, slot) { return slotX(cap, slot) + NW / 2; }
+
+function renderStage(fr) {
+  var cap = CASES[caseIndex].cap;
+  nodeLayer.innerHTML = ''; drawG().innerHTML = '';
+  addZone('双向链表（头=最近）', 13);
+  addZone('哈希表 map', 168);
+
+  var elems = [{ slot: 0, type: 'head' }];
+  fr.order.forEach(function (k, i) { elems.push({ slot: i + 1, key: k }); });
+  elems.push({ slot: fr.order.length + 1, type: 'tail' });
+
+  for (var e = 0; e + 1 < elems.length; e++) {
+    var c1 = nodeCenter(cap, elems[e].slot);
+    var c2 = nodeCenter(cap, elems[e + 1].slot);
+    linkLine(c1, LIST_CY - 8, c2, LIST_CY - 8, 'rgba(88,166,255,.75)');
+    linkLine(c1, LIST_CY + 8, c2, LIST_CY + 8, 'rgba(188,140,255,.75)');
+  }
+
+  elems.forEach(function (el) {
+    var cx = nodeCenter(cap, el.slot);
+    var d = document.createElement('div');
+    if (el.type === 'head' || el.type === 'tail') {
+      d.className = 'dnode sentinel';
+      d.style.left = (cx - SENT_W / 2) + 'px';
+      d.style.top = (LIST_CY - NH / 2) + 'px';
+      d.textContent = el.type === 'head' ? 'head' : 'tail';
+    } else {
+      d.className = 'dnode';
+      if (fr.active === el.key) d.className += ' ' + fr.activeCls;
+      d.style.left = (cx - NW / 2) + 'px';
+      d.style.top = (LIST_CY - NH / 2) + 'px';
+      d.innerHTML = '<span class="nk">key ' + el.key + '</span><span class="nv">' + fr.mapVals[el.key] + '</span>';
+    }
+    nodeLayer.appendChild(d);
+  });
+
+  var keys = fr.mapKeys.slice().sort(function (a, b) { return a - b; });
+  for (var i = 0; i < cap; i++) {
+    var ms = document.createElement('div');
+    ms.className = 'map-slot';
+    ms.style.left = mapSlotX(cap, i) + 'px';
+    ms.style.top = (MAP_CY - 22) + 'px';
+    if (keys[i] !== undefined) {
+      var k = keys[i];
+      if (fr.active === k) ms.className += ' hit';
+      ms.innerHTML = '<span class="mk">key ' + k + '</span><span class="mv">' + fr.mapVals[k] + '</span>';
+    } else {
+      ms.innerHTML = '<span class="mk">空槽</span>';
+      ms.style.opacity = .4;
+    }
+    nodeLayer.appendChild(ms);
+  }
+}
+
+function renderInfo(fr) {
+  document.getElementById('infoOp').textContent = fr.opName;
+  document.getElementById('infoKey').textContent = fr.opKey;
+  document.getElementById('infoRet').textContent = fr.ret;
+  document.getElementById('infoSize').textContent = fr.mapKeys.length + ' / ' + CASES[caseIndex].cap;
+  var msg = document.getElementById('msg');
+  msg.className = 'msg';
+  msg.innerHTML = '<span class="ph">' + fr.opName + '</span>' + fr.msg;
+}
+
+function render() {
+  var fr = steps[current];
+  renderStage(fr);
+  renderInfo(fr);
+  highlightLine(fr.line);
+  document.getElementById('scrub').value = current;
+  document.getElementById('stepCount').textContent = current + ' / ' + (steps.length - 1);
+  updateCtrlButtons();
+}
+
+var ICONS = {
+  play: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>',
+  pause: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>',
+  prev: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M18 6v12l-9-6z" fill="currentColor"/><rect x="5" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  next: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M6 6v12l9-6z" fill="currentColor"/><rect x="17" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  reset: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>'
+};
+var playBtn = document.getElementById('playBtn');
+var prevBtn = document.getElementById('prevBtn');
+var nextBtn = document.getElementById('nextBtn');
+var resetBtn = document.getElementById('resetBtn');
+var scrub = document.getElementById('scrub');
+var speedSel = document.getElementById('speedSel');
+prevBtn.innerHTML = ICONS.prev; nextBtn.innerHTML = ICONS.next; resetBtn.innerHTML = ICONS.reset;
+
+function updatePlayLabel() {
+  playBtn.innerHTML = (playing ? ICONS.pause : ICONS.play) + '<span>' + (playing ? '暂停' : '播放') + '</span>';
+}
+function updateCtrlButtons() {
+  prevBtn.disabled = (current === 0);
+  nextBtn.disabled = (current === steps.length - 1);
+}
+function updateScrubRange() { scrub.max = steps.length - 1; scrub.value = current; }
+function stepNext() { if (current < steps.length - 1) { current++; render(); } else { stopPlay(); } }
+function stepPrev() { if (current > 0) { current--; render(); } }
+
+function tick() {
+  if (!playing) return;
+  if (current >= steps.length - 1) { stopPlay(); return; }
+  current++;
+  render();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function startPlay() {
+  if (current >= steps.length - 1) current = 0;
+  playing = true;
+  updatePlayLabel();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function stopPlay() {
+  playing = false;
+  if (timer) { clearTimeout(timer); timer = null; }
+  updatePlayLabel();
+}
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+
+playBtn.addEventListener('click', togglePlay);
+nextBtn.addEventListener('click', stepNext);
+prevBtn.addEventListener('click', stepPrev);
+resetBtn.addEventListener('click', function () { stopPlay(); current = 0; render(); });
+scrub.addEventListener('input', function () { stopPlay(); current = +scrub.value; render(); });
+
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  switch (e.key) {
+    case 'ArrowRight': e.preventDefault(); stepNext(); break;
+    case 'ArrowLeft': e.preventDefault(); stepPrev(); break;
+    case ' ': e.preventDefault(); togglePlay(); break;
+    case 'Home': e.preventDefault(); stopPlay(); current = 0; render(); break;
+    case 'End': e.preventDefault(); stopPlay(); current = steps.length - 1; render(); break;
+  }
+});
+
+steps = buildSteps(CASES[0]);
+renderCode();
+renderCaseButtons();
+updateScrubRange();
+updatePlayLabel();
+render();
+
+
+
+
+
+</script>
+</body>
+</html>

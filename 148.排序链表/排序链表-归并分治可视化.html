@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>148. 排序链表 · 可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%2358a6ff'/><path d='M6 15l3-6 3 4 3-8' fill='none' stroke='white' stroke-width='2'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:"Segoe UI","Microsoft YaHei",-apple-system,sans-serif;
+  font-size:15px; line-height:1.6; padding:28px 18px 60px;
+}
+.wrap{max-width:1080px;margin:0 auto;}
+h1{font-size:26px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.badge.mid{color:var(--orange);border-color:rgba(227,179,65,.5);}
+.sub{color:var(--muted);font-size:14px;margin:0 0 18px;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.intro{font-size:14px;}
+.intro b.red{color:var(--red);} .intro b.blu{color:var(--blue);} .intro b.grn{color:var(--green);}
+.intro b.org{color:var(--orange);} .intro b.pur{color:var(--purple);}
+
+.case-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.case-btn{
+  background:var(--panel);color:var(--muted);border:1px solid var(--border);
+  border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;
+  transition:border-color .15s,color .15s;
+}
+.case-btn:hover{color:var(--text);border-color:var(--muted);}
+.case-btn.active{color:var(--text);border-color:var(--blue);background:rgba(88,166,255,.1);}
+
+.stage-wrap{display:flex;justify-content:center;}
+.stage{
+  position:relative;width:560px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;
+}
+#svgLayer{position:absolute;left:0;top:0;}
+.node-layer{position:absolute;left:0;top:0;width:560px;}
+.depth-label{position:absolute;left:12px;font-size:11px;color:var(--muted);font-weight:600;}
+.node{
+  position:absolute;width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600;
+  background:var(--panel);border:2px solid var(--border);color:var(--text);
+  transition:left .35s ease,top .35s ease,border-color .2s,box-shadow .2s,background .2s;
+}
+.node.in-active{background:rgba(63,185,80,.14);border-color:var(--green);}
+.node.placed{border-color:var(--green);box-shadow:0 0 0 2px rgba(63,185,80,.3);}
+.node.lp{border-color:var(--blue);box-shadow:0 0 0 2px rgba(88,166,255,.3);}
+.node.rp{border-color:var(--orange);box-shadow:0 0 0 2px rgba(227,179,65,.3);}
+.node.split-cut{border-color:var(--red);}
+.ptr{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;padding:0 5px;border-radius:5px;white-space:nowrap;}
+.ptr.t-lp{background:rgba(88,166,255,.2);color:var(--blue);top:-14px;}
+.ptr.t-rp{background:rgba(227,179,65,.2);color:var(--orange);bottom:-14px;}
+
+.phase-badge{
+  position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:3px 13px;z-index:6;
+}
+.phase-badge .ph-name{color:var(--blue);font-weight:700;font-size:12.5px;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:12px;color:var(--muted);}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;}
+
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.info-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;min-width:0;}
+.info-card .k{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.info-card .v{font-size:18px;font-weight:700;}
+.v.grn{color:var(--green);} .v.blu{color:var(--blue);} .v.org{color:var(--orange);} .v.pur{color:var(--purple);}
+
+.msg{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:11px 16px;font-size:14px;margin-bottom:16px;}
+.msg .ph{font-weight:700;color:var(--blue);margin-right:8px;}
+.msg.good{border-left-color:var(--green);} .msg.good .ph{color:var(--green);}
+
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.code-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);}
+.mac{width:11px;height:11px;border-radius:50%;}
+.code-body{display:flex;font-family:"Cascadia Code",Consolas,"Courier New",monospace;font-size:13px;line-height:1.7;overflow-x:auto;}
+.lineno{padding:12px 0;color:var(--muted);text-align:right;user-select:none;background:var(--panel2);min-width:44px;}
+.lineno div{padding:0 11px;}
+.code-lines{flex:1;padding:12px 0;min-width:0;}
+.code-lines div{padding:0 15px;white-space:pre;}
+.code-lines div.hl{background:rgba(88,166,255,.14);box-shadow:inset 3px 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;}
+
+.controls{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.ctrl-btn{
+  background:var(--panel2);color:var(--text);border:1px solid var(--border);
+  border-radius:8px;height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;
+  cursor:pointer;font-size:13px;font-family:inherit;
+}
+.ctrl-btn:hover:not(:disabled){border-color:var(--muted);}
+.ctrl-btn:disabled{opacity:.4;cursor:default;}
+.ctrl-btn.primary{background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:600;}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--blue);height:4px;}
+.step-count{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:52px;text-align:right;}
+select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;}
+.kbd-hint{width:100%;font-size:12px;color:var(--muted);}
+.kbd-hint b{color:var(--text);font-weight:600;}
+
+@media (max-width:760px){
+  .info-grid{grid-template-columns:repeat(2,1fr);}
+  .stage{width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>148. 排序链表 <span class="badge mid">中等</span></h1>
+  <p class="sub">归并排序 · 快慢指针找中点二分 · 递归合并有序链表 · 时间 O(n log n) · 空间 O(log n)</p>
+
+  <div class="panel intro">
+    <b class="grn">分</b>：快慢指针 <b class="red">slow</b>/<b class="purple">fast</b> 找中点，slow.next=null 断开成左右两半，递归分到单节点。
+    <b class="grn">治</b>：自底向上 merge，比较两个有序子段的头，<b class="blu">a</b>.val &gt; <b class="org">b</b>.val 就取 b，否则取 a（相等取 a），
+    逐个接到结果链，最后接剩余部分。
+  </div>
+
+  <div class="case-row" id="caseRow"></div>
+
+  <div class="panel stage-wrap">
+    <div class="stage" id="stage">
+      <svg id="svgLayer" width="560" height="320"></svg>
+      <div class="node-layer" id="nodeLayer"></div>
+      <div class="phase-badge"><span class="ph-name" id="phaseName">初始化</span></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--blue);"></i>左指针 a</span>
+    <span><i class="dot" style="background:var(--orange);"></i>右指针 b</span>
+    <span><i class="dot" style="background:var(--green);"></i>已归位</span>
+    <span><i class="dot" style="background:var(--red);"></i>二分断开处</span>
+  </div>
+
+  <div style="height:16px;"></div>
+  <div class="info-grid">
+    <div class="info-card"><div class="k">当前操作</div><div class="v pur" id="infoOp">—</div></div>
+    <div class="info-card"><div class="k">a 待比较</div><div class="v blu" id="infoA">—</div></div>
+    <div class="info-card"><div class="k">b 待比较</div><div class="v org" id="infoB">—</div></div>
+    <div class="info-card"><div class="k">已归位节点</div><div class="v grn" id="infoPlaced">—</div></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="code-panel">
+    <div class="code-head">
+      <span class="mac" style="background:#ff5f56;"></span>
+      <span class="mac" style="background:#ffbd2e;"></span>
+      <span class="mac" style="background:#27c93f;"></span>
+      <span style="margin-left:6px;">Solution.java</span>
+    </div>
+    <div class="code-body">
+      <div class="lineno" id="lineno"></div>
+      <div class="code-lines" id="codeLines"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn primary" id="playBtn"></button>
+    <button class="ctrl-btn" id="prevBtn"></button>
+    <button class="ctrl-btn" id="nextBtn"></button>
+    <button class="ctrl-btn" id="resetBtn"></button>
+    <input type="range" id="scrub" min="0" value="0" step="1">
+    <span class="step-count" id="stepCount"></span>
+    <select id="speedSel">
+      <option value="1200">0.5x</option>
+      <option value="800" selected>1x</option>
+      <option value="450">1.5x</option>
+      <option value="250">2x</option>
+    </select>
+    <div class="kbd-hint">键盘：<b>←/→</b> 单步 · <b>空格</b> 播放暂停 · <b>Home/End</b> 首末</div>
+  </div>
+</div>
+
+<script>
+/* ===== 用例 ===== */
+var CASES = [
+  { label: '用例 1：[4,2,1,3]', arr: [4, 2, 1, 3] },
+  { label: '用例 2：[-1,5,3,4,0]', arr: [-1, 5, 3, 4, 0] },
+  { label: '用例 3：单节点 [1]', arr: [1] },
+  { label: '用例 4：[3,2,1]', arr: [3, 2, 1] },
+  { label: '用例 5：逆序 [5,4,3,2,1]', arr: [5, 4, 3, 2, 1] },
+  { label: '用例 6：[2,1,4,3]', arr: [2, 1, 4, 3] },
+  { label: '用例 7：[1,3,2,5,4]', arr: [1, 3, 2, 5, 4] },
+  { label: '用例 8：[4,2]', arr: [4, 2] }
+];
+
+/* ===== 几何 ===== */
+var STAGE_W = 560;
+var NODE = 40;
+function colX(n, i) {
+  var gap = n >= 5 ? 20 : 30;
+  var pitch = NODE + gap;
+  var total = n * NODE + (n - 1) * gap;
+  var startCx = (STAGE_W - total) / 2 + NODE / 2;
+  return startCx + i * pitch;
+}
+function rowY(depth) { return 44 + depth * 74; }
+function stageHeight(maxD) { return rowY(maxD) + 22 + 26; }
+
+/* ===== Java 代码 ===== */
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-type">ListNode</span> <span class="t-fn">sortList</span>(<span class="t-type">ListNode</span> <span class="t-id">head</span>) {',
+  '        <span class="t-kw">if</span>(<span class="t-id">head</span> == <span class="t-bool">null</span> || <span class="t-id">head</span>.next == <span class="t-bool">null</span>){',
+  '            <span class="t-kw">return</span> <span class="t-id">head</span>;',
+  '        }',
+  '        <span class="t-type">ListNode</span> <span class="t-id">slow</span> = <span class="t-id">head</span>;',
+  '        <span class="t-type">ListNode</span> <span class="t-id">fast</span> = <span class="t-id">head</span>;',
+  '        <span class="t-kw">while</span>(<span class="t-id">fast</span>.next != <span class="t-bool">null</span> && <span class="t-id">fast</span>.next.next != <span class="t-bool">null</span>){',
+  '            <span class="t-id">slow</span> = <span class="t-id">slow</span>.next;',
+  '            <span class="t-id">fast</span> = <span class="t-id">fast</span>.next.next;',
+  '        }',
+  '        <span class="t-type">ListNode</span> <span class="t-id">l</span> = <span class="t-id">slow</span>.next;',
+  '        <span class="t-id">slow</span>.next = <span class="t-bool">null</span>;',
+  '        <span class="t-type">ListNode</span> <span class="t-id">left</span> = <span class="t-fn">sortList</span>(<span class="t-id">head</span>);',
+  '        <span class="t-type">ListNode</span> <span class="t-id">right</span> = <span class="t-fn">sortList</span>(<span class="t-id">l</span>);',
+  '        <span class="t-kw">return</span> <span class="t-fn">merge</span>(<span class="t-id">left</span>,<span class="t-id">right</span>);',
+  '    }',
+  '    <span class="t-kw">public</span> <span class="t-type">ListNode</span> <span class="t-fn">merge</span>(<span class="t-type">ListNode</span> <span class="t-id">a</span>,<span class="t-type">ListNode</span> <span class="t-id">b</span>){',
+  '        <span class="t-type">ListNode</span> <span class="t-id">dummty</span> = <span class="t-kw">new</span> <span class="t-type">ListNode</span>(<span class="t-num">0</span>);',
+  '        <span class="t-type">ListNode</span> <span class="t-id">cur</span> = <span class="t-id">dummty</span>;',
+  '        <span class="t-kw">while</span>(<span class="t-id">a</span> != <span class="t-bool">null</span> && <span class="t-id">b</span> !=<span class="t-bool">null</span>){',
+  '            <span class="t-kw">if</span>(<span class="t-id">a</span>.val &gt;<span class="t-id">b</span>.val){',
+  '                <span class="t-id">cur</span>.next = <span class="t-id">b</span>;',
+  '                <span class="t-id">b</span> = <span class="t-id">b</span>.next;',
+  '                <span class="t-id">cur</span> = <span class="t-id">cur</span>.next;',
+  '            }<span class="t-kw">else</span>{',
+  '                <span class="t-id">cur</span>.next = <span class="t-id">a</span>;',
+  '                <span class="t-id">a</span> = <span class="t-id">a</span>.next;',
+  '                <span class="t-id">cur</span> = <span class="t-id">cur</span>.next;',
+  '            }',
+  '        }',
+  '        <span class="t-kw">if</span>(<span class="t-id">a</span> != <span class="t-bool">null</span>){',
+  '            <span class="t-id">cur</span>.next = <span class="t-id">a</span>;',
+  '        }',
+  '        <span class="t-kw">if</span>(<span class="t-id">b</span>!= <span class="t-bool">null</span>){',
+  '            <span class="t-id">cur</span>.next = <span class="t-id">b</span>;',
+  '        }',
+  '        <span class="t-kw">return</span> <span class="t-id">dummty</span>.next;',
+  '    }',
+  '}'
+];
+
+/* ===== 分治树 ===== */
+var caseIndex = 0, current = 0, steps = [], playing = false, timer = null;
+
+function splitPoint(m) {
+  if (m <= 1) return 1;
+  var slow = 0, fast = 0;
+  while (fast + 2 < m) { slow++; fast += 2; }
+  return slow + 1;
+}
+function buildTree(lo, hi, depth, counter) {
+  var node = { lo: lo, hi: hi, depth: depth, id: counter.v++, left: null, right: null, leaf: lo === hi };
+  if (lo === hi) return node;
+  var leftLen = splitPoint(hi - lo + 1);
+  var mid = lo + leftLen - 1;
+  node.mid = mid;
+  node.left = buildTree(lo, mid, depth + 1, counter);
+  node.right = buildTree(mid + 1, hi, depth + 1, counter);
+  return node;
+}
+function maxDepthOf(node) { return node.leaf ? node.depth : maxDepthOf(node.left); }
+function collectInternalPost(node, out) {
+  if (node.leaf) return;
+  collectInternalPost(node.left, out);
+  collectInternalPost(node.right, out);
+  out.push(node);
+}
+function cloneSeq(o) {
+  var c = {};
+  Object.keys(o).forEach(function (k) { c[k] = o[k].slice(); });
+  return c;
+}
+function initSegSeq(node, store) {
+  var seq = [];
+  for (var i = node.lo; i <= node.hi; i++) seq.push(i + 1);
+  store[node.id] = seq;
+  if (!node.leaf) { initSegSeq(node.left, store); initSegSeq(node.right, store); }
+}
+
+/* ===== 步骤生成 ===== */
+function buildSteps(cd) {
+  var arr = cd.arr, n = arr.length;
+  var tree = buildTree(0, n - 1, 0, { v: 0 });
+  var maxD = maxDepthOf(tree);
+  var segSeq = {};
+  initSegSeq(tree, segSeq);
+  var frames = [];
+
+  // 分：逐层揭示
+  for (var d = 0; d <= maxD; d++) {
+    frames.push({
+      phase: d === 0 ? 'init' : 'split',
+      revealDepth: d, maxD: maxD, tree: tree,
+      activeSeg: null, segSeq: cloneSeq(segSeq),
+      lp: -1, rp: -1, placedCount: 0, cutMid: -1,
+      line: d === 0 ? 3 : 13,
+      msg: d === 0
+        ? '整条链表待排序，递归从这里开始（base case：空或单节点直接返回）'
+        : '深度 ' + d + '：快慢指针找中点，slow.next=null 断开，分成左右两半'
+    });
+  }
+
+  // 治：自底向上 merge
+  var internal = [];
+  collectInternalPost(tree, internal);
+  internal.forEach(function (seg) {
+    var leftSeq = segSeq[seg.left.id].slice();
+    var rightSeq = segSeq[seg.right.id].slice();
+    var i = 0, j = 0, placed = [];
+    while (i < leftSeq.length || j < rightSeq.length) {
+      var take;
+      if (i < leftSeq.length && j < rightSeq.length) {
+        if (arr[leftSeq[i] - 1] > arr[rightSeq[j] - 1]) { take = rightSeq[j]; j++; }
+        else { take = leftSeq[i]; i++; }
+      } else if (i < leftSeq.length) { take = leftSeq[i]; i++; }
+      else { take = rightSeq[j]; j++; }
+      placed.push(take);
+      var remaining = leftSeq.slice(i).concat(rightSeq.slice(j));
+      segSeq[seg.id] = placed.concat(remaining);
+      var lpId = (i < leftSeq.length) ? leftSeq[i] : -1;
+      var rpId = (j < rightSeq.length) ? rightSeq[j] : -1;
+      var takeVal = arr[take - 1];
+      frames.push({
+        phase: 'merge', revealDepth: maxD, maxD: maxD, tree: tree,
+        activeSeg: seg, segSeq: cloneSeq(segSeq),
+        lp: lpId, rp: rpId, placedCount: placed.length, cutMid: -1,
+        line: 22,
+        msg: '合并 [' + seg.lo + '..' + seg.hi + ']：取 ' + takeVal +
+          ' 接到结果链（a.val &gt; b.val 取 b，否则取 a）'
+      });
+    }
+  });
+
+  frames.push({
+    phase: 'done', revealDepth: maxD, maxD: maxD, tree: tree,
+    activeSeg: tree, segSeq: cloneSeq(segSeq),
+    lp: -1, rp: -1, placedCount: n, cutMid: -1,
+    line: 16, msgClass: 'good',
+    msg: '根节点 merge 完成，返回排序后的链表头'
+  });
+  return frames;
+}
+
+/* ===== 代码渲染 ===== */
+function renderCode() {
+  var lineno = document.getElementById('lineno');
+  var codeLines = document.getElementById('codeLines');
+  lineno.innerHTML = ''; codeLines.innerHTML = '';
+  CODE.forEach(function (src, i) {
+    var no = document.createElement('div'); no.textContent = (i + 1); lineno.appendChild(no);
+    var cl = document.createElement('div'); cl.innerHTML = (src === '' ? '&nbsp;' : src);
+    cl.setAttribute('data-line', i + 1); codeLines.appendChild(cl);
+  });
+}
+function highlightLine(line) {
+  var lines = document.getElementById('codeLines').children;
+  for (var i = 0; i < lines.length; i++) {
+    lines[i].className = (+lines[i].getAttribute('data-line') === line) ? 'hl' : '';
+  }
+}
+
+/* ===== 用例按钮 ===== */
+function renderCaseButtons() {
+  var row = document.getElementById('caseRow');
+  row.innerHTML = '';
+  CASES.forEach(function (c, idx) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (idx === caseIndex ? ' active' : '');
+    b.textContent = c.label;
+    b.addEventListener('click', function () { switchCase(idx); });
+    row.appendChild(b);
+  });
+}
+function switchCase(idx) {
+  stopPlay();
+  caseIndex = idx;
+  steps = buildSteps(CASES[idx]);
+  current = 0;
+  renderCaseButtons();
+  updateScrubRange();
+  render();
+}
+
+/* ===== SVG ===== */
+var SVG_NS = 'http://www.w3.org/2000/svg';
+var nodeLayer = document.getElementById('nodeLayer');
+var svg = document.getElementById('svgLayer');
+var stage = document.getElementById('stage');
+(function initSvg() {
+  var defs = document.createElementNS(SVG_NS, 'defs');
+  var marker = document.createElementNS(SVG_NS, 'marker');
+  marker.setAttribute('id', 'arHead');
+  marker.setAttribute('markerWidth', '9'); marker.setAttribute('markerHeight', '9');
+  marker.setAttribute('refX', '7'); marker.setAttribute('refY', '4.5');
+  marker.setAttribute('orient', 'auto'); marker.setAttribute('markerUnits', 'userSpaceOnUse');
+  var mp = document.createElementNS(SVG_NS, 'path');
+  mp.setAttribute('d', 'M0,0 L8,4.5 L0,9 Z'); mp.setAttribute('fill', '#7d8590');
+  marker.appendChild(mp); defs.appendChild(marker);
+  var g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('id', 'drawG');
+  svg.appendChild(defs); svg.appendChild(g);
+})();
+function drawG() { return document.getElementById('drawG'); }
+function segLine(x1, y, x2, color) {
+  var l = document.createElementNS(SVG_NS, 'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y);
+  l.setAttribute('stroke', color); l.setAttribute('stroke-width', '2');
+  l.setAttribute('marker-end', 'url(#arHead)');
+  drawG().appendChild(l);
+}
+
+function allSegs(node, revealDepth, out) {
+  if (node.depth > revealDepth) return;
+  out.push(node);
+  if (!node.leaf) { allSegs(node.left, revealDepth, out); allSegs(node.right, revealDepth, out); }
+}
+function addPtr(el, cls, text) {
+  var t = document.createElement('span');
+  t.className = 'ptr ' + cls; t.textContent = text;
+  el.appendChild(t);
+}
+
+function renderStage(fr) {
+  var n = CASES[caseIndex].arr.length;
+  var h = stageHeight(fr.maxD);
+  stage.style.height = h + 'px';
+  svg.setAttribute('height', h);
+  nodeLayer.style.height = h + 'px';
+  nodeLayer.innerHTML = ''; drawG().innerHTML = '';
+  var segs = [];
+  allSegs(fr.tree, fr.revealDepth, segs);
+  var placedIds = {};
+  if (fr.phase === 'merge' && fr.activeSeg) {
+    var pseq = fr.segSeq[fr.activeSeg.id];
+    for (var k = 0; k < fr.placedCount; k++) placedIds[pseq[k]] = true;
+  }
+  segs.forEach(function (seg) {
+    var seq = fr.segSeq[seg.id];
+    var y = rowY(seg.depth);
+    for (var k = 0; k + 1 < seq.length; k++) {
+      segLine(colX(n, seg.lo + k) + 20, y, colX(n, seg.lo + k + 1) - 20, '#7d8590');
+    }
+    var isActiveMerge = (fr.phase === 'merge' && fr.activeSeg && fr.activeSeg.id === seg.id);
+    var lpRow = fr.activeSeg ? fr.activeSeg.left : null;
+    var rpRow = fr.activeSeg ? fr.activeSeg.right : null;
+    seq.forEach(function (nid, k) {
+      var col = seg.lo + k;
+      var cls = 'node';
+      if (isActiveMerge) cls += ' in-active';
+      if (isActiveMerge && placedIds[nid]) cls += ' placed';
+      if (lpRow && lpRow.id === seg.id && fr.lp === nid) cls += ' lp';
+      if (rpRow && rpRow.id === seg.id && fr.rp === nid) cls += ' rp';
+      var el = document.createElement('div');
+      el.className = cls;
+      el.style.left = (colX(n, col) - 20) + 'px';
+      el.style.top = (y - 20) + 'px';
+      el.textContent = CASES[caseIndex].arr[nid - 1];
+      if (lpRow && lpRow.id === seg.id && fr.lp === nid) addPtr(el, 't-lp', 'a');
+      if (rpRow && rpRow.id === seg.id && fr.rp === nid) addPtr(el, 't-rp', 'b');
+      nodeLayer.appendChild(el);
+    });
+  });
+}
+
+function renderInfo(fr) {
+  var arr = CASES[caseIndex].arr;
+  var opMap = { init: '分·起点', split: '分·二分', merge: '治·合并', done: '完成' };
+  document.getElementById('infoOp').textContent = opMap[fr.phase];
+  document.getElementById('infoA').textContent = fr.lp === -1 ? '—' : arr[fr.lp - 1];
+  document.getElementById('infoB').textContent = fr.rp === -1 ? '—' : arr[fr.rp - 1];
+  document.getElementById('infoPlaced').textContent = fr.placedCount === 0 ? '—' : fr.placedCount;
+  var nameMap = { init: '初始化', split: '分·二分', merge: '治·合并', done: '完成' };
+  document.getElementById('phaseName').textContent = nameMap[fr.phase];
+  var msg = document.getElementById('msg');
+  msg.className = 'msg ' + fr.msgClass;
+  msg.innerHTML = '<span class="ph">' + nameMap[fr.phase] + '</span>' + fr.msg;
+}
+
+function render() {
+  var fr = steps[current];
+  renderStage(fr);
+  renderInfo(fr);
+  highlightLine(fr.line);
+  document.getElementById('scrub').value = current;
+  document.getElementById('stepCount').textContent = current + ' / ' + (steps.length - 1);
+  updateCtrlButtons();
+}
+
+var ICONS = {
+  play: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>',
+  pause: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>',
+  prev: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M18 6v12l-9-6z" fill="currentColor"/><rect x="5" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  next: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M6 6v12l9-6z" fill="currentColor"/><rect x="17" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  reset: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>'
+};
+var playBtn = document.getElementById('playBtn');
+var prevBtn = document.getElementById('prevBtn');
+var nextBtn = document.getElementById('nextBtn');
+var resetBtn = document.getElementById('resetBtn');
+var scrub = document.getElementById('scrub');
+var speedSel = document.getElementById('speedSel');
+prevBtn.innerHTML = ICONS.prev; nextBtn.innerHTML = ICONS.next; resetBtn.innerHTML = ICONS.reset;
+
+function updatePlayLabel() {
+  playBtn.innerHTML = (playing ? ICONS.pause : ICONS.play) + '<span>' + (playing ? '暂停' : '播放') + '</span>';
+}
+function updateCtrlButtons() {
+  prevBtn.disabled = (current === 0);
+  nextBtn.disabled = (current === steps.length - 1);
+}
+function updateScrubRange() { scrub.max = steps.length - 1; scrub.value = current; }
+function stepNext() { if (current < steps.length - 1) { current++; render(); } else { stopPlay(); } }
+function stepPrev() { if (current > 0) { current--; render(); } }
+
+function tick() {
+  if (!playing) return;
+  if (current >= steps.length - 1) { stopPlay(); return; }
+  current++;
+  render();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function startPlay() {
+  if (current >= steps.length - 1) current = 0;
+  playing = true;
+  updatePlayLabel();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function stopPlay() {
+  playing = false;
+  if (timer) { clearTimeout(timer); timer = null; }
+  updatePlayLabel();
+}
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+
+playBtn.addEventListener('click', togglePlay);
+nextBtn.addEventListener('click', stepNext);
+prevBtn.addEventListener('click', stepPrev);
+resetBtn.addEventListener('click', function () { stopPlay(); current = 0; render(); });
+scrub.addEventListener('input', function () { stopPlay(); current = +scrub.value; render(); });
+
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  switch (e.key) {
+    case 'ArrowRight': e.preventDefault(); stepNext(); break;
+    case 'ArrowLeft': e.preventDefault(); stepPrev(); break;
+    case ' ': e.preventDefault(); togglePlay(); break;
+    case 'Home': e.preventDefault(); stopPlay(); current = 0; render(); break;
+    case 'End': e.preventDefault(); stopPlay(); current = steps.length - 1; render(); break;
+  }
+});
+
+steps = buildSteps(CASES[0]);
+renderCode();
+renderCaseButtons();
+updateScrubRange();
+updatePlayLabel();
+render();
+
+
+
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeetCode 131 分割回文串：双指针 + 回溯分步图解</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23131718'/%3E%3Ccircle cx='11' cy='11' r='4' fill='%231A5470'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%239C7412'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#EDEEE9; --paper-hi:#F8F9F5;
+  --ink:#131718; --ink-2:#4A5257; --ink-3:#7B8387;
+  --rule:rgba(19,23,24,.15); --rule-2:rgba(19,23,24,.075);
+  --blue:#1A5470; --blue-bg:#D8E6EC;
+  --gold:#9C7412; --gold-bg:rgba(156,116,18,.12);
+  --red:#9E3529; --red-bg:rgba(158,53,41,.1);
+  --green:#2F6B3A; --green-bg:rgba(47,107,58,.12);
+  --gline:rgba(19,23,24,.045);
+  --sans:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --serif:"Songti SC","SimSun","STSong","Noto Serif SC",Georgia,serif;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.8;-webkit-font-smoothing:antialiased}
+.grid-layer{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--gline)1px,transparent 1px),linear-gradient(90deg,var(--gline)1px,transparent 1px);background-size:34px 34px}
+
+.wrap{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:0 20px}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.05em;color:var(--ink-3);display:flex;align-items:center;gap:10px;margin-top:38px}
+.kicker::before{content:"";width:22px;height:1px;background:var(--ink-3)}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(27px,4.6vw,40px);line-height:1.25;margin:14px 0 0}
+.lede{margin:16px 0 0;font-size:16px;color:var(--ink-2);max-width:48em}
+.lede b{color:var(--ink)}
+
+.console{margin-top:26px;border:1px solid var(--rule);background:var(--paper-hi)}
+.console-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px;border-bottom:1px solid var(--rule-2)}
+.btn{font-family:var(--sans);font-size:14px;padding:7px 15px;border:1px solid rgba(19,23,24,.55);background:transparent;color:var(--ink);cursor:pointer;min-height:40px}
+.btn:hover{background:rgba(19,23,24,.06)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.32;cursor:default}
+.btn.primary{background:var(--ink);color:var(--paper-hi);border-color:var(--ink)}
+.btn.ghost{border-color:var(--rule);color:var(--ink-2)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule)}
+.seg button{font-family:var(--sans);font-size:12.5px;padding:8px 9px;border:0;background:transparent;color:var(--ink-2);cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper-hi)}
+.seg button+button{border-left:1px solid var(--rule)}
+.step-ind{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-left:auto}
+
+.bar-wrap{padding:16px 18px 6px}
+.bar-title{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-bottom:10px}
+#charBar{display:flex;gap:5px;flex-wrap:wrap}
+.chcell{position:relative;border:1.5px solid var(--rule);background:#fff;min-width:52px;padding:18px 6px 7px;text-align:center}
+.chcell .ch{font-family:var(--mono);font-size:21px;font-weight:600;color:var(--ink-2)}
+.chcell.cut{border-color:var(--blue);background:var(--blue-bg)} .chcell.cut .ch{color:var(--blue)}
+.chcell.range{border-color:var(--gold);background:var(--gold-bg)}
+.chcell.fail{border-color:var(--red);background:var(--red-bg)} .chcell.fail .ch{color:var(--red)}
+.chcell .ptr{position:absolute;top:2px;font-family:var(--mono);font-size:10px;font-weight:700}
+.chcell .ptr.pc{left:50%;transform:translateX(-50%)}
+.chcell .pl{left:4px;color:var(--gold)} .chcell .pr{right:4px;color:var(--gold)}
+.chcell.fail .pl,.chcell.fail .pr{color:var(--red)}
+.chcell .idx{position:absolute;bottom:1px;left:0;right:0;font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+
+.cand-wrap{padding:12px 18px 6px}
+.cand-title{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-bottom:8px}
+.sub-row{display:flex;gap:8px;flex-wrap:wrap}
+.subcand{border:1.5px solid var(--rule);background:#fff;min-width:66px;padding:7px 8px;text-align:center}
+.subcand .segv{font-family:var(--mono);font-size:16px;font-weight:600;display:block;line-height:1.3}
+.subcand .lab{font-size:10.5px;display:block;margin-top:2px}
+.subcand.pal .segv{color:var(--green)} .subcand.pal{border-color:rgba(47,107,58,.5)}
+.subcand.nopal .segv{color:var(--red)} .subcand.nopal{border-color:rgba(158,53,41,.5)}
+.subcand.cur{border-width:2.5px;border-color:var(--gold);background:var(--gold-bg)}
+.subcand .lab{color:var(--ink-3)}
+.subcand.pal .lab{color:var(--green)} .subcand.nopal .lab{color:var(--red)}
+
+.console-text{padding:12px 16px 14px;font-size:14.5px;line-height:1.8;color:var(--ink-2);border-top:1px solid var(--rule-2);min-height:66px}
+.console-text b{color:var(--ink)}
+.console-text .gold{color:var(--gold);font-weight:600}
+.console-text .red{color:var(--red);font-weight:600}
+.console-text .green{color:var(--green);font-weight:600}
+
+.stat-grid{display:grid;gap:12px;margin-top:16px}
+@media(min-width:760px){.stat-grid{grid-template-columns:repeat(3,1fr)}}
+.stat{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.stat h3{font-family:var(--mono);font-size:11.5px;font-weight:400;margin:0 0 9px;color:var(--ink-3)}
+.path-box{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+.segpill{font-family:var(--mono);font-size:13px;padding:3px 9px;border:1px solid rgba(26,84,112,.45);color:var(--blue)}
+.idx-val{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--blue)}
+.res-list{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.res-item{font-family:var(--mono);font-size:11.5px;border:1px solid rgba(26,84,112,.4);background:rgba(216,230,236,.55);padding:2px 7px;color:var(--blue)}
+.res-empty{font-size:13px;color:var(--ink-3)}
+
+.code-panel{margin-top:22px;display:grid;gap:14px}
+@media(min-width:880px){.code-panel{grid-template-columns:1.24fr .76fr}}
+.codebox{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.codebox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px;font-weight:700}
+.code-scroll{max-height:480px;overflow:auto}
+pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.9;color:var(--ink-2);white-space:pre}
+pre .ln{display:block;padding:0 6px;margin:0 -6px;border-left:2px solid transparent}
+pre .ln.act{background:var(--gold-bg);border-left-color:var(--gold);color:var(--ink)}
+.tipbox{border:1px solid var(--rule);background:var(--paper-hi);padding:14px 16px}
+.tipbox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px}
+.tipbox ul{margin:0;padding-left:1.2em;font-size:14px;color:var(--ink-2);line-height:1.85}
+.tipbox li{margin:5px 0}
+.tipbox b{color:var(--ink)}
+
+.note{border-left:2px solid var(--gold);background:var(--gold-bg);padding:14px 16px;margin-top:22px;font-size:14.5px;color:var(--ink-2);line-height:1.8;max-width:56em}
+.note b{color:var(--ink)}
+.note.blue{border-left-color:var(--blue);background:rgba(26,84,112,.07)}
+code{font-family:var(--mono);font-size:.92em;background:rgba(19,23,24,.06);padding:1px 5px}
+
+footer{margin-top:60px;padding:26px 0 40px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink-3);line-height:1.9}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--paper-hi);font-size:14px;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.001s!important;animation-duration:.001s!important}}
+</style>
+</head>
+<body>
+<div class="grid-layer" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="kicker">LeetCode 131 · 中等 · 回溯 / 双指针</div>
+  <h1>分割回文串：每一刀<br>都先确认是回文再切</h1>
+  <p class="lede">题目：把字符串切成若干<b>子串</b>，使每段都是<b>回文</b>，返回所有分割方案。你的写法在切割起点 index 上，逐个尝试终点 i，用 <b>isHuwan 双指针</b>判断 s[index..i] 是否回文：回文才切并递归 i+1，不回文就跳过；走到末尾收集一种方案。</p>
+
+  <div class="console">
+    <div class="console-bar">
+      <button class="btn primary" id="btnPrev">上一步</button>
+      <button class="btn primary" id="btnNext">下一步</button>
+      <button class="btn" id="btnPlay">自动播放</button>
+      <button class="btn ghost" id="btnReset">重置</button>
+      <div class="seg" role="group" id="caseSeg"></div>
+      <span class="step-ind" id="stepInd"></span>
+    </div>
+
+    <div class="bar-wrap">
+      <div class="bar-title">字符条（蓝＝已切分，金＝当前候选区间，index/i＝双指针）</div>
+      <div id="charBar"></div>
+    </div>
+
+    <div class="cand-wrap">
+      <div class="cand-title">本层各终点子串（绿＝回文可切，红＝不回文跳过，金＝当前）</div>
+      <div class="sub-row" id="subRow"></div>
+    </div>
+
+    <div class="console-text" id="stepText"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <h3>已切分段 path</h3>
+      <div class="path-box" id="pathBox"></div>
+    </div>
+    <div class="stat">
+      <h3>当前切割起点 index</h3>
+      <div class="idx-val" id="indexVal"></div>
+    </div>
+    <div class="stat">
+      <h3>已收集方案 result</h3>
+      <div class="res-list" id="resBox"></div>
+    </div>
+  </div>
+
+  <div class="code-panel">
+    <div class="codebox">
+      <h3>你的代码（当前执行行高亮）</h3>
+      <div class="code-scroll">
+<pre id="srcCode"><span class="ln" data-l="1">class Solution {</span>
+<span class="ln" data-l="2">    List&lt;List&lt;String&gt;&gt; res = new ArrayList&lt;&gt;();</span>
+<span class="ln" data-l="3">    List&lt;String&gt; path = new ArrayList&lt;&gt;();</span>
+<span class="ln" data-l="4"></span>
+<span class="ln" data-l="5">    public List&lt;List&lt;String&gt;&gt; partition(String s) {</span>
+<span class="ln" data-l="6">        backtracing(s,0);</span>
+<span class="ln" data-l="7">        return res;</span>
+<span class="ln" data-l="8">    }</span>
+<span class="ln" data-l="9">    public void backtracing(String s,int index){</span>
+<span class="ln" data-l="10">        if(index == s.length()){</span>
+<span class="ln" data-l="11">            res.add(new ArrayList&lt;&gt;(path));</span>
+<span class="ln" data-l="12">        }</span>
+<span class="ln" data-l="13">        for(int i = index;i&lt;s.length() ;i++){</span>
+<span class="ln" data-l="14">            if(isHuwan(s,index,i)){</span>
+<span class="ln" data-l="15">                path.add(s.substring(index,i+1));</span>
+<span class="ln" data-l="16">                backtracing(s,i+1);</span>
+<span class="ln" data-l="17">                path.remove(path.size()-1);</span>
+<span class="ln" data-l="18">            }</span>
+<span class="ln" data-l="19">        }</span>
+<span class="ln" data-l="20">    }</span>
+<span class="ln" data-l="21"></span>
+<span class="ln" data-l="22"></span>
+<span class="ln" data-l="23">    public boolean isHuwan(String s,int left ,int right ){</span>
+<span class="ln" data-l="24">        while(left&lt;right){</span>
+<span class="ln" data-l="25">            if(s.charAt(left) != s.charAt(right)){</span>
+<span class="ln" data-l="26">                return false;</span>
+<span class="ln" data-l="27">            }</span>
+<span class="ln" data-l="28">            left++;</span>
+<span class="ln" data-l="29">            right--;</span>
+<span class="ln" data-l="30">        }</span>
+<span class="ln" data-l="31">        return true;</span>
+<span class="ln" data-l="32">    }</span>
+<span class="ln" data-l="33">}</span></pre>
+      </div>
+    </div>
+    <div class="tipbox">
+      <h3>看图抓三个点</h3>
+      <ul>
+        <li><b>双指针夹逼</b>：两端字符相等才往里缩，不等立即判否。</li>
+        <li><b>回文才切</b>：不回文的子串根本不进递归，天然剪枝。</li>
+        <li><b>递归传 i+1</b>：切完这段，下一刀从 i 的后面开始。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note blue"><b>复杂度：</b>设字符串长度为 n。最坏（如全相同字符）分割方案数接近 2^(n-1)，每段还要 O(n) 判断回文与拷贝，时间上界约 <b>O(n × 2^n)</b>；递归栈与 path 占 <b>O(n)</b>。若用 DP 预处理所有区间的回文性，可把每次判断降到 O(1)。</div>
+  <div class="note"><b>substring 的边界：</b><code>s.substring(index,i+1)</code> 第二个参数是<b>不包含</b>的位置，所以要写 i+1 才能取到第 i 个字符；这和双指针闭区间 [index,i] 是同一段，别因为 +1 误以为多取了一个字符。</div>
+
+  <footer>
+    LeetCode 131 分割回文串 · 双指针 + 回溯分步图解<br>
+    绿色回文、红色不回文、金色当前；字符条 index/i 实时显示双指针位置。
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+var toastTimer=null;
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('on');},2200);}
+
+var CASES=["aab","a","aa","aba","abc","abba","efe","aabb"];
+function isPal(s,l,r){while(r>l){if(s.charAt(r)!==s.charAt(l))return false;r--;l++;}return true;}
+
+/* 帧（与 verify_131 一致）*/
+function buildSteps(s){
+  var path=[];
+  var collected=[];
+  var steps=[];
+  var curIndex=0,curI=0;
+  function snap(phase,line,index,i,left,right){
+    steps.push({phase:phase,line:line,index:index,i:i,left:left,right:right,
+      path:path.slice(),collected:collected.map(function(p){return p.slice();})});
+  }
+  function checkPal(left,right){
+    snap('palstart',24,curIndex,curI,left,right);
+    while(right>left){
+      snap('palcmp',25,curIndex,curI,left,right);
+      if(s.charAt(right)!==s.charAt(left)){
+        snap('palfail',26,curIndex,curI,left,right);
+        return false;
+      }
+      right--;left++;
+    }
+    snap('palok',31,curIndex,curI,left,right);
+    return true;
+  }
+  function bt(index){
+    if(index===s.length){
+      collected.push(path.slice());
+      snap('leaf',11,index,-1,-1,-1);
+      return;
+    }
+    for(var i=index;i<s.length;i++){
+      curIndex=index;curI=i;
+      if(checkPal(index,i)){
+        path.push(s.substring(index,i+1));
+        snap('pick',15,index,i,-1,-1);
+        bt(i+1);
+        path.pop();
+        snap('undo',17,index,i,-1,-1);
+      }
+    }
+  }
+  bt(0);
+  snap('done',7,0,-1,-1,-1);
+  return steps;
+}
+
+var curS=CASES[0],steps=null,step=0;
+function render(){
+  var f=steps[step];
+  renderCharBar(f);renderSub(f);renderStats(f);renderText(f);renderCode(f);
+  document.getElementById('stepInd').textContent='步骤 '+(step+1)+' / '+steps.length;
+  document.getElementById('btnPrev').disabled=step===0;
+  document.getElementById('btnNext').disabled=step===steps.length-1;
+}
+function renderCharBar(f){
+  var host=document.getElementById('charBar');
+  var showPtr=f.phase.indexOf('pal')===0;
+  var html='';
+  for(var k=0;k<curS.length;k++){
+    var cls='chcell';
+    if(k<f.index)cls+=' cut';
+    if(showPtr&&f.i>=0&&k>=f.index&&k<=f.i)cls+=' range';
+    if(showPtr&&f.phase==='palfail'&&(k===f.left||k===f.right))cls+=' fail';
+    var ptr='';
+    if(showPtr){
+      if(f.left===f.right){
+        if(k===f.left)ptr='<span class="ptr pc">index=i</span>';
+      }else{
+        if(k===f.left)ptr+='<span class="ptr pl">index</span>';
+        if(k===f.right)ptr+='<span class="ptr pr">i</span>';
+      }
+    }
+    html+='<div class="'+cls+'">'+ptr+'<span class="ch">'+curS.charAt(k)+'</span><span class="idx">'+k+'</span></div>';
+  }
+  host.innerHTML=html;
+}
+function renderSub(f){
+  var host=document.getElementById('subRow');
+  if(f.index>=curS.length){host.innerHTML='<span style="font-size:13px;color:var(--ink-3)">已到末尾，收集当前分割方案</span>';return;}
+  var html='';
+  for(var j=f.index;j<curS.length;j++){
+    var sub=curS.substring(f.index,j+1);
+    var pal=isPal(curS,f.index,j);
+    var cls='subcand '+(pal?'pal':'nopal')+(j===f.i?' cur':'');
+    var lab=pal?'回文':'不回文';
+    html+='<div class="'+cls+'"><span class="segv">'+sub+'</span><span class="lab">'+lab+'</span></div>';
+  }
+  host.innerHTML=html;
+}
+function renderStats(f){
+  var pb=document.getElementById('pathBox');
+  pb.innerHTML=f.path.length
+    ?f.path.map(function(p){return '<span class="segpill">'+p+'</span>';}).join('')
+    :'<span style="font-size:13px;color:var(--ink-3)">空（尚未切分）</span>';
+  document.getElementById('indexVal').textContent=f.index;
+  document.getElementById('resBox').innerHTML=f.collected.length
+    ?f.collected.map(function(p){return '<span class="res-item">['+p.join(',')+']</span>';}).join('')
+    :'<span class="res-empty">尚未收集</span>';
+}
+function renderText(f){
+  var host=document.getElementById('stepText'),s;
+  switch(f.phase){
+    case 'palstart':
+      s='判断子串 “'+curS.substring(f.index,f.i+1)+'” 是否回文，双指针 index='+f.index+' i='+f.i;break;
+    case 'palcmp':
+      s='比较 s['+f.left+']='+curS.charAt(f.left)+' 与 s['+f.right+']='+curS.charAt(f.right);break;
+    case 'palfail':
+      s='<span class="red">两端字符不等，返回 false，该子串不切、跳过</span>';break;
+    case 'palok':
+      s='<span class="green">双指针相遇，确认回文，可以切这一段</span>';break;
+    case 'pick':
+      s='把 “'+curS.substring(f.index,f.i+1)+'” 加入 path，递归下一刀起点 '+(f.i+1);break;
+    case 'undo':
+      s='子方案走完，撤销 “'+curS.substring(f.index,f.i+1)+'”，试本层下一个终点';break;
+    case 'leaf':
+      s='<span class="gold">index 到末尾，收集一种完整分割方案</span>';break;
+    case 'done':
+      s='全部回溯结束，共 <b>'+f.collected.length+'</b> 种分割方案';break;
+  }
+  host.innerHTML=s+'。';
+}
+function renderCode(f){
+  document.querySelectorAll('#srcCode .ln').forEach(function(ln){
+    ln.classList.toggle('act',Number(ln.getAttribute('data-l'))===f.line);
+  });
+}
+
+var playTimer=null;
+function stopPlay(){if(playTimer){clearInterval(playTimer);playTimer=null;}document.getElementById('btnPlay').textContent='自动播放';}
+document.getElementById('btnNext').addEventListener('click',function(){stopPlay();if(step<steps.length-1){step++;render();}});
+document.getElementById('btnPrev').addEventListener('click',function(){stopPlay();if(step>0){step--;render();}});
+document.getElementById('btnReset').addEventListener('click',function(){stopPlay();step=0;render();});
+document.getElementById('btnPlay').addEventListener('click',function(){
+  if(playTimer){stopPlay();return;}
+  if(step===steps.length-1){step=0;render();}
+  document.getElementById('btnPlay').textContent='暂停';
+  playTimer=setInterval(function(){
+    if(step>=steps.length-1){stopPlay();toast('演示结束：共 '+steps[steps.length-1].collected.length+' 种方案');return;}
+    step++;render();
+  },600);
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'){e.preventDefault();stopPlay();if(step<steps.length-1){step++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();stopPlay();if(step>0){step--;render();}}
+  else if(e.key===' '){e.preventDefault();document.getElementById('btnPlay').click();}
+  else if(e.key==='Home'){e.preventDefault();stopPlay();step=0;render();}
+  else if(e.key==='End'){e.preventDefault();stopPlay();step=steps.length-1;render();}
+});
+
+var seg=document.getElementById('caseSeg');
+CASES.forEach(function(c0,i){
+  var b=document.createElement('button');
+  b.setAttribute('aria-pressed',i===0?'true':'false');
+  b.textContent=c0;
+  b.addEventListener('click',function(){switchCase(i);});
+  seg.appendChild(b);
+});
+function switchCase(i){
+  stopPlay();step=0;curS=CASES[i];
+  steps=buildSteps(curS);render();
+  document.querySelectorAll('#caseSeg button').forEach(function(b,j){
+    b.setAttribute('aria-pressed',j===i?'true':'false');
+  });
+}
+
+steps=buildSteps(curS);render();
+</script>
+</body>
+</html>

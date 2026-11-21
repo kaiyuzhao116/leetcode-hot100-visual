@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>189. 轮转数组 · 三次翻转可视化</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230d1117'/%3E%3Cpath d='M4 8h13l-3-3m3 3-3 3M20 16H7l3 3m-3-3 3-3' stroke='%2358a6ff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+  --orange:#e3b341;--purple:#bc8cff;--red:#f85149
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.6;padding:28px 20px 60px}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tag{font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--orange);color:var(--orange)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:18px}
+.intro{border-left:3px solid var(--blue);background:var(--panel)}
+.intro p{font-size:14.5px;color:var(--text)}
+.intro b{color:var(--blue)}
+.cases{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.case-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+.case-btn:hover{border-color:var(--blue);color:var(--text)}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+/* 阶段步骤条 */
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.ph-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;position:relative;transition:.2s;min-width:0}
+.ph-num{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:1px}
+.ph-name{font-size:14.5px;font-weight:600;margin-top:4px}
+.ph-range{font-size:12.5px;color:var(--muted);margin-top:4px;font-family:Consolas,monospace}
+.ph-card.p1{border-color:var(--blue)} .ph-card.p1 .ph-num{color:var(--blue)}
+.ph-card.p2{border-color:var(--purple)} .ph-card.p2 .ph-num{color:var(--purple)}
+.ph-card.p3{border-color:var(--orange)} .ph-card.p3 .ph-num{color:var(--orange)}
+.ph-card.on{box-shadow:0 0 0 1px currentColor}
+.ph-card.done{opacity:.65}
+.ph-card .tick{position:absolute;top:10px;right:10px;width:16px;height:16px;display:none}
+.ph-card.done .tick{display:block}
+
+/* 数组可视化 */
+.viz-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.viz-title{font-size:15px;font-weight:600}
+.arr{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:26px 6px 8px}
+.cell{position:relative;width:64px;flex:0 0 auto;display:flex;flex-direction:column;align-items:center}
+.cell .ptr{position:absolute;top:-22px;font-size:11px;font-weight:700;font-family:Consolas,monospace;white-space:nowrap}
+.cell .ptr.l{color:var(--green);left:6px}
+.cell .ptr.r{color:var(--red);right:6px}
+.cell .box{width:58px;height:54px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;font-family:Consolas,monospace;transition:all .25s}
+.cell .ix{font-size:11px;color:var(--muted);margin-top:5px;font-family:Consolas,monospace}
+.cell.inrange .box{border-width:2px}
+.cell.c1 .box{border-color:var(--blue);background:rgba(88,166,255,.12)}
+.cell.c2 .box{border-color:var(--purple);background:rgba(188,140,255,.12)}
+.cell.c3 .box{border-color:var(--orange);background:rgba(227,179,65,.12)}
+.cell.swapping .box{border-color:var(--green);background:rgba(63,185,80,.25);animation:swapFlash .55s ease}
+@keyframes swapFlash{0%{transform:translateY(-8px) scale(1.08)}100%{transform:none scale(1)}}
+.cell.sameptr .box{border-color:var(--muted)}
+
+/* 信息条 */
+.info{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px}
+.info-card{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.info-card .k{font-size:12px;color:var(--muted)}
+.info-card .v{font-size:16px;font-weight:600;margin-top:3px;font-family:Consolas,monospace}
+.msg{margin-top:14px;font-size:14px;color:var(--text);background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.msg .act{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;margin-right:8px;background:rgba(88,166,255,.16);color:var(--blue)}
+.msg .act.swap{background:rgba(63,185,80,.16);color:var(--green)}
+.msg .act.end{background:rgba(188,140,255,.16);color:var(--purple)}
+
+/* 代码面板 */
+.code-wrap{display:grid;grid-template-columns:1fr;gap:18px;margin-top:18px}
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.code-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border)}
+.dot{width:12px;height:12px;border-radius:50%}
+.d1{background:var(--red)}.d2{background:var(--orange)}.d3{background:var(--green)}
+.code-fname{margin-left:8px;font-size:13px;color:var(--muted)}
+.code-body{padding:12px 0;overflow:auto;max-height:440px}
+.code-line{display:flex;align-items:flex-start;padding:1.5px 14px;font-family:Consolas,monospace;font-size:13.5px;white-space:pre}
+.code-line .ln{width:26px;text-align:right;color:#48505c;margin-right:14px;flex-shrink:0;user-select:none}
+.code-line.hl{background:rgba(88,166,255,.16)}
+.code-line.hl .ln{color:var(--blue)}
+.t-kw{color:#ff7b72}.t-type{color:#79c0ff}.t-meth{color:#d2a8ff}.t-num{color:#a5d6ff}
+
+/* 控制栏 */
+.controls{position:sticky;bottom:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.4)}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:42px;height:42px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn:hover{border-color:var(--blue)}
+.btn.play{width:auto;padding:0 20px;gap:8px;background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:700;font-size:14px}
+.btn.play:hover{filter:brightness(1.1)}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.scrub{flex:1;min-width:140px;accent-color:var(--blue);height:6px}
+.step-txt{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:52px;text-align:right}
+.speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+@media(max-width:760px){
+  .phases{grid-template-columns:1fr}
+  .cell{width:52px}.cell .box{width:48px;height:48px;font-size:16px}
+  body{padding:18px 12px 50px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>189. 轮转数组 <span class="tag">中等</span></h1>
+  <div class="sub">三次翻转法 · 时间 O(n) · 空间 O(1)，原地修改不另开数组</div>
+
+  <div class="panel intro">
+    <p>把数组整体向右轮转 <b>k</b> 位。先 <b>k = k % n</b> 防止 k 超过长度；再用三次区间翻转完成：<b>先翻整个数组 → 再翻前 k 个 → 最后翻后 n-k 个</b>。每次翻转都用双指针从两端向中间交换，指针相遇即停。</p>
+  </div>
+
+  <div class="cases" id="caseBox"></div>
+
+  <div class="phases" id="phaseBox"></div>
+
+  <div class="panel">
+    <div class="viz-head"><span class="viz-title">数组变化（双指针交换）</span></div>
+    <div class="arr" id="arrBox"></div>
+    <div class="info">
+      <div class="info-card"><div class="k">当前阶段</div><div class="v" id="iPhase">—</div></div>
+      <div class="info-card"><div class="k">left 指针</div><div class="v" id="iLeft">—</div></div>
+      <div class="info-card"><div class="k">right 指针</div><div class="v" id="iRight">—</div></div>
+      <div class="info-card"><div class="k">翻转区间</div><div class="v" id="iRange">—</div></div>
+    </div>
+    <div class="msg" id="msgBox"></div>
+  </div>
+
+  <div class="code-panel">
+    <div class="code-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="code-fname">Solution.java</span></div>
+    <div class="code-body" id="codeBody"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn play" id="playBtn">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playTxt">播放</span>
+    </button>
+    <button class="btn" id="prevBtn" title="上一步（左箭头）"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+    <button class="btn" id="nextBtn" title="下一步（右箭头）"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+    <button class="btn" id="resetBtn" title="重置"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <input type="range" class="scrub" id="scrub" min="0" max="0" value="0">
+    <span class="step-txt" id="stepTxt">0 / 0</span>
+    <select class="speed" id="speedSel"><option value="1200">0.5x</option><option value="800" selected>1x</option><option value="450">2x</option><option value="220">4x</option></select>
+  </div>
+</div>
+
+<script>
+/* ===== 用例数据 ===== */
+const CASES=[
+  {nums:[1,2,3,4,5,6,7],k:3,label:'[1..7], k=3'},
+  {nums:[-1,-100,3,99],k:2,label:'[-1,-100,3,99], k=2'},
+  {nums:[1,2,3,4,5],k:7,label:'[1..5], k=7'},
+  {nums:[1,2,3,4],k:0,label:'[1..4], k=0'},
+  {nums:[1,2],k:3,label:'[1,2], k=3'}
+];
+
+/* ===== 代码面板（手写版：内联交换 + x 变量 + reserve，while 用 <=） ===== */
+const CODE_HTML=[
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '  <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-meth">rotate</span>(<span class="t-kw">int</span>[] nums, <span class="t-kw">int</span> k) {',
+  '    <span class="t-kw">int</span> n = nums.length;',
+  '    <span class="t-kw">int</span> x = k % n;',
+  '    <span class="t-meth">reserve</span>(nums, <span class="t-num">0</span>, n-<span class="t-num">1</span>);',
+  '    <span class="t-meth">reserve</span>(nums, <span class="t-num">0</span>, x-<span class="t-num">1</span>);',
+  '    <span class="t-meth">reserve</span>(nums, x, n-<span class="t-num">1</span>);',
+  '  }',
+  '  <span class="t-kw">private</span> <span class="t-kw">void</span> <span class="t-meth">reserve</span>(<span class="t-kw">int</span>[] nums, <span class="t-kw">int</span> left, <span class="t-kw">int</span> right){',
+  '    <span class="t-kw">while</span>(left &lt;= right){',
+  '      <span class="t-kw">int</span> temp = nums[left];',
+  '      nums[left] = nums[right];',
+  '      nums[right] = temp;',
+  '      left++;',
+  '      right--;',
+  '    }',
+  '  }',
+  '}'
+];
+
+const PHASE_DEFS=[
+  {cls:'p1',name:'翻转整个数组',range:(n,k)=>[0,n-1]},
+  {cls:'p2',name:'翻转前 k 个',range:(n,k)=>[0,k-1]},
+  {cls:'p3',name:'翻转后 n-k 个',range:(n,k)=>[k,n-1]}
+];
+
+/* ===== 构建步骤 ===== */
+function buildSteps(c){
+  const n=c.nums.length;
+  const kk=((c.k%n)+n)%n;
+  const nums=c.nums.slice();
+  const steps=[];
+  const push=(o)=>steps.push(Object.assign({
+    line:0,phase:0,left:-1,right:-1,range:null,
+    swapPair:null,nums:nums.slice(),action:'',msg:''
+  },o));
+
+  push({line:4,action:'start',
+    msg:'n = '+n+'，x = k % n = '+c.k+' % '+n+' = '+kk+'，先把 k 收敛到数组长度内'});
+
+  for(let pi=0;pi<3;pi++){
+    const L=PHASE_DEFS[pi].range(n,kk)[0];
+    const R=PHASE_DEFS[pi].range(n,kk)[1];
+    push({line:5+pi,phase:pi+1,range:[L,R],left:L,right:R,action:'phase',
+      msg:'第'+(pi+1)+'次 reserve：'+PHASE_DEFS[pi].name+'，区间 ['+L+','+R+']'+(L>R?'，区间为空，while 一次都不执行':'，双指针从两端开始')});
+    let left=L,right=R;
+    while(left<=right){
+      if(left===right){
+        push({line:10,phase:pi+1,range:[L,R],left:left,right:right,
+          swapPair:null,action:'meet',
+          msg:'left 和 right 在 下标 '+left+' 相遇，元素与自身交换（数组不变），随后 left++、right-- 错开，循环结束'});
+      }else{
+        const t=nums[left];nums[left]=nums[right];nums[right]=t;
+        push({line:12,phase:pi+1,range:[L,R],left:left,right:right,
+          swapPair:[left,right],action:'swap',
+          msg:'交换 nums['+left+']='+nums[right]+' 与 nums['+right+']='+nums[left]+'，随后 left++、right-- 向中间靠拢'});
+      }
+      left++;right--;
+    }
+  }
+  push({line:7,phase:3,action:'end',
+    msg:'三次翻转完成，数组已原地向右轮转 '+kk+' 位，共 '+steps.length+' 步'});
+  return {steps,kk};
+}
+
+/* ===== 状态 ===== */
+let caseIdx=0,steps=[],posIdx=0,timer=null,playing=false,kk=0;
+const $=(id)=>document.getElementById(id);
+
+function renderCaseButtons(){
+  $('caseBox').innerHTML=CASES.map((c,i)=>
+    '<button class="case-btn'+(i===caseIdx?' active':'')+'" data-k="'+i+'">用例 '+(i+1)+': '+c.label+'</button>').join('');
+  document.querySelectorAll('.case-btn').forEach(b=>b.addEventListener('click',
+    ()=>loadCase(parseInt(b.dataset.k,10))));
+}
+
+function renderPhases(snap){
+  const n=CASES[caseIdx].nums.length;
+  $('phaseBox').innerHTML=PHASE_DEFS.map((p,i)=>{
+    const [L,R]=p.range(n,kk);
+    const cur=snap.phase===i+1;
+    const done=snap.phase>i+1||(snap.phase===3&&snap.action==='end');
+    return '<div class="ph-card '+p.cls+(cur?' on':'')+(done?' done':'')+'">'+
+      '<svg class="tick" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+      '<div class="ph-num">STEP '+(i+1)+'</div>'+
+      '<div class="ph-name">'+p.name+'</div>'+
+      '<div class="ph-range">reserve['+L+','+R+']</div></div>';
+  }).join('');
+}
+
+function renderArray(snap){
+  $('arrBox').innerHTML=snap.nums.map((v,i)=>{
+    let cls='cell';
+    if(snap.range&&i>=snap.range[0]&&i<=snap.range[1])cls+=' inrange c'+snap.phase;
+    if(snap.swapPair&&(snap.swapPair[0]===i||snap.swapPair[1]===i))cls+=' swapping';
+    let ptr='';
+    if(snap.left===i)ptr+='<span class="ptr l">L</span>';
+    if(snap.right===i)ptr+='<span class="ptr r">R</span>';
+    return '<div class="'+cls+'">'+ptr+'<div class="box">'+v+'</div><div class="ix">'+i+'</div></div>';
+  }).join('');
+}
+
+function renderCode(){
+  $('codeBody').innerHTML=CODE_HTML.map((h,i)=>
+    '<div class="code-line" data-line="'+(i+1)+'"><span class="ln">'+(i+1)+'</span><span>'+h+'</span></div>').join('');
+}
+
+function render(){
+  const snap=steps[posIdx];
+  renderPhases(snap);
+  renderArray(snap);
+  $('iPhase').textContent=snap.phase?('第 '+snap.phase+' 阶段'):'准备';
+  $('iLeft').textContent=snap.left>=0?snap.left:'—';
+  $('iRight').textContent=snap.right>=0?snap.right:'—';
+  $('iRange').textContent=snap.range?'['+snap.range[0]+','+snap.range[1]+']':'—';
+  const actCls=(snap.action==='swap')?'swap':((snap.action==='end'||snap.action==='meet')?'end':'');
+  const actName={start:'准备',phase:'翻转',swap:'交换',meet:'相遇',end:'完成'}[snap.action];
+  $('msgBox').innerHTML='<span class="act '+actCls+'">'+actName+'</span>'+snap.msg;
+  $('codeBody').querySelectorAll('.code-line').forEach(el=>
+    el.classList.toggle('hl',parseInt(el.dataset.line,10)===snap.line));
+  $('scrub').max=steps.length-1;$('scrub').value=posIdx;
+  $('stepTxt').textContent=posIdx+' / '+(steps.length-1);
+  // 让高亮代码行滚动到可见
+  const hlEl=$('codeBody').querySelector('.code-line.hl');
+  if(hlEl)hlEl.scrollIntoView({block:'nearest'});
+}
+
+function pause(){
+  playing=false;clearInterval(timer);timer=null;
+  $('playTxt').textContent='播放';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M8 5v14l11-7z"/>';
+}
+function play(){
+  if(playing){pause();return;}
+  playing=true;$('playTxt').textContent='暂停';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
+  if(posIdx>=steps.length-1){posIdx=0;render();}
+  timer=setInterval(()=>{
+    if(posIdx>=steps.length-1){pause();return;}
+    posIdx++;render();
+  },parseInt($('speedSel').value,10));
+}
+function loadCase(k){
+  pause();caseIdx=k;posIdx=0;
+  const r=buildSteps(CASES[k]);steps=r.steps;kk=r.kk;
+  renderCaseButtons();render();
+}
+
+$('playBtn').addEventListener('click',play);
+$('prevBtn').addEventListener('click',()=>{pause();if(posIdx>0){posIdx--;render();}});
+$('nextBtn').addEventListener('click',()=>{pause();if(posIdx<steps.length-1){posIdx++;render();}});
+$('resetBtn').addEventListener('click',()=>{pause();posIdx=0;render();});
+$('scrub').addEventListener('input',()=>{pause();posIdx=parseInt($('scrub').value,10);render();});
+$('speedSel').addEventListener('change',()=>{if(playing){pause();play();}});
+document.addEventListener('keydown',(e)=>{
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();if(posIdx<steps.length-1){posIdx++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(posIdx>0){posIdx--;render();}}
+  else if(e.key===' '){e.preventDefault();play();}
+});
+
+/* ===== 初始化 ===== */
+renderCode();
+const r0=buildSteps(CASES[0]);steps=r0.steps;kk=r0.kk;
+renderCaseButtons();render();
+</script>
+</body>
+</html>

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>二叉树递归的三种传播模式 · 图解总结</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='%2358a6ff'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.6;}
+.wrap{max-width:1180px;margin:0 auto;padding:30px 26px 50px;}
+h1{font-size:27px;margin:0 0 8px;}
+.subtitle{color:var(--muted);margin:0 0 26px;font-size:14.5px;max-width:760px;}
+h2{font-size:20px;margin:0 0 4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.sec-desc{color:var(--muted);font-size:13.5px;margin:0 0 16px;}
+.section{margin-bottom:34px;scroll-margin-top:20px;}
+
+/* 快速判断 */
+#quick{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:38px;}
+.qcard{display:block;text-decoration:none;color:var(--text);background:var(--panel);
+  border:1px solid var(--border);border-radius:10px;padding:14px 16px;transition:border-color .15s,transform .15s;}
+.qcard:hover{border-color:var(--blue);transform:translateY(-2px);}
+.qcard .qtag{font-size:12.5px;font-weight:700;margin-bottom:6px;}
+.qcard .qkw{font-size:13px;color:var(--muted);}
+.qcard .qmode{font-size:14px;font-weight:700;margin-top:4px;}
+.t-or{color:var(--orange);} .t-bl{color:var(--blue);} .t-gr{color:var(--green);} .t-rd{color:var(--red);}
+
+/* 模式区块 */
+.mode-grid{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:18px;align-items:start;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.card-head{padding:11px 16px;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--muted);
+  font-weight:600;letter-spacing:.3px;display:flex;align-items:center;gap:8px;}
+.svg-wrap{padding:8px 10px 4px;}
+svg.mini{width:100%;height:auto;display:block;}
+.mini-bar{display:flex;align-items:center;gap:12px;padding:8px 16px 14px;flex-wrap:wrap;}
+.mini-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;
+  padding:7px 16px;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:7px;}
+.mini-btn:hover{border-color:var(--blue);}
+.mini-btn svg{width:14px;height:14px;fill:var(--text);}
+.mini-pc{font-size:12.5px;color:var(--muted);font-family:Consolas,monospace;}
+
+/* SVG 节点与边 */
+.mc{fill:var(--panel2);stroke:var(--border);stroke-width:2;transition:fill .2s,stroke .2s;}
+.mt{fill:var(--muted);font-size:14px;font-weight:600;transition:fill .2s;}
+.ml{fill:var(--green);font-size:11.5px;font-family:Consolas,monospace;}
+.me{stroke:var(--border);stroke-width:2;transition:stroke .2s;}
+g.active .mc{stroke:var(--blue);fill:rgba(88,166,255,.22);} g.active .mt{fill:var(--blue);}
+g.onpath .mc{stroke:var(--blue);fill:rgba(88,166,255,.1);} g.onpath .mt{fill:var(--blue);}
+g.found .mc{stroke:var(--orange);fill:rgba(227,179,65,.22);} g.found .mt{fill:var(--orange);}
+g.bad .mc{stroke:var(--red);fill:rgba(248,81,73,.2);} g.bad .mt{fill:var(--red);}
+g.ret .mc{stroke:var(--green);fill:rgba(63,185,80,.18);} g.ret .mt{fill:var(--green);}
+g.skip .mc{stroke:var(--border);stroke-dasharray:3 3;fill:transparent;opacity:.5;} g.skip .mt{opacity:.4;}
+line.onpath{stroke:var(--blue);}
+line.found{stroke:var(--orange);stroke-width:3;}
+line.bad{stroke:var(--red);}
+line.ret{stroke:var(--green);stroke-width:2.6;}
+line.skip{stroke:var(--border);stroke-dasharray:4 4;opacity:.45;}
+
+/* 代码 */
+#codeCard{display:flex;flex-direction:column;}
+.code-wrap{padding:12px 0;max-height:300px;overflow:auto;}
+.code-inner{display:flex;min-width:max-content;}
+.line-nums{padding:0 10px 0 14px;text-align:right;color:var(--muted);font-size:13px;line-height:1.75;
+  font-family:Consolas,monospace;user-select:none;border-right:1px solid var(--border);}
+.code-lines{padding:0 14px 0 10px;font-family:Consolas,monospace;font-size:13px;line-height:1.75;min-width:0;}
+.code-line{white-space:pre;border-radius:4px;padding:0 6px;margin:0 -6px;}
+.code-line.hl{background:rgba(88,166,255,.13);box-shadow:inset 3px 0 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;} .t-cmt{color:#8b949e;}
+.note{padding:10px 16px;border-top:1px solid var(--border);font-size:13px;background:var(--panel2);min-height:42px;}
+.rules{padding:12px 16px;border-top:1px solid var(--border);}
+.rules .rline{font-size:13px;color:var(--muted);padding:3px 0;display:flex;gap:8px;}
+.rules b{color:var(--text);font-weight:600;min-width:56px;display:inline-block;}
+.examples{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px;border-top:1px solid var(--border);}
+.tag{font-size:12px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;
+  padding:3px 9px;color:var(--muted);}
+
+/* 专题 */
+.topic{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;}
+.topic h3{font-size:16px;margin:0 0 12px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.demo-box{background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;}
+.demo-box .cap{font-size:13.5px;font-weight:700;margin-bottom:4px;}
+.demo-box p{font-size:12.5px;color:var(--muted);margin:8px 0 0;}
+svg.demo{width:100%;height:auto;display:block;}
+.mix-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start;}
+.mix-code{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.mix-code .code-wrap{max-height:none;}
+.mix-note{font-size:13.5px;color:var(--muted);padding:0 2px;}
+.mix-note b{color:var(--text);}
+@media (max-width:960px){
+  .mode-grid,.mix-grid{grid-template-columns:1fr;}
+  #quick,.two-col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>二叉树递归的三种传播模式</h1>
+  <p class="subtitle">一道题属于哪种模式，只看题目问的是什么。递归里信息向下靠参数、向上靠返回值；三种模式的差别，就是子节点往父节点返回什么、以及要不要短路。</p>
+
+  <!-- 快速判断 -->
+  <div id="quick">
+    <a class="qcard" href="#sec-or">
+      <div class="qtag t-or">一、存在性（OR）</div>
+      <div class="qkw">有没有 · 是否存在 · 能否找到</div>
+      <div class="qmode t-or">有没有</div>
+    </a>
+    <a class="qcard" href="#sec-and">
+      <div class="qtag t-bl">二、全部满足（AND）</div>
+      <div class="qkw">是否全部 · 是否对称 · 是否合法</div>
+      <div class="qmode t-bl">是不是都</div>
+    </a>
+    <a class="qcard" href="#sec-agg">
+      <div class="qtag t-gr">三、聚合（计算型）</div>
+      <div class="qkw">多少条 · 最大最小 · 总和</div>
+      <div class="qmode t-gr">有多少</div>
+    </a>
+  </div>
+
+  <!-- ============ 模式一 OR ============ -->
+  <div class="section" id="sec-or">
+    <h2><span class="t-or">一、存在性（OR）</span>「有没有」</h2>
+    <p class="sec-desc">存不存在一条路径 / 能不能找到 / 是否符合条件。任一子为 true 父就为 true，找到即停，true 沿回溯直线传回根。</p>
+    <div class="mode-grid">
+      <div class="card">
+        <div class="card-head">传播动画：节点 4 命中，右子树被短路不访问</div>
+        <div class="svg-wrap">
+          <svg class="mini" viewBox="0 0 420 240" id="svg-or">
+            <line class="me" id="or-e1_2" x1="210" y1="40" x2="120" y2="115"/>
+            <line class="me" id="or-e1_3" x1="210" y1="40" x2="300" y2="115"/>
+            <line class="me" id="or-e2_4" x1="120" y1="115" x2="60" y2="195"/>
+            <line class="me" id="or-e2_5" x1="120" y1="115" x2="180" y2="195"/>
+            <g class="mg" id="or-n1"><circle class="mc" cx="210" cy="40" r="20"/><text class="mt" x="210" y="45" text-anchor="middle">1</text><text class="ml" x="210" y="78" text-anchor="middle"></text></g>
+            <g class="mg" id="or-n2"><circle class="mc" cx="120" cy="115" r="20"/><text class="mt" x="120" y="120" text-anchor="middle">2</text><text class="ml" x="120" y="153" text-anchor="middle"></text></g>
+            <g class="mg" id="or-n3"><circle class="mc" cx="300" cy="115" r="20"/><text class="mt" x="300" y="120" text-anchor="middle">3</text><text class="ml" x="300" y="153" text-anchor="middle"></text></g>
+            <g class="mg" id="or-n4"><circle class="mc" cx="60" cy="195" r="20"/><text class="mt" x="60" y="200" text-anchor="middle">4</text><text class="ml" x="60" y="233" text-anchor="middle"></text></g>
+            <g class="mg" id="or-n5"><circle class="mc" cx="180" cy="195" r="20"/><text class="mt" x="180" y="200" text-anchor="middle">5</text><text class="ml" x="180" y="233" text-anchor="middle"></text></g>
+          </svg>
+        </div>
+        <div class="mini-bar">
+          <button class="mini-btn" id="btn-or"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="lbl-or">播放</span></button>
+          <span class="mini-pc" id="pc-or">1 / 6</span>
+        </div>
+      </div>
+      <div class="card" id="codeCard">
+        <div class="card-head">OR 骨架</div>
+        <div class="code-wrap">
+          <div class="code-inner">
+            <div class="line-nums" id="nums-or"></div>
+            <div class="code-lines" id="code-or"></div>
+          </div>
+        </div>
+        <div class="note" id="note-or"></div>
+        <div class="rules">
+          <div class="rline"><b>传播</b>任一子为 true → 父为 true</div>
+          <div class="rline"><b>短路</b>找到即停，另一侧完全不访问</div>
+          <div class="rline"><b>冒泡</b>true 沿回溯路径直线传回根</div>
+        </div>
+        <div class="examples">
+          <span class="tag">112 路径总和</span><span class="tag">100 相同的树</span><span class="tag">236 返回节点版</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 模式二 AND ============ -->
+  <div class="section" id="sec-and">
+    <h2><span class="t-bl">二、全部满足（AND）</span>「是不是都」</h2>
+    <p class="sec-desc">是不是所有节点都满足 / 左右是否对称 / 整棵树是否合法。任一子为 false 父就为 false，违规即停，false 直线冒泡。与 OR 唯一区别是短路方向。</p>
+    <div class="mode-grid">
+      <div class="card">
+        <div class="card-head">传播动画：节点 4 违规，右子树被短路不访问</div>
+        <div class="svg-wrap">
+          <svg class="mini" viewBox="0 0 420 240" id="svg-and">
+            <line class="me" id="and-e1_2" x1="210" y1="40" x2="120" y2="115"/>
+            <line class="me" id="and-e1_3" x1="210" y1="40" x2="300" y2="115"/>
+            <line class="me" id="and-e2_4" x1="120" y1="115" x2="60" y2="195"/>
+            <g class="mg" id="and-n1"><circle class="mc" cx="210" cy="40" r="20"/><text class="mt" x="210" y="45" text-anchor="middle">1</text><text class="ml" x="210" y="78" text-anchor="middle"></text></g>
+            <g class="mg" id="and-n2"><circle class="mc" cx="120" cy="115" r="20"/><text class="mt" x="120" y="120" text-anchor="middle">2</text><text class="ml" x="120" y="153" text-anchor="middle"></text></g>
+            <g class="mg" id="and-n3"><circle class="mc" cx="300" cy="115" r="20"/><text class="mt" x="300" y="120" text-anchor="middle">3</text><text class="ml" x="300" y="153" text-anchor="middle"></text></g>
+            <g class="mg" id="and-n4"><circle class="mc" cx="60" cy="195" r="20"/><text class="mt" x="60" y="200" text-anchor="middle">4</text><text class="ml" x="60" y="233" text-anchor="middle"></text></g>
+          </svg>
+        </div>
+        <div class="mini-bar">
+          <button class="mini-btn" id="btn-and"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="lbl-and">播放</span></button>
+          <span class="mini-pc" id="pc-and">1 / 6</span>
+        </div>
+      </div>
+      <div class="card" id="codeCard">
+        <div class="card-head">AND 骨架</div>
+        <div class="code-wrap">
+          <div class="code-inner">
+            <div class="line-nums" id="nums-and"></div>
+            <div class="code-lines" id="code-and"></div>
+          </div>
+        </div>
+        <div class="note" id="note-and"></div>
+        <div class="rules">
+          <div class="rline"><b>传播</b>任一子为 false → 父为 false</div>
+          <div class="rline"><b>短路</b>违规即停，另一侧不访问</div>
+          <div class="rline"><b>冒泡</b>false 沿回溯路径直线传回根</div>
+        </div>
+        <div class="examples">
+          <span class="tag">101 对称二叉树</span><span class="tag">98 验证 BST</span><span class="tag">110 平衡二叉树</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 模式三 聚合 ============ -->
+  <div class="section" id="sec-agg">
+    <h2><span class="t-gr">三、聚合（计算型）</span>「有多少 / 最大是多少」</h2>
+    <p class="sec-desc">计数、求和、最大最小。两个子的结果都要用、不能短路；难点是「答案」和「返回值」是两套不同的东西。</p>
+    <div class="mode-grid">
+      <div class="card">
+        <div class="card-head">传播动画：所有节点都访问，先分叉答案、再单边返回</div>
+        <div class="svg-wrap">
+          <svg class="mini" viewBox="0 0 420 220" id="svg-agg">
+            <line class="me" id="agg-e1_2" x1="210" y1="45" x2="110" y2="150"/>
+            <line class="me" id="agg-e1_3" x1="210" y1="45" x2="310" y2="150"/>
+            <g class="mg" id="agg-n1"><circle class="mc" cx="210" cy="45" r="20"/><text class="mt" x="210" y="50" text-anchor="middle">1</text><text class="ml" x="210" y="83" text-anchor="middle"></text></g>
+            <g class="mg" id="agg-n2"><circle class="mc" cx="110" cy="150" r="20"/><text class="mt" x="110" y="155" text-anchor="middle">2</text><text class="ml" x="110" y="188" text-anchor="middle"></text></g>
+            <g class="mg" id="agg-n3"><circle class="mc" cx="310" cy="150" r="20"/><text class="mt" x="310" y="155" text-anchor="middle">3</text><text class="ml" x="310" y="188" text-anchor="middle"></text></g>
+          </svg>
+        </div>
+        <div class="mini-bar">
+          <button class="mini-btn" id="btn-agg"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="lbl-agg">播放</span></button>
+          <span class="mini-pc" id="pc-agg">1 / 7</span>
+        </div>
+      </div>
+      <div class="card" id="codeCard">
+        <div class="card-head">聚合骨架</div>
+        <div class="code-wrap">
+          <div class="code-inner">
+            <div class="line-nums" id="nums-agg"></div>
+            <div class="code-lines" id="code-agg"></div>
+          </div>
+        </div>
+        <div class="note" id="note-agg"></div>
+        <div class="rules">
+          <div class="rline"><b>传播</b>两个子结果都用，不能短路</div>
+          <div class="rline"><b>两套值</b>答案与返回值是不同的东西</div>
+          <div class="rline"><b>易错</b>返回值错误地用了分叉形式</div>
+        </div>
+        <div class="examples">
+          <span class="tag">104 最大深度</span><span class="tag">543 直径</span><span class="tag">124 最大路径和</span><span class="tag">437 路径总和 III</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 专题：两套值 ============ -->
+  <div class="section">
+    <div class="topic">
+      <h3>聚合型难点：为什么返回值不能分叉？</h3>
+      <div class="two-col">
+        <div class="demo-box">
+          <div class="cap t-or">答案 ans：左右都能走（分叉）</div>
+          <svg class="demo" viewBox="0 0 360 150">
+            <line x1="180" y1="35" x2="90" y2="115" stroke="var(--orange)" stroke-width="3"/>
+            <line x1="180" y1="35" x2="270" y2="115" stroke="var(--orange)" stroke-width="3"/>
+            <circle cx="180" cy="35" r="18" fill="rgba(227,179,65,.22)" stroke="var(--orange)" stroke-width="2"/>
+            <text x="180" y="40" text-anchor="middle" fill="var(--orange)" font-size="13" font-weight="600">n</text>
+            <circle cx="90" cy="115" r="16" fill="rgba(227,179,65,.14)" stroke="var(--orange)" stroke-width="2"/>
+            <text x="90" y="120" text-anchor="middle" fill="var(--orange)" font-size="12">l</text>
+            <circle cx="270" cy="115" r="16" fill="rgba(227,179,65,.14)" stroke="var(--orange)" stroke-width="2"/>
+            <text x="270" y="120" text-anchor="middle" fill="var(--orange)" font-size="12">r</text>
+          </svg>
+          <p>ans = Math.max(ans, l + n + r)，整条折线都算，允许在 n 处拐弯。</p>
+        </div>
+        <div class="demo-box">
+          <div class="cap t-gr">返回值：只能选一边（直线）</div>
+          <svg class="demo" viewBox="0 0 360 150">
+            <line x1="180" y1="35" x2="90" y2="115" stroke="var(--border)" stroke-width="2" stroke-dasharray="4 4"/>
+            <line x1="180" y1="35" x2="270" y2="115" stroke="var(--green)" stroke-width="2.6"/>
+            <circle cx="180" cy="35" r="18" fill="rgba(63,185,80,.18)" stroke="var(--green)" stroke-width="2"/>
+            <text x="180" y="40" text-anchor="middle" fill="var(--green)" font-size="13" font-weight="600">n</text>
+            <circle cx="90" cy="115" r="16" fill="var(--panel2)" stroke="var(--border)" stroke-width="2"/>
+            <text x="90" y="120" text-anchor="middle" fill="var(--muted)" font-size="12">l</text>
+            <circle cx="270" cy="115" r="16" fill="rgba(63,185,80,.14)" stroke="var(--green)" stroke-width="2"/>
+            <text x="270" y="120" text-anchor="middle" fill="var(--green)" font-size="12">r</text>
+          </svg>
+          <p>return n + Math.max(l, r)，只交较大的单边。父节点会把它当成一条直路，再接上另一侧；若传上去的是折线，拼起来就分叉两次了。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 专题：混用 236 ============ -->
+  <div class="section">
+    <h2>混合型：236 最近公共祖先</h2>
+    <p class="sec-desc">它既是「找到节点」（OR 语义），又要「返回候选节点」（不是布尔）。两边都要访问（像聚合），但逻辑是哪边找到用哪边（像 OR）。</p>
+    <div class="mix-grid">
+      <div class="card">
+        <div class="card-head">两边都算，再根据左右是否为空决定返回</div>
+        <div class="svg-wrap">
+          <svg class="mini" viewBox="0 0 420 200">
+            <line x1="210" y1="40" x2="110" y2="140" stroke="var(--blue)" stroke-width="2.4"/>
+            <line x1="210" y1="40" x2="310" y2="140" stroke="var(--blue)" stroke-width="2.4"/>
+            <circle cx="210" cy="40" r="20" fill="rgba(227,179,65,.22)" stroke="var(--orange)" stroke-width="2"/>
+            <text x="210" y="45" text-anchor="middle" fill="var(--orange)" font-size="13" font-weight="600">root</text>
+            <circle cx="110" cy="140" r="19" fill="rgba(88,166,255,.16)" stroke="var(--blue)" stroke-width="2"/>
+            <text x="110" y="145" text-anchor="middle" fill="var(--blue)" font-size="13">p</text>
+            <circle cx="310" cy="140" r="19" fill="rgba(88,166,255,.16)" stroke="var(--blue)" stroke-width="2"/>
+            <text x="310" y="145" text-anchor="middle" fill="var(--blue)" font-size="13">q</text>
+            <text x="210" y="190" text-anchor="middle" fill="var(--muted)" font-size="12">l、r 都非 null → root 就是答案</text>
+          </svg>
+        </div>
+        <p class="mix-note" style="padding:0 18px 16px;">判断依据：<b>只要父节点需要同时观察左右两个孩子，就不能短路</b>。因为必须知道「两边是否都有」，才能区分返回孩子还是返回自己。</p>
+      </div>
+      <div class="mix-code">
+        <div class="card-head">LCA 骨架</div>
+        <div class="code-wrap">
+          <div class="code-inner">
+            <div class="line-nums" id="nums-mix"></div>
+            <div class="code-lines" id="code-mix"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 各模式 Java 骨架（带高亮）=====
+var CODE = {
+  or: [
+    '<span class="t-kw">public</span> <span class="t-type">boolean</span> <span class="t-fn">dfs</span>(<span class="t-type">TreeNode</span> <span class="t-id">node</span>) {',
+    '    <span class="t-kw">if</span> (<span class="t-id">node</span> == <span class="t-bool">null</span>) <span class="t-kw">return</span> <span class="t-bool">false</span>;',
+    '    <span class="t-kw">if</span> (<span class="t-id">满足条件</span>) <span class="t-kw">return</span> <span class="t-bool">true</span>;',
+    '    <span class="t-kw">if</span> (<span class="t-fn">dfs</span>(<span class="t-id">node</span>.left))  <span class="t-kw">return</span> <span class="t-bool">true</span>;',
+    '    <span class="t-kw">return</span> <span class="t-fn">dfs</span>(<span class="t-id">node</span>.right);',
+    '}'
+  ],
+  and: [
+    '<span class="t-kw">public</span> <span class="t-type">boolean</span> <span class="t-fn">dfs</span>(<span class="t-type">TreeNode</span> <span class="t-id">node</span>) {',
+    '    <span class="t-kw">if</span> (<span class="t-id">node</span> == <span class="t-bool">null</span>) <span class="t-kw">return</span> <span class="t-bool">true</span>;',
+    '    <span class="t-kw">if</span> (<span class="t-id">违反条件</span>) <span class="t-kw">return</span> <span class="t-bool">false</span>;',
+    '    <span class="t-kw">return</span> <span class="t-fn">dfs</span>(<span class="t-id">node</span>.left) <span class="t-kw">&amp;&amp;</span> <span class="t-fn">dfs</span>(<span class="t-id">node</span>.right);',
+    '}'
+  ],
+  agg: [
+    '<span class="t-kw">public</span> <span class="t-type">int</span> <span class="t-fn">dfs</span>(<span class="t-type">TreeNode</span> <span class="t-id">node</span>) {',
+    '    <span class="t-kw">if</span> (<span class="t-id">node</span> == <span class="t-bool">null</span>) <span class="t-kw">return</span> <span class="t-num">0</span>;',
+    '    <span class="t-type">int</span> <span class="t-id">l</span> = <span class="t-fn">dfs</span>(<span class="t-id">node</span>.left);',
+    '    <span class="t-type">int</span> <span class="t-id">r</span> = <span class="t-fn">dfs</span>(<span class="t-id">node</span>.right);',
+    '    <span class="t-id">ans</span> = <span class="t-type">Math</span>.max(<span class="t-id">ans</span>, <span class="t-id">l</span> + <span class="t-id">r</span> + <span class="t-id">node</span>.val);',
+    '    <span class="t-kw">return</span> <span class="t-id">node</span>.val + <span class="t-type">Math</span>.max(<span class="t-id">l</span>, <span class="t-id">r</span>);',
+    '}'
+  ],
+  mix: [
+    '<span class="t-kw">if</span> (<span class="t-id">root</span> == <span class="t-id">p</span> || <span class="t-id">root</span> == <span class="t-id">q</span>) <span class="t-kw">return</span> <span class="t-id">root</span>;',
+    '<span class="t-type">TreeNode</span> <span class="t-id">l</span> = <span class="t-fn">dfs</span>(<span class="t-id">left</span>), <span class="t-id">r</span> = <span class="t-fn">dfs</span>(<span class="t-id">right</span>);',
+    '<span class="t-kw">if</span> (<span class="t-id">l</span> == <span class="t-bool">null</span>) <span class="t-kw">return</span> <span class="t-id">r</span>;',
+    '<span class="t-kw">if</span> (<span class="t-id">r</span> == <span class="t-bool">null</span>) <span class="t-kw">return</span> <span class="t-id">l</span>;',
+    '<span class="t-kw">return</span> <span class="t-id">root</span>;'
+  ]
+};
+
+// ===== 帧数据 =====
+var FRAMES = {
+  or: [
+    { nodes: { 1: 'active' }, line: 3, note: '进入节点 1，检查是否满足条件' },
+    { nodes: { 1: 'onpath', 2: 'active' }, edges: { '1_2': 'onpath' }, line: 4, note: '1 未命中，递归左子树到 2' },
+    { nodes: { 1: 'onpath', 2: 'onpath', 4: 'active' }, edges: { '1_2': 'onpath', '2_4': 'onpath' }, line: 4, note: '2 未命中，递归左子树到 4' },
+    { nodes: { 1: 'onpath', 2: 'onpath', 4: 'found' }, edges: { '1_2': 'onpath', '2_4': 'onpath' }, line: 3, note: '节点 4 满足条件，return true' },
+    { nodes: { 1: 'onpath', 2: 'found', 4: 'found' }, edges: { '2_4': 'found', '1_2': 'onpath' }, line: 4, note: 'true 冒泡：2 的左路通了，return true（5 不访问）' },
+    { nodes: { 1: 'found', 2: 'found', 4: 'found', 3: 'skip', 5: 'skip' }, edges: { '1_2': 'found', '2_4': 'found', '1_3': 'skip', '2_5': 'skip' }, line: 5, note: 'true 冒泡到根，1 return true；右子树 3 完全不访问' }
+  ],
+  and: [
+    { nodes: { 1: 'active' }, line: 3, note: '进入 1，检查是否违反条件' },
+    { nodes: { 1: 'onpath', 2: 'active' }, edges: { '1_2': 'onpath' }, line: 4, note: '1 正常，需要左右都满足，先递归左到 2' },
+    { nodes: { 1: 'onpath', 2: 'onpath', 4: 'active' }, edges: { '1_2': 'onpath', '2_4': 'onpath' }, line: 4, note: '2 正常，继续递归左到 4' },
+    { nodes: { 1: 'onpath', 2: 'onpath', 4: 'bad' }, edges: { '1_2': 'onpath', '2_4': 'onpath' }, line: 3, note: '节点 4 违反条件，return false' },
+    { nodes: { 1: 'onpath', 2: 'bad', 4: 'bad' }, edges: { '2_4': 'bad', '1_2': 'onpath' }, line: 4, note: 'false 冒泡：2 拿到 false，结果 false' },
+    { nodes: { 1: 'bad', 2: 'bad', 4: 'bad', 3: 'skip' }, edges: { '1_2': 'bad', '2_4': 'bad', '1_3': 'skip' }, line: 4, note: 'false 冒泡到根，整棵树不合法；右子树 3 不访问' }
+  ],
+  agg: [
+    { nodes: { 1: 'active' }, line: 1, note: '进入 1，聚合型不能短路，左右都要算' },
+    { nodes: { 1: 'onpath', 2: 'active' }, edges: { '1_2': 'onpath' }, line: 3, note: '先算左：int l = dfs(2)' },
+    { nodes: { 1: 'onpath', 2: 'ret' }, edges: { '1_2': 'onpath' }, labels: { 2: 'ret 2' }, line: 6, note: '2 是叶子，返回值 = 2' },
+    { nodes: { 1: 'onpath', 2: 'ret', 3: 'active' }, edges: { '1_2': 'onpath', '1_3': 'onpath' }, labels: { 2: 'ret 2' }, line: 4, note: '再算右：int r = dfs(3)' },
+    { nodes: { 1: 'onpath', 2: 'ret', 3: 'ret' }, edges: { '1_2': 'onpath', '1_3': 'onpath' }, labels: { 2: 'ret 2', 3: 'ret 3' }, line: 6, note: '3 是叶子，返回值 = 3' },
+    { nodes: { 1: 'found', 2: 'found', 3: 'found' }, edges: { '1_2': 'found', '1_3': 'found' }, labels: { 2: 'ret 2', 3: 'ret 3' }, line: 5, note: '答案 ans 可分叉：l + n + r = 2 + 1 + 3 = 6' },
+    { nodes: { 1: 'ret', 2: 'ret', 3: 'ret' }, edges: { '1_3': 'ret', '1_2': 'onpath' }, labels: { 1: 'ret 4', 2: 'ret 2', 3: 'ret 3' }, line: 6, note: '返回值只能单边：n + max(l, r) = 1 + 3 = 4' }
+  ]
+};
+
+// ===== 渲染代码（静态 + 动画）=====
+function renderStaticCode(key) {
+  var arr = CODE[key];
+  document.getElementById('nums-' + key).innerHTML = arr.map(function (_, i) { return i + 1; }).join('<br>');
+  document.getElementById('code-' + key).innerHTML = arr.map(function (c, i) {
+    return '<div class="code-line" id="cl-' + key + '-' + (i + 1) + '">' + c + '</div>';
+  }).join('');
+}
+
+function Player(key) {
+  this.key = key;
+  this.svg = document.getElementById('svg-' + key);
+  this.frames = FRAMES[key];
+  this.cur = 0; this.timer = null; this.playing = false;
+  this.btn = document.getElementById('btn-' + key);
+  this.lbl = document.getElementById('lbl-' + key);
+  this.pc = document.getElementById('pc-' + key);
+  this.note = document.getElementById('note-' + key);
+  this.ngroups = this.svg.querySelectorAll('.mg');
+  this.elines = this.svg.querySelectorAll('.me');
+  this.clines = document.querySelectorAll('#code-' + key + ' .code-line');
+  var self = this;
+  this.btn.onclick = function () { self.toggle(); };
+  this.render(0);
+}
+Player.prototype.reset = function () {
+  this.ngroups.forEach(function (g) {
+    g.classList.remove('active', 'onpath', 'found', 'bad', 'ret', 'skip');
+    var l = g.querySelector('.ml'); if (l) l.textContent = '';
+  });
+  this.elines.forEach(function (e) { e.classList.remove('onpath', 'found', 'bad', 'ret', 'skip'); });
+};
+Player.prototype.render = function (i) {
+  this.cur = i;
+  var f = this.frames[i], key = this.key, self = this;
+  this.reset();
+  Object.keys(f.nodes || {}).forEach(function (id) {
+    var g = document.getElementById(key + '-n' + id);
+    if (g) g.classList.add(f.nodes[id]);
+  });
+  Object.keys(f.edges || {}).forEach(function (ek) {
+    var e = document.getElementById(key + '-e' + ek);
+    if (e) e.classList.add(f.edges[ek]);
+  });
+  Object.keys(f.labels || {}).forEach(function (id) {
+    var g = document.getElementById(key + '-n' + id);
+    if (g) g.querySelector('.ml').textContent = f.labels[id];
+  });
+  this.clines.forEach(function (l) { l.classList.remove('hl'); });
+  var hl = document.getElementById('cl-' + key + '-' + f.line);
+  if (hl) hl.classList.add('hl');
+  this.note.textContent = f.note;
+  this.pc.textContent = (i + 1) + ' / ' + this.frames.length;
+};
+Player.prototype.play = function () {
+  this.playing = true; this.lbl.textContent = '暂停';
+  var self = this;
+  this.timer = setInterval(function () {
+    if (self.cur >= self.frames.length - 1) { self.stop(); return; }
+    self.render(self.cur + 1);
+  }, 950);
+};
+Player.prototype.stop = function () {
+  this.playing = false; this.lbl.textContent = this.cur >= this.frames.length - 1 ? '重播' : '播放';
+  if (this.timer) { clearInterval(this.timer); this.timer = null; }
+};
+Player.prototype.toggle = function () {
+  if (this.playing) { this.stop(); return; }
+  if (this.cur >= this.frames.length - 1) this.render(0);
+  this.play();
+};
+
+['or', 'and', 'agg', 'mix'].forEach(renderStaticCode);
+new Player('or'); new Player('and'); new Player('agg');
+</script>
+</body>
+</html>

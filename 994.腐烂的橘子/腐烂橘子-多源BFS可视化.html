@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>994. 腐烂的橘子 · 多源 BFS 可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='%2358a6ff'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.6;}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 26px 40px;}
+h1{font-size:27px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:12px;background:rgba(227,179,65,.15);color:var(--orange);}
+.subtitle{color:var(--muted);margin:0 0 22px;font-size:14.5px;}
+.info-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:20px;}
+.info-panel p{margin:0 0 14px;color:var(--muted);font-size:14px;}
+.info-panel b{color:var(--text);font-weight:600;}
+.info-panel .hl-b{color:var(--blue);font-weight:600;}
+.info-panel .hl-o{color:var(--orange);font-weight:600;}
+.info-panel .hl-g{color:var(--green);font-weight:600;}
+.info-panel .hl-r{color:var(--red);font-weight:600;}
+#cases{display:flex;flex-wrap:wrap;gap:8px;}
+.case-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:7px 13px;font-size:13.5px;cursor:pointer;transition:border-color .15s,background .15s;}
+.case-btn:hover{border-color:var(--blue);}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);}
+.main-grid{display:grid;grid-template-columns:minmax(0,1fr) 436px;gap:20px;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.card-head{padding:11px 16px;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--muted);
+  font-weight:600;letter-spacing:.3px;display:flex;align-items:center;gap:8px;}
+#stage{position:relative;}
+#gridWrap{display:grid;gap:5px;padding:48px 26px 22px;}
+.cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:600;border:1.5px solid transparent;font-family:Consolas,monospace;
+  transition:background .15s,border-color .15s,color .15s,box-shadow .15s;min-width:0;}
+.cell.empty{background:#161b22;color:#30363d;}
+.cell.fresh{background:rgba(63,185,80,.16);border-color:rgba(63,185,80,.55);color:var(--green);}
+.cell.rotten{background:rgba(248,81,73,.18);border-color:rgba(248,81,73,.6);color:var(--red);}
+.cell.active{background:rgba(88,166,255,.26);border-color:var(--blue);color:var(--blue);
+  box-shadow:0 0 0 2px rgba(88,166,255,.4);z-index:2;}
+.cell.newly{background:rgba(227,179,65,.26);border-color:var(--orange);color:var(--orange);
+  box-shadow:0 0 0 2px rgba(227,179,65,.5);z-index:2;}
+.cell.scan{box-shadow:inset 0 0 0 2px var(--purple);}
+#queueBox{padding:10px 24px 14px;border-top:1px solid var(--border);min-height:52px;}
+.qlabel{font-size:12px;color:var(--muted);margin-right:6px;}
+.qchip{font-size:11.5px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;
+  padding:2px 7px;font-family:Consolas,monospace;color:var(--muted);margin:3px 4px 0 0;display:inline-block;}
+.legend{display:flex;gap:12px;font-size:11.5px;color:var(--muted);align-items:center;flex-wrap:wrap;padding:0 24px 12px;}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px;}
+.dot.g{background:var(--green);} .dot.r{background:var(--red);} .dot.b{background:var(--blue);} .dot.o{background:var(--orange);}
+.pill{position:absolute;font-size:13px;color:var(--muted);font-family:Consolas,monospace;z-index:4;}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 16px;border-top:1px solid var(--border);}
+.stat{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;min-width:0;}
+.stat .k{font-size:12px;color:var(--muted);margin-bottom:3px;}
+.stat .val{font-size:13.5px;font-weight:600;font-family:Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.val.blue{color:var(--blue);} .val.orange{color:var(--orange);} .val.purple{color:var(--purple);} .val.red{color:var(--red);}
+.controls{display:flex;align-items:center;gap:10px;padding:13px 16px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.ctrl-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;
+  width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ctrl-btn:hover:not(:disabled){border-color:var(--blue);}
+.ctrl-btn:disabled{opacity:.4;cursor:not-allowed;}
+.ctrl-btn.wide{width:auto;padding:0 16px;gap:7px;font-size:14px;}
+.ctrl-btn svg{width:18px;height:18px;fill:var(--text);}
+#slider{flex:1;min-width:120px;height:5px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:3px;outline:none;}
+#slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--blue);cursor:pointer;}
+#pcount{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:56px;text-align:center;}
+#speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 8px;font-size:13.5px;cursor:pointer;}
+.kbd-hint{padding:0 16px 13px;font-size:12.5px;color:var(--muted);}
+#codeCard{display:flex;flex-direction:column;}
+.code-wrap{flex:1;overflow:auto;padding:14px 0;max-height:470px;}
+.code-inner{display:flex;min-width:max-content;}
+.line-nums{padding:0 12px 0 16px;text-align:right;color:var(--muted);font-size:13px;line-height:1.7;
+  font-family:Consolas,monospace;user-select:none;border-right:1px solid var(--border);}
+.code-lines{padding:0 16px 0 12px;font-family:Consolas,monospace;font-size:13px;line-height:1.7;min-width:0;}
+.code-line{white-space:pre;border-radius:4px;padding:0 6px;margin:0 -6px;}
+.code-line.hl{background:rgba(88,166,255,.13);box-shadow:inset 3px 0 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;} .t-cmt{color:#8b949e;}
+#msg{padding:11px 16px;border-top:1px solid var(--border);font-size:13.5px;color:var(--text);background:var(--panel2);min-height:44px;}
+@media (max-width:980px){.main-grid{grid-template-columns:1fr;}#codeCard{max-height:520px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>994. 腐烂的橘子 <span class="badge">中等</span></h1>
+  <p class="subtitle">所有腐烂橘子同时入队（多源 BFS），按分钟一层一层向外感染，每过一分钟扩散一圈</p>
+
+  <div class="info-panel">
+    <p>单元格：<span class="hl-r">2 腐烂</span>、<span class="hl-g">1 新鲜</span>、0 空。先扫描：腐烂橘子全部入队，新鲜橘子计数 frush。然后 BFS 按层扩散，<span class="hl-o">每轮 mintues 加 1</span>，只处理本轮开始时已在队列里的橘子（固定 size），每个向四方向把相邻新鲜橘子<span class="hl-r">感染成 2</span>、frush 减 1、入队。最后还有新鲜橘子说明感染不到，返回 -1。</p>
+    <div id="cases"></div>
+  </div>
+
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="var(--muted)"><path d="M12 3v10m0 0l-4-4m4 4l4-4M5 19h14"/></svg>
+        多源 BFS 分层感染
+      </div>
+      <div id="stage">
+        <div class="pill" style="left:18px;top:14px;" id="minPill">分钟 = <b style="color:var(--orange)">0</b></div>
+        <div class="pill" style="right:18px;top:14px;" id="dimPill"></div>
+        <div id="gridWrap"></div>
+        <div class="legend">
+          <span><span class="dot g"></span>新鲜</span>
+          <span><span class="dot r"></span>腐烂</span>
+          <span><span class="dot b"></span>当前处理</span>
+          <span><span class="dot o"></span>刚感染</span>
+        </div>
+        <div id="queueBox"><span class="qlabel">BFS 队列：</span><span id="queueChips"></span></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="k">分钟</div><div class="val orange" id="i-min">0</div></div>
+        <div class="stat"><div class="k">剩余新鲜</div><div class="val green" id="i-frush">0</div></div>
+        <div class="stat"><div class="k">当前处理</div><div class="val blue" id="i-active">&mdash;</div></div>
+        <div class="stat"><div class="k">队列长度</div><div class="val purple" id="i-qlen">0</div></div>
+      </div>
+      <div class="controls">
+        <button class="ctrl-btn wide" id="btnPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playLabel">播放</span></button>
+        <button class="ctrl-btn" id="btnPrev" title="上一步（←）"><svg viewBox="0 0 24 24"><path d="M16 6l-8 6 8 6z"/></svg></button>
+        <button class="ctrl-btn" id="btnNext" title="下一步（→）"><svg viewBox="0 0 24 24"><path d="M8 6l-8 6-8 6z"/></svg></button>
+        <button class="ctrl-btn" id="btnReset" title="重置（Home）"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+        <input type="range" id="slider" min="0" value="0">
+        <span id="pcount">1 / 1</span>
+        <select id="speed">
+          <option value="1000">0.8x</option>
+          <option value="700" selected>1x</option>
+          <option value="420">1.5x</option>
+          <option value="240">2.5x</option>
+        </select>
+      </div>
+      <div class="kbd-hint">键盘：← / → 单步 · 空格 播放暂停 · Home / End 首末</div>
+    </div>
+
+    <div class="card" id="codeCard">
+      <div class="card-head">Solution.java</div>
+      <div class="code-wrap">
+        <div class="code-inner">
+          <div class="line-nums" id="lineNums"></div>
+          <div class="code-lines" id="codeLines"></div>
+        </div>
+      </div>
+      <div id="msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 用例 =====
+function g(rows) { return rows.map(function (r) { return r.split('').map(Number); }); }
+var CASES = [
+  { grid: g(['211', '110', '011']), expect: 4 },
+  { grid: g(['211', '011', '101']), expect: -1 },
+  { grid: g(['02', '00']), expect: 0 },
+  { grid: g(['11', '11']), expect: -1 },
+  { grid: [[2]], expect: 0 },
+  { grid: [[1]], expect: -1 },
+  { grid: g(['202', '111', '202']), expect: 2 },
+  { grid: g(['2111']), expect: 3 }
+];
+
+// ===== 代码（48 行）=====
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-id">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-type">int</span> <span class="t-fn">orangesRotting</span>(<span class="t-type">int</span>[][] <span class="t-id">grid</span>) {',
+  '        <span class="t-type">int</span> <span class="t-id">n</span> = <span class="t-id">grid</span>.length;',
+  '        <span class="t-type">int</span> <span class="t-id">m</span> = <span class="t-id">grid</span>[<span class="t-num">0</span>].length;',
+  '        <span class="t-type">Deque</span>&lt;<span class="t-type">int</span>[]&gt; <span class="t-id">pq</span> = <span class="t-kw">new</span> <span class="t-type">LinkedList</span>&lt;&gt;();',
+  '        <span class="t-type">int</span> <span class="t-id">frush</span> = <span class="t-num">0</span>;',
+  '        <span class="t-kw">for</span>(<span class="t-type">int</span> <span class="t-id">i</span> = <span class="t-num">0</span>;<span class="t-id">i</span>&lt;<span class="t-id">n</span>;<span class="t-id">i</span>++){',
+  '            <span class="t-kw">for</span>(<span class="t-type">int</span> <span class="t-id">j</span> = <span class="t-num">0</span>;<span class="t-id">j</span>&lt;<span class="t-id">m</span>;<span class="t-id">j</span>++){',
+  '                <span class="t-kw">if</span>(<span class="t-id">grid</span>[<span class="t-id">i</span>][<span class="t-id">j</span>] == <span class="t-num">2</span>){',
+  '                    <span class="t-id">pq</span>.offer(<span class="t-kw">new</span> <span class="t-type">int</span>[]{<span class="t-id">i</span>,<span class="t-id">j</span>});',
+  '                }<span class="t-kw">else if</span>(<span class="t-id">grid</span>[<span class="t-id">i</span>][<span class="t-id">j</span>] == <span class="t-num">1</span>){',
+  '                    <span class="t-id">frush</span> ++ ;',
+  '                }',
+  '            }',
+  '        }',
+  '        <span class="t-type">int</span> <span class="t-id">mintues</span> = <span class="t-num">0</span>;',
+  '        <span class="t-kw">while</span>(!<span class="t-id">pq</span>.isEmpty() <span class="t-kw">&amp;&amp;</span> <span class="t-id">frush</span> > <span class="t-num">0</span>){',
+  '            <span class="t-type">int</span> <span class="t-id">size</span> = <span class="t-id">pq</span>.size();',
+  '            <span class="t-id">mintues</span>++;',
+  '            <span class="t-kw">for</span>(<span class="t-type">int</span> <span class="t-id">i</span>=<span class="t-num">0</span>;<span class="t-id">i</span>&lt;<span class="t-id">size</span>;<span class="t-id">i</span>++){',
+  '                <span class="t-type">int</span>[] <span class="t-id">a</span> = <span class="t-id">pq</span>.poll();',
+  '                <span class="t-type">int</span> <span class="t-id">x</span> = <span class="t-id">a</span>[<span class="t-num">0</span>];',
+  '                <span class="t-type">int</span> <span class="t-id">y</span> = <span class="t-id">a</span>[<span class="t-num">1</span>];',
+  '                <span class="t-kw">if</span>(<span class="t-id">x</span>-<span class="t-num">1</span> >=<span class="t-num">0</span> <span class="t-kw">&amp;&amp;</span> <span class="t-id">grid</span>[<span class="t-id">x</span>-<span class="t-num">1</span>][<span class="t-id">y</span>] ==<span class="t-num">1</span>){',
+  '                    <span class="t-id">grid</span>[<span class="t-id">x</span>-<span class="t-num">1</span>][<span class="t-id">y</span>] =<span class="t-num">2</span>;',
+  '                    <span class="t-id">frush</span> --;',
+  '                    <span class="t-id">pq</span>.offer(<span class="t-kw">new</span> <span class="t-type">int</span>[]{<span class="t-id">x</span>-<span class="t-num">1</span>,<span class="t-id">y</span>});',
+  '                }',
+  '                <span class="t-kw">if</span>(<span class="t-id">y</span>-<span class="t-num">1</span> >=<span class="t-num">0</span> <span class="t-kw">&amp;&amp;</span> <span class="t-id">grid</span>[<span class="t-id">x</span>][<span class="t-id">y</span>-<span class="t-num">1</span>] ==<span class="t-num">1</span>){',
+  '                    <span class="t-id">grid</span>[<span class="t-id">x</span>][<span class="t-id">y</span>-<span class="t-num">1</span>] =<span class="t-num">2</span>;',
+  '                    <span class="t-id">frush</span> --;',
+  '                    <span class="t-id">pq</span>.offer(<span class="t-kw">new</span> <span class="t-type">int</span>[]{<span class="t-id">x</span>,<span class="t-id">y</span>-<span class="t-num">1</span>});',
+  '                }',
+  '                <span class="t-kw">if</span>(<span class="t-id">x</span>+<span class="t-num">1</span> &lt; <span class="t-id">n</span> <span class="t-kw">&amp;&amp;</span> <span class="t-id">grid</span>[<span class="t-id">x</span>+<span class="t-num">1</span>][<span class="t-id">y</span>] ==<span class="t-num">1</span>){',
+  '                    <span class="t-id">grid</span>[<span class="t-id">x</span>+<span class="t-num">1</span>][<span class="t-id">y</span>] =<span class="t-num">2</span>;',
+  '                    <span class="t-id">frush</span> --;',
+  '                    <span class="t-id">pq</span>.offer(<span class="t-kw">new</span> <span class="t-type">int</span>[]{<span class="t-id">x</span>+<span class="t-num">1</span>,<span class="t-id">y</span>});',
+  '                }',
+  '                <span class="t-kw">if</span>(<span class="t-id">y</span>+<span class="t-num">1</span> &lt; <span class="t-id">m</span> <span class="t-kw">&amp;&amp;</span> <span class="t-id">grid</span>[<span class="t-id">x</span>][<span class="t-id">y</span>+<span class="t-num">1</span>] ==<span class="t-num">1</span>){',
+  '                    <span class="t-id">grid</span>[<span class="t-id">x</span>][<span class="t-id">y</span>+<span class="t-num">1</span>] =<span class="t-num">2</span>;',
+  '                    <span class="t-id">frush</span> --;',
+  '                    <span class="t-id">pq</span>.offer(<span class="t-kw">new</span> <span class="t-type">int</span>[]{<span class="t-id">x</span>,<span class="t-id">y</span>+<span class="t-num">1</span>});',
+  '                }',
+  '            }',
+  '        }',
+  '        <span class="t-kw">return</span> <span class="t-id">frush</span> == <span class="t-num">0</span> ? <span class="t-id">mintues</span> : <span class="t-num">-1</span>;',
+  '    }',
+  '}'
+];
+
+// ===== 帧生成（snap 独立快照）=====
+var curGrid = null, curN = 0, curM = 0;
+function buildSteps(grid0) {
+  var grid = grid0.map(function (r) { return r.slice(); });
+  var n = grid.length, m = grid[0].length;
+  var queue = [], frush = 0, minutes = 0;
+  var steps = [], scan = null, active = null;
+  function snap(phase, line, extra) {
+    extra = extra || {};
+    steps.push({
+      phase: phase, line: line, scan: scan, active: active,
+      grid: grid.map(function (r) { return r.slice(); }),
+      queue: queue.map(function (q) { return q.slice(); }),
+      frush: frush, minutes: minutes,
+      target: extra.target === undefined ? null : extra.target,
+      dir: extra.dir === undefined ? null : extra.dir
+    });
+  }
+  snap('start', 6);
+  for (var i = 0; i < n; i++) {
+    for (var j = 0; j < m; j++) {
+      scan = [i, j]; active = [i, j];
+      if (grid[i][j] === 2) { queue.push([i, j]); snap('scan', 9); }
+      else if (grid[i][j] === 1) { frush++; snap('scan', 11); }
+      else snap('scan', 9);
+    }
+  }
+  active = null;
+  while (queue.length > 0 && frush > 0) {
+    var size = queue.length;
+    minutes++;
+    snap('layerstart', 19);
+    for (var k = 0; k < size; k++) {
+      var a = queue.shift(), x = a[0], y = a[1];
+      active = [x, y];
+      snap('poll', 21);
+      tryInfect(x - 1, y, 25, '上', x, y);
+      tryInfect(x, y - 1, 30, '左', x, y);
+      tryInfect(x + 1, y, 35, '下', x, y);
+      tryInfect(x, y + 1, 40, '右', x, y);
+    }
+  }
+  active = null;
+  snap('done', 46);
+  return steps;
+
+  function tryInfect(nx, ny, infLine, dirName, cx, cy) {
+    if (nx >= 0 && nx < n && ny >= 0 && ny < m && grid[nx][ny] === 1) {
+      grid[nx][ny] = 2; frush--; queue.push([nx, ny]);
+      active = [nx, ny];
+      snap('infect', infLine, { target: [nx, ny], dir: dirName });
+      active = [cx, cy];
+    }
+  }
+}
+
+function fmtPos(p) { return p === null ? 'null' : '(' + p[0] + ',' + p[1] + ')'; }
+function makeMsg(fr) {
+  switch (fr.phase) {
+    case 'start': return '开始，分钟 = 0，先扫描整网统计';
+    case 'scan':
+      if (curGrid[fr.scan[0]][fr.scan[1]] === 2)
+        return '扫描到 ' + fmtPos(fr.scan) + '，腐烂橘子，入队';
+      if (curGrid[fr.scan[0]][fr.scan[1]] === 1)
+        return '扫描到 ' + fmtPos(fr.scan) + '，新鲜橘子，frush 加 1';
+      return '扫描到 ' + fmtPos(fr.scan) + '，空格子，跳过';
+    case 'layerstart':
+      return '第 ' + fr.minutes + ' 分钟开始，本轮处理 ' + fr.queue.length + ' 个腐烂橘子';
+    case 'poll':
+      return '取出队头 ' + fmtPos(fr.active) + '，检查它的四个方向';
+    case 'infect':
+      return '向「' + fr.dir + '」感染 ' + fmtPos(fr.target) + '，变腐烂、frush 减 1、入队';
+    case 'done':
+      return fr.frush === 0 ? '全部感染完成，共需 ' + fr.minutes + ' 分钟' : '还有新鲜橘子感染不到，返回 -1';
+  }
+}
+
+// ===== 运行状态 =====
+var frameList = [], cellEls = [], cur = 0, timer = null, playing = false, curCase = 0;
+
+function setupGrid() {
+  var wrap = document.getElementById('gridWrap');
+  wrap.innerHTML = '';
+  wrap.style.gridTemplateColumns = 'repeat(' + curM + ',1fr)';
+  cellEls = [];
+  for (var i = 0; i < curN; i++) {
+    var row = [];
+    for (var j = 0; j < curM; j++) {
+      var d = document.createElement('div');
+      d.textContent = curGrid[i][j];
+      wrap.appendChild(d); row.push(d);
+    }
+    cellEls.push(row);
+  }
+}
+
+function samePos(a, b) { return a !== null && b !== null && a[0] === b[0] && a[1] === b[1]; }
+
+function renderFrame() {
+  var fr = frameList[cur];
+  for (var i = 0; i < curN; i++) {
+    for (var j = 0; j < curM; j++) {
+      var here = [i, j], cls = 'cell';
+      if (fr.phase === 'infect' && samePos(fr.target, here)) cls += ' newly';
+      else if (samePos(fr.active, here)) cls += ' active';
+      else if (fr.grid[i][j] === 2) cls += ' rotten';
+      else if (fr.grid[i][j] === 1) cls += ' fresh';
+      else cls += ' empty';
+      if (fr.phase === 'scan' && samePos(fr.scan, here)) cls += ' scan';
+      cellEls[i][j].className = cls;
+    }
+  }
+  // 队列 chips
+  document.getElementById('queueChips').innerHTML = fr.queue.map(function (q) {
+    return '<span class="qchip">' + q[0] + ',' + q[1] + '</span>';
+  }).join('');
+  document.getElementById('minPill').innerHTML =
+    '分钟 = <b style="color:var(--orange)">' + fr.minutes + '</b>';
+  document.getElementById('dimPill').textContent = curN + ' × ' + curM;
+  document.getElementById('i-min').textContent = fr.minutes;
+  document.getElementById('i-frush').textContent = fr.frush;
+  document.getElementById('i-active').textContent = fr.active === null ? '—' : fmtPos(fr.active);
+  document.getElementById('i-qlen').textContent = fr.queue.length;
+
+  document.querySelectorAll('.code-line').forEach(function (l) { l.classList.remove('hl'); });
+  var hl = document.getElementById('cl-' + fr.line);
+  if (hl) hl.classList.add('hl');
+  document.getElementById('msg').innerHTML = makeMsg(fr);
+  document.getElementById('pcount').textContent = (cur + 1) + ' / ' + frameList.length;
+  var slider = document.getElementById('slider');
+  slider.max = frameList.length - 1; slider.value = cur;
+  document.getElementById('btnPrev').disabled = (cur === 0);
+  document.getElementById('btnNext').disabled = (cur === frameList.length - 1);
+}
+
+function compute(idx) {
+  var c = CASES[idx];
+  curGrid = c.grid; curN = c.grid.length; curM = c.grid[0].length;
+  frameList = buildSteps(c.grid);
+}
+
+// ===== 播放控制 =====
+function setPlaying(on) {
+  playing = on;
+  document.getElementById('playLabel').textContent = on ? '暂停' : '播放';
+  document.querySelector('#btnPlay svg').innerHTML = on
+    ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+}
+function play() {
+  setPlaying(true);
+  timer = setInterval(function () {
+    if (cur >= frameList.length - 1) { stop(); return; }
+    cur++; renderFrame();
+  }, Number(document.getElementById('speed').value));
+}
+function stop() {
+  setPlaying(false);
+  if (timer) { clearInterval(timer); timer = null; }
+}
+function nextStep() { if (cur < frameList.length - 1) { cur++; renderFrame(); } }
+function prevStep() { if (cur > 0) { cur--; renderFrame(); } }
+
+function switchCase(idx) {
+  stop(); curCase = idx; cur = 0;
+  compute(idx); setupGrid(); renderFrame();
+  document.querySelectorAll('.case-btn').forEach(function (b, i) {
+    b.classList.toggle('active', i === idx);
+  });
+}
+function renderCode() {
+  document.getElementById('lineNums').innerHTML =
+    CODE.map(function (_, i) { return i + 1; }).join('<br>');
+  document.getElementById('codeLines').innerHTML = CODE.map(function (c, i) {
+    return '<div class="code-line" id="cl-' + (i + 1) + '">' + c + '</div>';
+  }).join('');
+}
+function renderCases() {
+  var box = document.getElementById('cases');
+  CASES.forEach(function (c, i) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (i === 0 ? ' active' : '');
+    b.textContent = '用例 ' + (i + 1) + '（' + c.grid.length + '×' + c.grid[0].length + '）';
+    b.onclick = function () { switchCase(i); };
+    box.appendChild(b);
+  });
+}
+
+document.getElementById('btnPlay').onclick = function () { playing ? stop() : play(); };
+document.getElementById('btnNext').onclick = nextStep;
+document.getElementById('btnPrev').onclick = prevStep;
+document.getElementById('btnReset').onclick = function () { stop(); cur = 0; renderFrame(); };
+document.getElementById('slider').addEventListener('input', function (e) {
+  stop(); cur = Number(e.target.value); renderFrame();
+});
+document.getElementById('speed').onchange = function () { if (playing) { stop(); play(); } };
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); nextStep(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); prevStep(); }
+  else if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
+  else if (e.key === 'Home') { e.preventDefault(); stop(); cur = 0; renderFrame(); }
+  else if (e.key === 'End') { e.preventDefault(); stop(); cur = frameList.length - 1; renderFrame(); }
+});
+
+renderCode();
+renderCases();
+compute(0);
+setupGrid();
+renderFrame();
+</script>
+</body>
+</html>

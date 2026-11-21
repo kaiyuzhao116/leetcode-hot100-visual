@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>M</text></svg>">
+<title>HashMap API 速查 · 两数之和</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --fg:#e6edf3;--muted:#8b949e;
+    --blue:#58a6ff;--green:#3fb950;--orange:#d29922;--red:#f85149;--purple:#bc8cff;
+    --mono:"Cascadia Code",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);font-family:var(--mono);font-size:14px;line-height:1.55;padding:22px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:12.5px;margin-bottom:18px}
+  h2{font-size:13px;color:var(--muted);margin:22px 0 11px}
+  .box{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+  .feats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .feat{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px;font-size:11.5px;text-align:center;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-size:11px;font-weight:600}
+  td code{font-size:11.5px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:2px 7px}
+  .use{color:var(--blue);font-size:10.5px}
+  .nullv{color:var(--orange)}
+  .demo-grid{display:grid;grid-template-columns:1fr 280px;gap:16px}
+  .inputrow{display:flex;gap:8px;margin-bottom:11px;flex-wrap:wrap;align-items:center}
+  input{background:var(--panel2);border:1px solid var(--border);color:var(--fg);border-radius:7px;padding:8px 11px;width:90px;font-family:var(--mono)}
+  .abtn{border:1px solid var(--border);background:var(--panel2);color:var(--fg);border-radius:7px;padding:8px 13px;cursor:pointer;font-size:12px}
+  .abtn.put{color:var(--green);border-color:rgba(63,185,80,.5)}
+  .abtn.rm{color:var(--red);border-color:rgba(248,81,73,.5)}
+  .maptable{width:100%;border-collapse:collapse;font-size:12.5px}
+  .maptable th,.maptable td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left}
+  .maptable th{color:var(--muted);font-size:10.5px}
+  .maptable tr.flash td{background:rgba(210,153,34,.15)}
+  .log{font-size:11px;max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:5px}
+  .log .l{color:var(--muted)}.log .lg{color:var(--green)}.log .lr{color:var(--red)}.log .lp{color:var(--purple)}
+  .note{font-size:11.5px;color:var(--muted);margin-top:10px}
+  .scene{margin-top:16px;border-top:1px solid var(--border);padding-top:16px}
+  .scene h3{font-size:13px;color:var(--purple);margin-bottom:10px}
+  .scenerow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .out{font-size:12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;min-height:40px}
+  @media(max-width:820px){.demo-grid,.feats{grid-template-columns:1fr}body{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>HashMap API 速查</h1>
+  <div class="sub">两数之和里用它存"数组值 → 下标"。key 唯一（重复 put 覆盖），无序，允许 null 键值，非线程安全。</div>
+
+  <h2>一、特点</h2>
+  <div class="box">
+    <div class="feats">
+      <div class="feat">键值对 key→value</div>
+      <div class="feat">key 唯一，重复即覆盖</div>
+      <div class="feat">不保证遍历顺序</div>
+      <div class="feat">允许 null 键 / 值</div>
+    </div>
+  </div>
+
+  <h2>二、核心方法（蓝色 = 两数之和用到）</h2>
+  <div class="box" style="padding:6px 8px">
+    <table>
+      <tr><th>方法</th><th>作用</th><th>返回 / 缺失行为</th><th>本题</th></tr>
+      <tr><td><code>put(k,v)</code></td><td>放入或覆盖</td><td>返回旧值，没有则 <span class="nullv">null</span></td><td class="use">建表</td></tr>
+      <tr><td><code>get(k)</code></td><td>按 key 取值</td><td>没有则 <span class="nullv">null</span></td><td class="use">取下标</td></tr>
+      <tr><td><code>containsKey(k)</code></td><td>是否有该 key</td><td>boolean</td><td class="use">判断补数</td></tr>
+      <tr><td><code>getOrDefault(k,d)</code></td><td>取值，缺失给默认值</td><td>缺失返回 d</td><td></td></tr>
+      <tr><td><code>remove(k)</code></td><td>删除该键值对</td><td>返回旧值，没有则 null</td><td></td></tr>
+      <tr><td><code>keySet()/values()/entrySet()</code></td><td>取所有键 / 值 / 条目</td><td>集合视图</td><td></td></tr>
+      <tr><td><code>size()/isEmpty()/clear()</code></td><td>大小 / 是否空 / 清空</td><td>—</td><td></td></tr>
+    </table>
+  </div>
+
+  <h2>三、交互演示</h2>
+  <div class="box">
+    <div class="demo-grid">
+      <div>
+        <div class="inputrow">
+          <input id="ik" placeholder="key">
+          <input id="iv" placeholder="value">
+          <button class="abtn put" id="putBtn">put</button>
+          <button class="abtn" id="getBtn">get</button>
+          <button class="abtn rm" id="rmBtn">remove</button>
+          <button class="abtn" id="clearBtn">clear</button>
+        </div>
+        <table class="maptable">
+          <tr><th>key</th><th>value</th></tr>
+          <tbody id="mapbody"><tr><td colspan="2" style="color:var(--muted)">空表，先 put 几对</td></tr></tbody>
+        </table>
+        <div class="note">用已存在的 key 再 put 会覆盖 value 而不是新增行——key 唯一。两数之和里重复值就是这样被覆盖成最后下标的。</div>
+
+        <div class="scene">
+          <h3>两数之和场景：查补数</h3>
+          <div class="scenerow">
+            <button class="abtn put" id="loadBtn">加载 [2,7,11,15] 映射</button>
+            <input id="tgt" placeholder="target" style="width:70px">
+            <input id="cur" placeholder="i" style="width:55px">
+            <button class="abtn" id="findBtn">查 need</button>
+          </div>
+          <div class="out" id="sceneOut">点"加载"先建表，再填 target 和 i（如 target=9, i=0）。</div>
+        </div>
+      </div>
+      <div class="log" id="log"><span class="l">操作日志…</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const map=new Map();
+let flashKey=null;
+const $=id=>document.getElementById(id);
+function addLog(t,c){const el=$('log');if(el.children.length===1&&el.firstElementChild.classList.contains('l'))el.innerHTML='';const s=document.createElement('div');s.className=c;s.textContent=t;el.appendChild(s);el.scrollTop=el.scrollHeight;}
+function render(){
+  const body=$('mapbody');
+  if(map.size===0){body.innerHTML='<tr><td colspan="2" style="color:var(--muted)">空表</td></tr>';return;}
+  body.innerHTML=[...map.entries()].map(([k,v])=>
+    `<tr class="${k===flashKey?'flash':''}"><td>${k}</td><td>${v}</td></tr>`).join('');
+  flashKey=null;
+}
+$('putBtn').onclick=()=>{
+  const k=$('ik').value,v=$('iv').value;
+  if(k===''||v===''){addLog('put：key 和 value 都要填','l');return;}
+  const existed=map.has(k),old=map.get(k);
+  map.set(k,v);flashKey=k;
+  addLog(existed?`put(${k},${v})：覆盖旧值 ${old}`:`put(${k},${v})：新增`,existed?'lp':'lg');
+  $('ik').value='';$('iv').value='';render();
+};
+$('getBtn').onclick=()=>{
+  const k=$('ik').value;
+  if(k===''){addLog('get：先填 key','l');return;}
+  addLog(map.has(k)?`get(${k}) = ${map.get(k)}`:`get(${k})：不存在，返回 null`,'lp');
+};
+$('rmBtn').onclick=()=>{
+  const k=$('ik').value;
+  if(k===''){addLog('remove：先填 key','l');return;}
+  if(map.has(k)){const old=map.get(k);map.delete(k);addLog(`remove(${k})，删除旧值 ${old}`,'lr');}
+  else addLog(`remove(${k})：不存在`,'l');
+  render();
+};
+$('clearBtn').onclick=()=>{map.clear();addLog('clear() 已清空','l');render();};
+$('loadBtn').onclick=()=>{
+  const nums=[2,7,11,15];
+  for(let i=0;i<nums.length;i++)map.set(String(nums[i]),i);
+  addLog('已建表：值→下标','lg');render();
+};
+$('findBtn').onclick=()=>{
+  const t=+($('tgt').value),i=+($('cur').value);
+  if(Number.isNaN(t)||Number.isNaN(i)){$('sceneOut').textContent='先填 target 和 i';return;}
+  const nums=[2,7,11,15],need=t-nums[i];
+  let out=`need = ${t}-${nums[i]} = ${need}。`;
+  if(map.has(String(need))){
+    const j=map.get(String(need));
+    if(j!==i){out+=` containsKey(${need})=true，get 到下标 ${j}，${j}!=${i}，返回 [${i},${j}]。`;}
+    else{out+=` 表里有 ${need} 但下标是自己 ${i}，排除。`;}
+  }else{out+=` containsKey(${need})=false，无法配对。`;}
+  $('sceneOut').textContent=out;addLog(out,'lp');
+};
+document.querySelectorAll('input').forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')$('putBtn').onclick();}));
+render();
+</script>
+</body>
+</html>

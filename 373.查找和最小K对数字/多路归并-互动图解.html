@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>M</text></svg>">
+<title>多路归并 · 小根堆互动图解</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#30363d;
+    --fg:#e6edf3;--muted:#8b949e;
+    --blue:#58a6ff;--green:#3fb950;--orange:#d29922;--red:#f85149;--purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.55;padding:22px}
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:12.5px;margin-bottom:16px}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:7px 13px;cursor:pointer;font-size:12.5px}
+  .casebtn.active{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.1)}
+  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:14px}
+  .ctl{background:var(--panel2);border:1px solid var(--border);color:var(--fg);border-radius:7px;width:38px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .ctl:hover{background:#272e3a}
+  .ctl.play{width:auto;padding:0 16px;color:var(--green)}
+  input[type=range]{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .msg{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:8px;padding:11px 15px;margin-bottom:16px;font-size:13px;min-height:44px}
+  .box{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+  .box h2{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:13px;font-weight:600}
+  /* 序列 */
+  .seq{display:flex;align-items:center;gap:9px;margin-bottom:11px;flex-wrap:wrap}
+  .seq:last-child{margin-bottom:0}
+  .seqlabel{font-family:var(--mono);font-size:12px;font-weight:700;width:26px;color:var(--purple)}
+  .el{width:42px;height:42px;border-radius:8px;background:var(--panel2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:14px;transition:all .25s}
+  .el.done{opacity:.35;border-style:dashed}
+  .el.head{border-color:var(--blue);background:rgba(88,166,255,.12);color:var(--blue)}
+  .el.take{border-color:var(--red);box-shadow:0 0 0 2px var(--red);color:var(--red)}
+  .el.add{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange);color:var(--orange)}
+  .headtag{font-family:var(--mono);font-size:10px;color:var(--blue);margin-left:2px}
+  /* 堆树 */
+  .heaptree{position:relative;height:210px}
+  .heaptree svg{position:absolute;inset:0;width:100%;height:100%}
+  .heaptree line{stroke:var(--border);stroke-width:1.6}
+  .hnode{position:absolute;transform:translate(-50%,-50%);min-width:52px;height:48px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--blue);color:var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);line-height:1.15;z-index:2;transition:all .3s;padding:0 6px}
+  .hnode .hv{font-size:13px;font-weight:700}
+  .hnode .hs{font-size:9.5px;color:var(--muted)}
+  .hnode.t0{border-color:var(--green);color:var(--green)}
+  .hnode.hi{border-color:var(--orange);box-shadow:0 0 0 3px rgba(210,153,34,.25)}
+  .hnode.cmp{border-color:var(--purple)}
+  /* 输出 */
+  .out{display:flex;gap:7px;flex-wrap:wrap;min-height:42px;align-items:center}
+  .ochip{min-width:42px;height:42px;border-radius:8px;background:rgba(63,185,80,.12);border:1.5px solid var(--green);color:var(--green);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700}
+  .empty{color:var(--muted);font-family:var(--mono);font-size:11px}
+  .codebox{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:auto}
+  .codebox h2{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
+  pre{font-family:var(--mono);font-size:12.5px;line-height:1.85}
+  .ln{display:block;padding:0 10px;border-radius:5px;white-space:pre}
+  .ln.on{background:rgba(88,166,255,.13)}
+  .kw{color:#ff7b72}
+  @media(max-width:700px){body{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>多路归并 · 小根堆互动图解</h1>
+  <div class="sub">每路有序序列只派队首一个代表进堆；取走堆顶（全局最小），就补该路下一个，直到全部取完。</div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="controls">
+    <button class="ctl" id="reset">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="ctl play" id="play">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span id="playtxt">播放</span>
+    </button>
+    <button class="ctl" id="prev">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="ctl" id="next">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
+    <input type="range" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="box">
+    <h2>有序序列（蓝框=该路队首代表，在堆里）</h2>
+    <div id="seqs"></div>
+  </div>
+
+  <div class="box">
+    <h2>小根堆（节点下：来自哪路）</h2>
+    <div class="heaptree">
+      <svg id="heaplines" viewBox="0 0 1000 210" preserveAspectRatio="none"></svg>
+      <div id="heapnodes"></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>归并输出（全局有序）</h2>
+    <div class="out" id="out"><span class="empty">暂无</span></div>
+  </div>
+
+  <div class="codebox">
+    <h2>核心逻辑（通用）</h2>
+    <pre id="code"></pre>
+  </div>
+</div>
+
+<script>
+const CASES=[
+  {name:'3 路',seqs:[[1,4,7],[2,5,8],[3,6,9]]},
+  {name:'4 路交错',seqs:[[1,3,8],[2,6,9],[4,5,10],[7,11,12]]}
+];
+
+function buildSteps(seqs){
+  const steps=[];
+  let heap=[];let ptr=seqs.map(()=>0);let out=[];
+  const better=(a,b)=>a.v<b.v;
+  const push=s=>steps.push(Object.assign({heap:heap.map(x=>Object.assign({},x)),ptr:ptr.slice(),out:out.slice(),hi:-1,cmp:-1,take:null,line:0},s));
+  function offer(node,line){
+    heap.push(node);
+    push({msg:`第 ${node.s} 路队首 ${node.v} 加到堆末尾`,hi:heap.length-1,line});
+    let ci=heap.length-1;
+    while(ci>0){
+      const p=(ci-1)>>1;
+      if(better(heap[ci],heap[p])){
+        push({msg:`上浮：${heap[ci].v} < 父 ${heap[p].v}，交换`,hi:ci,cmp:p,line});
+        [heap[ci],heap[p]]=[heap[p],heap[ci]];ci=p;
+      }else break;
+    }
+  }
+  // 初始化：每路队首
+  for(let s=0;s<seqs.length;s++){offer({v:seqs[s][0],s},1);}
+  // 归并直到堆空
+  while(heap.length>0){
+    const top=heap[0];
+    push({msg:`堆顶 ${top.v}（第${top.s}路）全局最小，poll`,take:Object.assign({},top),hi:0,line:3});
+    const last=heap.pop();out.push(top.v);
+    if(heap.length>0){
+      heap[0]=last;let p=0;
+      while(true){
+        const l=2*p+1,r=2*p+2;let m=p;
+        if(l<heap.length&&better(heap[l],heap[m]))m=l;
+        if(r<heap.length&&better(heap[r],heap[m]))m=r;
+        if(m===p)break;
+        push({msg:`下沉：与更小的子交换`,hi:p,cmp:m,line:3});
+        [heap[p],heap[m]]=[heap[m],heap[p]];p=m;
+      }
+    }
+    const s=top.s;ptr[s]++;
+    if(ptr[s]<seqs[s].length){offer({v:seqs[s][ptr[s]],s},6);}
+    else push({msg:`第 ${s} 路已取完，不再补`,line:5});
+  }
+  push({msg:`全部取完，输出即全局有序`,line:8});
+  return steps;
+}
+
+let curCase=0,steps=[],posIdx=0,timer=null;
+const $=id=>document.getElementById(id);
+
+function heapNodePos(i){
+  const d=Math.floor(Math.log2(i+1)),ls=Math.pow(2,d)-1,lc=Math.pow(2,d),pos=i-ls;
+  return{x:((pos+0.5)/lc)*1000,y:d*60+26};
+}
+
+function render(){
+  const cs=CASES[curCase],s=steps[posIdx];
+  $('msg').textContent=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  // 序列
+  let sh='';
+  cs.seqs.forEach((arr,si)=>{
+    sh+=`<div class="seq"><span class="seqlabel">${String.fromCharCode(65+si)}</span>`;
+    arr.forEach((v,k)=>{
+      let cls='el';
+      if(k<s.ptr[si])cls+=' done';
+      if(k===s.ptr[si])cls+=' head';
+      if(s.take&&s.take.s===si&&k===s.ptr[si])cls+=' take';
+      if(s.hi>=0&&s.heap[s.hi]&&s.heap[s.hi].s===si&&k===s.ptr[si])cls+=' add';
+      sh+=`<span class="${cls}">${v}</span>`;
+    });
+    sh+=`<span class="headtag">队首→</span></div>`;
+  });
+  $('seqs').innerHTML=sh;
+  // 堆树
+  let hlines='',hnodes='';
+  s.heap.forEach((node,idx)=>{
+    const P=heapNodePos(idx);
+    if(idx>0){const Q=heapNodePos((idx-1)>>1);hlines+=`<line x1="${Q.x}" y1="${Q.y}" x2="${P.x}" y2="${P.y}"/>`;}
+    let cls='hnode';
+    if(idx===0)cls+=' t0';
+    if(idx===s.hi)cls+=' hi';
+    if(idx===s.cmp)cls+=' cmp';
+    hnodes+=`<div class="${cls}" style="left:${P.x/10}%;top:${P.y}px"><span class="hv">${node.v}</span><span class="hs">${String.fromCharCode(65+node.s)}路</span></div>`;
+  });
+  $('heaplines').innerHTML=hlines;
+  $('heapnodes').innerHTML=hnodes||'<div class="empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">堆为空</div>';
+  // 输出
+  $('out').innerHTML=s.out.length?s.out.map(v=>`<span class="ochip">${v}</span>`).join(''):'<span class="empty">暂无</span>';
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+
+const CODE=[
+  '<span class="kw">// 每路队首先入堆</span>',
+  '<span class="kw">for</span> (每一路 s) heap.offer({v:队首, s});',
+  '<span class="kw">while</span> (!heap.isEmpty()) {',
+  '    Node t = heap.poll();        <span class="kw">// 取全局最小</span>',
+  '    out.add(t.v);',
+  '    <span class="kw">if</span> (t.s 还有下一个)',
+  '        heap.offer({v:该路下一个, s:t.s});',
+  '}',
+  '<span class="kw">return</span> out;'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;steps=buildSteps(CASES[i].seqs);posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">${c.name}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i);
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},750);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

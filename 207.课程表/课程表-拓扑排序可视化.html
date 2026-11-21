@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>207. 课程表 · 拓扑排序可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='%2358a6ff'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.6;}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 26px 40px;}
+h1{font-size:27px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:12px;background:rgba(227,179,65,.15);color:var(--orange);}
+.subtitle{color:var(--muted);margin:0 0 22px;font-size:14.5px;}
+.info-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:20px;}
+.info-panel p{margin:0 0 14px;color:var(--muted);font-size:14px;}
+.info-panel b{color:var(--text);font-weight:600;}
+.info-panel .hl-b{color:var(--blue);font-weight:600;}
+.info-panel .hl-o{color:var(--orange);font-weight:600;}
+.info-panel .hl-g{color:var(--green);font-weight:600;}
+.info-panel .hl-r{color:var(--red);font-weight:600;}
+#cases{display:flex;flex-wrap:wrap;gap:8px;}
+.case-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:7px 13px;font-size:13.5px;cursor:pointer;transition:border-color .15s,background .15s;}
+.case-btn:hover{border-color:var(--blue);}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);}
+.main-grid{display:grid;grid-template-columns:minmax(0,1fr) 436px;gap:20px;}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.card-head{padding:11px 16px;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--muted);
+  font-weight:600;letter-spacing:.3px;display:flex;align-items:center;gap:8px;}
+#stage{position:relative;}
+svg.graph{width:100%;height:auto;display:block;}
+.gcircle{fill:var(--panel2);stroke:var(--border);stroke-width:2;transition:fill .18s,stroke .18s;}
+.gtext{fill:var(--muted);font-size:14px;font-weight:600;transition:fill .18s;}
+.indeg-t{fill:var(--muted);font-size:11.5px;font-family:Consolas,monospace;}
+g.ready .gcircle{stroke:var(--orange);fill:rgba(227,179,65,.2);} g.ready .gtext{fill:var(--orange);}
+g.active .gcircle{stroke:var(--blue);fill:rgba(88,166,255,.26);} g.active .gtext{fill:var(--blue);}
+g.done .gcircle{stroke:var(--green);fill:rgba(63,185,80,.16);} g.done .gtext{fill:var(--green);}
+g.stuck .gcircle{stroke:var(--red);fill:rgba(248,81,73,.18);} g.stuck .gtext{fill:var(--red);}
+.gpath{fill:none;stroke:var(--blue);stroke-width:2.2;transition:stroke .18s,stroke-dasharray .18s,opacity .18s;}
+.gpath.removing{stroke:var(--orange);stroke-width:3;}
+.gpath.removed{stroke:var(--border);stroke-dasharray:4 4;opacity:.55;}
+#queueBox{padding:10px 24px 14px;border-top:1px solid var(--border);min-height:52px;}
+.qlabel{font-size:12px;color:var(--muted);margin-right:6px;}
+.qchip{font-size:11.5px;background:var(--panel2);border:1px solid var(--border);border-radius:5px;
+  padding:2px 8px;font-family:Consolas,monospace;color:var(--orange);margin:3px 4px 0 0;display:inline-block;}
+.legend{display:flex;gap:12px;font-size:11.5px;color:var(--muted);align-items:center;flex-wrap:wrap;padding:0 24px 12px;}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:-1px;}
+.dot.o{background:var(--orange);} .dot.b{background:var(--blue);} .dot.g{background:var(--green);} .dot.r{background:var(--red);}
+.pill{position:absolute;font-size:13px;color:var(--muted);font-family:Consolas,monospace;z-index:4;}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 16px;border-top:1px solid var(--border);}
+.stat{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;min-width:0;}
+.stat .k{font-size:12px;color:var(--muted);margin-bottom:3px;}
+.stat .val{font-size:13.5px;font-weight:600;font-family:Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.val.blue{color:var(--blue);} .val.orange{color:var(--orange);} .val.purple{color:var(--purple);} .val.green{color:var(--green);}
+.controls{display:flex;align-items:center;gap:10px;padding:13px 16px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.ctrl-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;
+  width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ctrl-btn:hover:not(:disabled){border-color:var(--blue);}
+.ctrl-btn:disabled{opacity:.4;cursor:not-allowed;}
+.ctrl-btn.wide{width:auto;padding:0 16px;gap:7px;font-size:14px;}
+.ctrl-btn svg{width:18px;height:18px;fill:var(--text);}
+#slider{flex:1;min-width:120px;height:5px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:3px;outline:none;}
+#slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--blue);cursor:pointer;}
+#pcount{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:56px;text-align:center;}
+#speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 8px;font-size:13.5px;cursor:pointer;}
+.kbd-hint{padding:0 16px 13px;font-size:12.5px;color:var(--muted);}
+#codeCard{display:flex;flex-direction:column;}
+.code-wrap{flex:1;overflow:auto;padding:14px 0;max-height:470px;}
+.code-inner{display:flex;min-width:max-content;}
+.line-nums{padding:0 12px 0 16px;text-align:right;color:var(--muted);font-size:13px;line-height:1.7;
+  font-family:Consolas,monospace;user-select:none;border-right:1px solid var(--border);}
+.code-lines{padding:0 16px 0 12px;font-family:Consolas,monospace;font-size:13px;line-height:1.7;min-width:0;}
+.code-line{white-space:pre;border-radius:4px;padding:0 6px;margin:0 -6px;}
+.code-line.hl{background:rgba(88,166,255,.13);box-shadow:inset 3px 0 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;} .t-cmt{color:#8b949e;}
+#msg{padding:11px 16px;border-top:1px solid var(--border);font-size:13.5px;color:var(--text);background:var(--panel2);min-height:44px;}
+@media (max-width:980px){.main-grid{grid-template-columns:1fr;}#codeCard{max-height:520px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>207. 课程表 <span class="badge">中等</span></h1>
+  <p class="subtitle">把先修关系建成有向图，用 Kahn 拓扑排序：入度 0 的课先修，逐步删边，能删完则可完成，剩环则不可能</p>
+
+  <div class="info-panel">
+    <p>邻接表 <span class="hl-b">res</span>：pre 指向它的后继 x；<span class="hl-o">入度 count</span> 记录每门课有多少先修。先把所有入度 0 的课入队，每次取出一门，沿它的出边把后继<span class="hl-b">入度减 1</span>（删边），后继入度变 0 就入队。每入队一门 fish 加 1，<span class="hl-g">fish 等于课程数</span>说明能学完；环上的课入度永远 &gt; 0，返回 <span class="hl-r">false</span>。</p>
+    <div id="cases"></div>
+  </div>
+
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-head">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="var(--muted)"><path d="M12 3v10m0 0l-4-4m4 4l4-4M5 19h14"/></svg>
+        有向图与 Kahn 删边
+      </div>
+      <div id="stage">
+        <div class="pill" style="left:18px;top:14px;" id="fishPill">已修 fish = <b style="color:var(--green)">0</b></div>
+        <div class="pill" style="right:18px;top:14px;" id="dimPill"></div>
+        <svg class="graph" viewBox="0 0 460 300" id="graphSvg"></svg>
+        <div class="legend">
+          <span><span class="dot o"></span>入度0/队列</span>
+          <span><span class="dot b"></span>当前</span>
+          <span><span class="dot g"></span>已修</span>
+          <span><span class="dot r"></span>环上卡死</span>
+        </div>
+        <div id="queueBox"><span class="qlabel">队列：</span><span id="queueChips"></span></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="k">已修 fish</div><div class="val green" id="i-fish">0</div></div>
+        <div class="stat"><div class="k">当前节点</div><div class="val blue" id="i-active">&mdash;</div></div>
+        <div class="stat"><div class="k">队列长度</div><div class="val orange" id="i-qlen">0</div></div>
+        <div class="stat"><div class="k">课程总数</div><div class="val purple" id="i-total">0</div></div>
+      </div>
+      <div class="controls">
+        <button class="ctrl-btn wide" id="btnPlay"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playLabel">播放</span></button>
+        <button class="ctrl-btn" id="btnPrev" title="上一步（←）"><svg viewBox="0 0 24 24"><path d="M16 6l-8 6 8 6z"/></svg></button>
+        <button class="ctrl-btn" id="btnNext" title="下一步（→）"><svg viewBox="0 0 24 24"><path d="M8 6l-8 6-8 6z"/></svg></button>
+        <button class="ctrl-btn" id="btnReset" title="重置（Home）"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+        <input type="range" id="slider" min="0" value="0">
+        <span id="pcount">1 / 1</span>
+        <select id="speed">
+          <option value="1000">0.8x</option>
+          <option value="700" selected>1x</option>
+          <option value="420">1.5x</option>
+          <option value="240">2.5x</option>
+        </select>
+      </div>
+      <div class="kbd-hint">键盘：← / → 单步 · 空格 播放暂停 · Home / End 首末</div>
+    </div>
+
+    <div class="card" id="codeCard">
+      <div class="card-head">Solution.java</div>
+      <div class="code-wrap">
+        <div class="code-inner">
+          <div class="line-nums" id="lineNums"></div>
+          <div class="code-lines" id="codeLines"></div>
+        </div>
+      </div>
+      <div id="msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 用例（含节点坐标）=====
+var CASES = [
+  { n: 2, pre: [[1, 0]], pos: [[120, 150], [330, 150]], expect: true },
+  { n: 2, pre: [[1, 0], [0, 1]], pos: [[130, 150], [330, 150]], expect: false },
+  { n: 4, pre: [[1, 0], [2, 1], [3, 2]], pos: [[70, 150], [185, 150], [300, 150], [415, 150]], expect: true },
+  { n: 4, pre: [[1, 0], [2, 0], [3, 1], [3, 2]], pos: [[230, 50], [110, 150], [350, 150], [230, 245]], expect: true },
+  { n: 4, pre: [[1, 0], [2, 1], [0, 2]], pos: [[150, 90], [90, 220], [230, 220], [380, 150]], expect: false },
+  { n: 3, pre: [], pos: [[110, 150], [230, 150], [350, 150]], expect: true },
+  { n: 6, pre: [[1, 0], [2, 0], [3, 1], [3, 2], [4, 3], [5, 3]],
+    pos: [[230, 40], [130, 110], [330, 110], [230, 180], [130, 250], [330, 250]], expect: true },
+  { n: 1, pre: [], pos: [[230, 150]], expect: true }
+];
+
+// ===== 代码（35 行）=====
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-id">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-type">boolean</span> <span class="t-fn">canFinish</span>(<span class="t-type">int</span> <span class="t-id">numCourses</span>, <span class="t-type">int</span>[][] <span class="t-id">prerequisites</span>) {',
+  '        <span class="t-type">List</span>&lt;<span class="t-type">List</span>&lt;<span class="t-type">Integer</span>&gt;&gt; <span class="t-id">res</span> = <span class="t-kw">new</span> <span class="t-type">ArrayList</span>&lt;&gt;();',
+  '        <span class="t-kw">for</span>(<span class="t-type">int</span> <span class="t-id">i</span> = <span class="t-num">0</span>;<span class="t-id">i</span>&lt;<span class="t-id">numCourses</span>; <span class="t-id">i</span>){',
+  '            <span class="t-id">res</span>.add(<span class="t-kw">new</span> <span class="t-type">ArrayList</span>&lt;&gt;());',
+  '        }',
+  '        <span class="t-type">int</span>[] <span class="t-id">count</span> = <span class="t-kw">new</span> <span class="t-type">int</span>[<span class="t-id">numCourses</span>];',
+  '        <span class="t-kw">for</span>(<span class="t-type">int</span>[] <span class="t-id">c</span> : <span class="t-id">prerequisites</span>){',
+  '            <span class="t-type">int</span> <span class="t-id">x</span> = <span class="t-id">c</span>[<span class="t-num">0</span>];',
+  '            <span class="t-type">int</span> <span class="t-id">pre</span> = <span class="t-id">c</span>[<span class="t-num">1</span>];',
+  '            <span class="t-id">res</span>.get(<span class="t-id">pre</span>).add(<span class="t-id">x</span>);',
+  '            <span class="t-id">count</span>[<span class="t-id">x</span>]++;',
+  '        }',
+  '        <span class="t-type">int</span> <span class="t-id">fish</span> = <span class="t-num">0</span>;',
+  '        <span class="t-type">Deque</span>&lt;<span class="t-type">Integer</span>&gt; <span class="t-id">pq</span> = <span class="t-kw">new</span> <span class="t-type">LinkedList</span>&lt;&gt;();',
+  '        <span class="t-kw">for</span>(<span class="t-id">i</span> =<span class="t-num">0</span>;<span class="t-id">i</span> &lt; <span class="t-id">numCourses</span>;<span class="t-id">i</span>){',
+  '            <span class="t-kw">if</span>(<span class="t-id">count</span>[<span class="t-id">i</span>] == <span class="t-num">0</span>){',
+  '                <span class="t-id">pq</span>.offer(<span class="t-id">i</span>);',
+  '                <span class="t-id">fish</span>++;',
+  '            }',
+  '        }',
+  '        <span class="t-kw">while</span>(!<span class="t-id">pq</span>.isEmpty()){',
+  '            <span class="t-type">int</span> <span class="t-id">z</span> = <span class="t-id">pq</span>.poll();',
+  '            <span class="t-type">List</span>&lt;<span class="t-type">Integer</span>&gt; <span class="t-id">q</span> = <span class="t-id">res</span>.get(<span class="t-id">z</span>);',
+  '            <span class="t-kw">for</span>(<span class="t-type">int</span> <span class="t-id">a</span> : <span class="t-id">q</span>){',
+  '                <span class="t-id">count</span>[<span class="t-id">a</span>]--;',
+  '                <span class="t-kw">if</span>(<span class="t-id">count</span>[<span class="t-id">a</span>] == <span class="t-num">0</span>){',
+  '                    <span class="t-id">fish</span>++;',
+  '                    <span class="t-id">pq</span>.offer(<span class="t-id">a</span>);',
+  '                }',
+  '            }',
+  '        }',
+  '        <span class="t-kw">return</span> <span class="t-id">fish</span> == <span class="t-id">numCourses</span> ? <span class="t-bool">true</span>:<span class="t-bool">false</span>;',
+  '    }',
+  '}'
+];
+
+// ===== 帧生成（snap 独立快照）=====
+var curCase2 = null;
+function buildSteps(cfg) {
+  var num = cfg.n, adj = [];
+  for (var i = 0; i < num; i++) adj.push([]);
+  var indeg = new Array(num).fill(0);
+  var steps = [], active = null, queue = [], fish = 0,
+      removed = {}, doneNodes = {};
+  function snap(phase, line, extra) {
+    extra = extra || {};
+    steps.push({
+      phase: phase, line: line, active: active,
+      indeg: indeg.slice(), queue: queue.slice(), fish: fish,
+      removed: Object.assign({}, removed),
+      doneNodes: Object.assign({}, doneNodes),
+      edge: extra.edge === undefined ? null : extra.edge
+    });
+  }
+  snap('start', 14);
+  cfg.pre.forEach(function (c) {
+    var x = c[0], p = c[1];
+    adj[p].push(x); indeg[x]++;
+    active = x;
+    snap('build', 12, { edge: p + '-' + x });
+  });
+  active = null;
+  for (i = 0; i < num; i++) {
+    if (indeg[i] === 0) {
+      queue.push(i); fish++;
+      active = i;
+      snap('init', 19);
+    }
+  }
+  active = null;
+  while (queue.length) {
+    var z = queue.shift(); active = z;
+    doneNodes[z] = true;
+    snap('poll', 23);
+    adj[z].forEach(function (a) {
+      indeg[a]--;
+      removed[z + '-' + a] = true;
+      active = a;
+      snap('dec', 26, { edge: z + '-' + a });
+      if (indeg[a] === 0) {
+        fish++; queue.push(a);
+        active = a;
+        snap('zero', 29);
+      }
+    });
+  }
+  active = null;
+  snap('done', 33);
+  return steps;
+}
+
+function makeMsg(fr, cfg) {
+  switch (fr.phase) {
+    case 'start': return '开始，先根据先修数组建邻接表与入度';
+    case 'build':
+      var parts = fr.edge.split('-');
+      return '加边 ' + parts[0] + ' → ' + parts[1] + '，课程 ' + parts[1] + ' 入度变为 ' + fr.indeg[Number(parts[1])];
+    case 'init':
+      return '课程 ' + fr.active + ' 入度为 0，入队，fish=' + fr.fish;
+    case 'poll':
+      return '取出课程 ' + fr.active + '，处理它的所有出边';
+    case 'dec':
+      var p2 = fr.edge.split('-');
+      return '删除边 ' + p2[0] + ' → ' + p2[1] + '，课程 ' + p2[1] + ' 入度减到 ' + fr.indeg[Number(p2[1])];
+    case 'zero':
+      return '课程 ' + fr.active + ' 入度变 0，入队，fish=' + fr.fish;
+    case 'done':
+      return fr.fish === cfg.n ? '全部 ' + cfg.n + ' 门可修，返回 true' : '只有 ' + fr.fish + ' 门能修，环上课程卡死，返回 false';
+  }
+}
+
+// ===== SVG 构建与几何 =====
+var svg = document.getElementById('graphSvg');
+var nodeGroups = {}, edgeEls = {};
+var SVGNS = 'http://www.w3.org/2000/svg';
+function edgeGeom(p1, p2, bend) {
+  var dx = p2[0] - p1[0], dy = p2[1] - p1[1], len = Math.hypot(dx, dy),
+      ux = dx / len, uy = dy / len, r = 23;
+  var sx = p1[0] + ux * r, sy = p1[1] + uy * r,
+      tx = p2[0] - ux * r, ty = p2[1] - uy * r;
+  if (bend !== 0) {
+    var mx = (sx + tx) / 2, my = (sy + ty) / 2,
+      px = -uy, py = ux;
+    // 让 bend 在屏幕方向上一致：从右往左（或从上往下）时翻转法向
+    if (ux < 0 || (Math.abs(ux) < 0.01 && uy > 0)) { px = -px; py = -py; }
+    var cx = mx + px * 38 * bend, cy = my + py * 38 * bend;
+    return 'M' + sx + ' ' + sy + ' Q' + cx + ' ' + cy + ' ' + tx + ' ' + ty;
+  }
+  return 'M' + sx + ' ' + sy + ' L' + tx + ' ' + ty;
+}
+function hasReverse(cfg, f, t) {
+  return cfg.pre.some(function (c) { return c[0] === f && c[1] === t; });
+}
+
+function setupGraph(cfg) {
+  svg.innerHTML =
+    '<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">' +
+    '<path d="M0,0 L8,4.5 L0,9 z" fill="var(--blue)"/></marker>' +
+    '<marker id="arrow-o" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">' +
+    '<path d="M0,0 L8,4.5 L0,9 z" fill="var(--orange)"/></marker></defs>';
+  nodeGroups = {}; edgeEls = {};
+  // 边
+  cfg.pre.forEach(function (c) {
+    var f = c[1], t = c[0], bend = 0;
+    if (hasReverse(cfg, f, t)) {
+      if (cfg.pos[f][0] !== cfg.pos[t][0]) bend = (cfg.pos[f][0] < cfg.pos[t][0]) ? -1 : 1;
+      else bend = (cfg.pos[f][1] < cfg.pos[t][1]) ? -1 : 1;
+    }
+    var path = document.createElementNS(SVGNS, 'path');
+    path.setAttribute('d', edgeGeom(cfg.pos[f], cfg.pos[t], bend));
+    path.setAttribute('class', 'gpath');
+    path.setAttribute('marker-end', 'url(#arrow)');
+    path.id = 'ep-' + f + '-' + t;
+    svg.appendChild(path);
+    edgeEls[f + '-' + t] = path;
+  });
+  // 节点
+  for (var id = 0; id < cfg.n; id++) {
+    var p = cfg.pos[id], g = document.createElementNS(SVGNS, 'g');
+    g.id = 'ng-' + id;
+    var c = document.createElementNS(SVGNS, 'circle');
+    c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]); c.setAttribute('r', 22);
+    c.setAttribute('class', 'gcircle');
+    var t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', p[0]); t.setAttribute('y', p[1] + 5);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('class', 'gtext');
+    t.textContent = id;
+    var it = document.createElementNS(SVGNS, 'text');
+    it.setAttribute('x', p[0]); it.setAttribute('y', p[1] + 40);
+    it.setAttribute('text-anchor', 'middle'); it.setAttribute('class', 'indeg-t');
+    it.id = 'indeg-' + id;
+    g.appendChild(c); g.appendChild(t); g.appendChild(it);
+    svg.appendChild(g);
+    nodeGroups[id] = g;
+  }
+}
+
+// ===== 运行状态 =====
+var frameList = [], cur = 0, timer = null, playing = false, curCaseIdx = 0;
+function renderFrame() {
+  var fr = frameList[cur], cfg = CASES[curCaseIdx];
+  // 边
+  Object.keys(edgeEls).forEach(function (k) {
+    var el = edgeEls[k], cls = 'gpath';
+    if (fr.edge === k && (fr.phase === 'dec')) {
+      cls = 'gpath removing'; el.setAttribute('marker-end', 'url(#arrow-o)');
+    } else if (fr.removed[k]) {
+      cls = 'gpath removed'; el.removeAttribute('marker-end');
+    } else {
+      el.setAttribute('marker-end', 'url(#arrow)');
+    }
+    el.setAttribute('class', cls);
+  });
+  // 节点
+  Object.keys(nodeGroups).forEach(function (key) {
+    var id = Number(key), g = nodeGroups[id], cls = '';
+    if (fr.doneNodes[id] && !(fr.active === id)) cls = 'done';
+    if (fr.active === id) cls = 'active';
+    else if (!fr.doneNodes[id] && fr.indeg[id] === 0) cls = 'ready';
+    else if (!fr.doneNodes[id] && fr.phase === 'done') cls = 'stuck';
+    g.setAttribute('class', cls);
+    document.getElementById('indeg-' + id).textContent = '入度 ' + fr.indeg[id];
+  });
+  document.getElementById('queueChips').innerHTML = fr.queue.map(function (q) {
+    return '<span class="qchip">' + q + '</span>';
+  }).join('');
+  document.getElementById('fishPill').innerHTML =
+    '已修 fish = <b style="color:var(--green)">' + fr.fish + '</b>';
+  document.getElementById('dimPill').textContent = cfg.n + ' 门课';
+  document.getElementById('i-fish').textContent = fr.fish;
+  document.getElementById('i-active').textContent = fr.active === null ? '—' : fr.active;
+  document.getElementById('i-qlen').textContent = fr.queue.length;
+  document.getElementById('i-total').textContent = cfg.n;
+  document.querySelectorAll('.code-line').forEach(function (l) { l.classList.remove('hl'); });
+  var hl = document.getElementById('cl-' + fr.line);
+  if (hl) hl.classList.add('hl');
+  document.getElementById('msg').innerHTML = makeMsg(fr, cfg);
+  document.getElementById('pcount').textContent = (cur + 1) + ' / ' + frameList.length;
+  var slider = document.getElementById('slider');
+  slider.max = frameList.length - 1; slider.value = cur;
+  document.getElementById('btnPrev').disabled = (cur === 0);
+  document.getElementById('btnNext').disabled = (cur === frameList.length - 1);
+}
+function compute(idx) { frameList = buildSteps(CASES[idx]); }
+
+// ===== 播放控制 =====
+function setPlaying(on) {
+  playing = on;
+  document.getElementById('playLabel').textContent = on ? '暂停' : '播放';
+  document.querySelector('#btnPlay svg').innerHTML = on
+    ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+}
+function play() {
+  setPlaying(true);
+  timer = setInterval(function () {
+    if (cur >= frameList.length - 1) { stop(); return; }
+    cur++; renderFrame();
+  }, Number(document.getElementById('speed').value));
+}
+function stop() {
+  setPlaying(false);
+  if (timer) { clearInterval(timer); timer = null; }
+}
+function nextStep() { if (cur < frameList.length - 1) { cur++; renderFrame(); } }
+function prevStep() { if (cur > 0) { cur--; renderFrame(); } }
+function switchCase(idx) {
+  stop(); curCaseIdx = idx; cur = 0;
+  setupGraph(CASES[idx]); compute(idx); renderFrame();
+  document.querySelectorAll('.case-btn').forEach(function (b, i) {
+    b.classList.toggle('active', i === idx);
+  });
+}
+function renderCode() {
+  document.getElementById('lineNums').innerHTML =
+    CODE.map(function (_, i) { return i + 1; }).join('<br>');
+  document.getElementById('codeLines').innerHTML = CODE.map(function (c, i) {
+    return '<div class="code-line" id="cl-' + (i + 1) + '">' + c + '</div>';
+  }).join('');
+}
+function renderCases() {
+  var box = document.getElementById('cases');
+  CASES.forEach(function (c, i) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (i === 0 ? ' active' : '');
+    b.textContent = '用例 ' + (i + 1) + '（' + c.n + '门）';
+    b.onclick = function () { switchCase(i); };
+    box.appendChild(b);
+  });
+}
+document.getElementById('btnPlay').onclick = function () { playing ? stop() : play(); };
+document.getElementById('btnNext').onclick = nextStep;
+document.getElementById('btnPrev').onclick = prevStep;
+document.getElementById('btnReset').onclick = function () { stop(); cur = 0; renderFrame(); };
+document.getElementById('slider').addEventListener('input', function (e) {
+  stop(); cur = Number(e.target.value); renderFrame();
+});
+document.getElementById('speed').onchange = function () { if (playing) { stop(); play(); } };
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); nextStep(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); prevStep(); }
+  else if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
+  else if (e.key === 'Home') { e.preventDefault(); stop(); cur = 0; renderFrame(); }
+  else if (e.key === 'End') { e.preventDefault(); stop(); cur = frameList.length - 1; renderFrame(); }
+});
+
+renderCode();
+renderCases();
+setupGraph(CASES[0]);
+compute(0);
+renderFrame();
+</script>
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>41. 缺失的第一个正数 · HashSet 可视化</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230d1117'/%3E%3Cpath d='M5 12h14M13 6l6 6-6 6' stroke='%2358a6ff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+  --orange:#e3b341;--purple:#bc8cff;--red:#f85149
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;line-height:1.6;padding:28px 20px 60px}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tag{font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--red);color:var(--red)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:18px}
+.intro{border-left:3px solid var(--blue)}
+.intro p{font-size:14.5px}
+.intro b{color:var(--blue)}
+.cases{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.case-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+.case-btn:hover{border-color:var(--blue);color:var(--text)}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+.phases{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:18px}
+.ph-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;transition:.2s;min-width:0;position:relative}
+.ph-num{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:1px}
+.ph-name{font-size:14.5px;font-weight:600;margin-top:4px}
+.ph-desc{font-size:12.5px;color:var(--muted);margin-top:4px}
+.ph-card.p1{border-color:var(--blue)} .ph-card.p1 .ph-num{color:var(--blue)}
+.ph-card.p2{border-color:var(--purple)} .ph-card.p2 .ph-num{color:var(--purple)}
+.ph-card.on{box-shadow:0 0 0 1px currentColor}
+.ph-card.done{opacity:.6}
+.ph-card .tick{position:absolute;top:10px;right:10px;width:16px;height:16px;display:none}
+.ph-card.done .tick{display:block}
+
+.viz-title{font-size:15px;font-weight:600;margin-bottom:14px}
+.arr-row{display:flex;align-items:center;gap:14px;padding:8px 0;flex-wrap:wrap}
+.arr-label{width:58px;flex:0 0 auto;font-size:13px;font-weight:700;color:var(--muted);font-family:Consolas,monospace;text-align:right}
+.arr-cells{display:flex;gap:8px;flex:1;flex-wrap:wrap;min-width:0}
+.cell{position:relative;width:62px;flex:0 0 auto}
+.cell .box{width:60px;height:50px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;font-family:Consolas,monospace;transition:all .2s}
+.cell .ix{font-size:10.5px;color:var(--muted);text-align:center;margin-top:4px;font-family:Consolas,monospace}
+.cell.cur .box{border:2px solid var(--blue);background:rgba(88,166,255,.18);animation:pop .5s ease}
+.cell.dup .box{border-color:var(--orange);background:rgba(227,179,65,.12)}
+@keyframes pop{0%{transform:scale(1.12)}100%{transform:scale(1)}}
+
+.set-box{min-height:60px;border:1px dashed var(--border);border-radius:8px;padding:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.set-empty{color:#48505c;font-size:13px}
+.set-item{width:56px;height:46px;border:1px solid var(--blue);border-radius:8px;background:rgba(88,166,255,.14);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;font-family:Consolas,monospace;animation:pop .4s ease}
+.set-item.dupflash{border-color:var(--orange);background:rgba(227,179,65,.16)}
+
+.cand-wrap{display:flex;gap:8px;flex-wrap:wrap}
+.cand{width:60px;flex:0 0 auto}
+.cand .box{width:58px;height:48px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;font-family:Consolas,monospace;transition:all .2s}
+.cand .st{font-size:11px;text-align:center;margin-top:4px;color:var(--muted)}
+.cand.hit .box{border-color:var(--green);background:rgba(63,185,80,.14)}
+.cand.hit .st{color:var(--green)}
+.cand.looking .box{border:2px solid var(--purple);background:rgba(188,140,255,.18)}
+.cand.looking .st{color:var(--purple)}
+.cand.miss .box{border:2px solid var(--red);background:rgba(248,81,73,.18)}
+.cand.miss .st{color:var(--red)}
+.cand.dim{opacity:.35}
+
+.info{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px}
+.info-card{flex:1;min-width:140px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px 14px}
+.info-card .k{font-size:12px;color:var(--muted)}
+.info-card .v{font-size:15px;font-weight:600;margin-top:3px;font-family:Consolas,monospace}
+.msg{margin-top:14px;font-size:14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.msg .act{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;margin-right:8px;background:rgba(88,166,255,.16);color:var(--blue)}
+.msg .act.purple{background:rgba(188,140,255,.16);color:var(--purple)}
+.msg .act.red{background:rgba(248,81,73,.16);color:var(--red)}
+
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:18px}
+.code-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border)}
+.dot{width:12px;height:12px;border-radius:50%}
+.d1{background:var(--red)}.d2{background:var(--orange)}.d3{background:var(--green)}
+.code-fname{margin-left:8px;font-size:13px;color:var(--muted)}
+.code-body{padding:12px 0;overflow:auto;max-height:420px}
+.code-line{display:flex;align-items:flex-start;padding:1.5px 14px;font-family:Consolas,monospace;font-size:13.5px;white-space:pre}
+.code-line .ln{width:26px;text-align:right;color:#48505c;margin-right:14px;flex-shrink:0;user-select:none}
+.code-line.hl{background:rgba(88,166,255,.16)}
+.code-line.hl .ln{color:var(--blue)}
+.t-kw{color:#ff7b72}.t-type{color:#79c0ff}.t-meth{color:#d2a8ff}.t-num{color:#a5d6ff}
+
+.controls{position:sticky;bottom:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.4)}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:42px;height:42px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn:hover{border-color:var(--blue)}
+.btn.play{width:auto;padding:0 20px;gap:8px;background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:700;font-size:14px}
+.btn.play:hover{filter:brightness(1.1)}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.scrub{flex:1;min-width:140px;accent-color:var(--blue);height:6px}
+.step-txt{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:52px;text-align:right}
+.speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+@media(max-width:760px){
+  .phases{grid-template-columns:1fr}
+  .cell{width:48px}.cell .box{width:46px;height:44px;font-size:14px}
+  .cand{width:48px}.cand .box{width:46px;height:42px;font-size:13px}
+  .arr-label{width:100%;text-align:left}
+  body{padding:18px 12px 50px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>41. 缺失的第一个正数 <span class="tag">困难</span></h1>
+  <div class="sub">HashSet 解法 · 时间 O(n) · 空间 O(n)，从 1 开始找第一个不在集合里的数</div>
+
+  <div class="panel intro">
+    <p>先把数组元素全部放进 <b>HashSet</b>（自动去重），再从 <b>i=1</b> 开始逐个调用 <b>contains(i)</b>，第一个返回 false 的 i 就是最小缺失正数；如果 1..n 全都在，答案兜底为 <b>n+1</b>。</p>
+  </div>
+
+  <div class="cases" id="caseBox"></div>
+  <div class="phases" id="phaseBox"></div>
+
+  <div class="panel">
+    <div class="viz-title">原数组 nums</div>
+    <div class="arr-row"><div class="arr-label">nums</div><div class="arr-cells" id="rowNums"></div></div>
+
+    <div class="viz-title" style="margin-top:18px">HashSet 集合（元素逐个加入，重复不新增）</div>
+    <div class="set-box" id="setBox"></div>
+
+    <div class="viz-title" style="margin-top:20px">候选正数检查（从 1 开始 contains 查找）</div>
+    <div class="cand-wrap" id="candBox"></div>
+
+    <div class="info">
+      <div class="info-card"><div class="k">当前阶段</div><div class="v" id="iPhase">—</div></div>
+      <div class="info-card"><div class="k">当前处理</div><div class="v" id="iCur">—</div></div>
+      <div class="info-card"><div class="k">答案</div><div class="v" id="iAns">—</div></div>
+    </div>
+    <div class="msg" id="msgBox"></div>
+  </div>
+
+  <div class="code-panel">
+    <div class="code-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="code-fname">Solution.java</span></div>
+    <div class="code-body" id="codeBody"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn play" id="playBtn">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playTxt">播放</span>
+    </button>
+    <button class="btn" id="prevBtn" title="上一步（左箭头）"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+    <button class="btn" id="nextBtn" title="下一步（右箭头）"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+    <button class="btn" id="resetBtn" title="重置"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <input type="range" class="scrub" id="scrub" min="0" max="0" value="0">
+    <span class="step-txt" id="stepTxt">0 / 0</span>
+    <select class="speed" id="speedSel"><option value="1100">0.5x</option><option value="700" selected>1x</option><option value="380">2x</option><option value="200">4x</option></select>
+  </div>
+</div>
+
+<script>
+const CASES=[
+  {nums:[1,2,0],label:'[1,2,0]'},
+  {nums:[3,4,-1,1],label:'[3,4,-1,1]'},
+  {nums:[7,8,9,11,12],label:'[7,8,9,11,12]'},
+  {nums:[1,2,3],label:'[1,2,3]'},
+  {nums:[1,1],label:'[1,1]'}
+];
+
+const CODE_HTML=[
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '  <span class="t-kw">public</span> <span class="t-kw">int</span> <span class="t-meth">firstMissingPositive</span>(<span class="t-kw">int</span>[] nums) {',
+  '    <span class="t-kw">int</span> n = nums.length;',
+  '    <span class="t-type">HashSet</span>&lt;<span class="t-type">Integer</span>&gt; set = <span class="t-kw">new</span> <span class="t-type">HashSet</span>&lt;&gt;();',
+  '    <span class="t-kw">for</span>(<span class="t-kw">int</span> num:nums){',
+  '      set.add(num);',
+  '    }',
+  '    <span class="t-kw">for</span>(<span class="t-kw">int</span> i=<span class="t-num">1</span>;i&lt;=n;i++){',
+  '      <span class="t-kw">if</span>(!set.contains(i)) <span class="t-kw">return</span> i;',
+  '    }',
+  '    <span class="t-kw">return</span> n+<span class="t-num">1</span>;',
+  '  }',
+  '}'
+];
+
+const PHASE_DEFS=[
+  {cls:'p1',name:'元素加入 HashSet',desc:'set.add(num)，重复自动去重'},
+  {cls:'p2',name:'从 1 到 n 逐个 contains',desc:'第一个不在集合的 i 即答案'}
+];
+
+function buildSteps(c){
+  const nums=c.nums.slice(),n=nums.length;
+  const setArr=[];
+  const steps=[];
+  const push=(o)=>steps.push(Object.assign({
+    line:0,phase:0,nums:nums.slice(),set:[],cur:null,
+    checked:[],answer:null,action:'',msg:''
+  },o));
+
+  push({line:3,action:'init',
+    msg:'n = '+n+'，创建空 HashSet，准备把数组元素逐个加入'});
+
+  for(let k=0;k<n;k++){
+    const num=nums[k];
+    if(setArr.includes(num)){
+      push({line:6,phase:1,cur:num,set:setArr.slice(),action:'dup',
+        msg:'nums['+k+']='+num+' 已在集合中，HashSet 自动去重，不重复加入'});
+    }else{
+      setArr.push(num);
+      push({line:6,phase:1,cur:num,set:setArr.slice(),action:'add',
+        msg:'set.add('+num+')，把 nums['+k+']='+num+' 加入集合'});
+    }
+  }
+
+  const checked=[];
+  for(let i=1;i<=n;i++){
+    if(setArr.includes(i)){
+      push({line:9,phase:2,cur:i,set:setArr.slice(),checked:checked.slice(),action:'hit',
+        msg:'set.contains('+i+') 为真，'+i+' 在集合里，继续检查下一个'});
+      checked.push(i);
+    }else{
+      push({line:9,phase:2,cur:i,set:setArr.slice(),checked:checked.slice(),answer:i,action:'miss',
+        msg:'set.contains('+i+') 为假，'+i+' 不在集合里，return '+i+'，这就是最小缺失正数'});
+      return steps;
+    }
+  }
+  push({line:11,phase:2,cur:n+1,set:setArr.slice(),checked:checked.slice(),answer:n+1,action:'end',
+    msg:'1..'+n+' 全部在集合里，循环结束，兜底 return n+1 = '+(n+1)});
+  return steps;
+}
+
+let caseIdx=0,steps=[],posIdx=0,timer=null,playing=false;
+const $=(id)=>document.getElementById(id);
+
+function renderCaseButtons(){
+  $('caseBox').innerHTML=CASES.map((c,i)=>
+    '<button class="case-btn'+(i===caseIdx?' active':'')+'" data-k="'+i+'">用例 '+(i+1)+': '+c.label+'</button>').join('');
+  document.querySelectorAll('.case-btn').forEach(b=>b.addEventListener('click',
+    ()=>loadCase(parseInt(b.dataset.k,10))));
+}
+function renderPhases(snap){
+  $('phaseBox').innerHTML=PHASE_DEFS.map((p,i)=>{
+    const cur=snap.phase===i+1&&snap.action!=='end';
+    const done=snap.phase>i+1;
+    return '<div class="ph-card '+p.cls+(cur?' on':'')+(done?' done':'')+'">'+
+      '<svg class="tick" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+      '<div class="ph-num">PHASE '+(i+1)+'</div><div class="ph-name">'+p.name+'</div>'+
+      '<div class="ph-desc">'+p.desc+'</div></div>';
+  }).join('');
+}
+function renderNums(snap){
+  $('rowNums').innerHTML=snap.nums.map((v,i)=>{
+    let cls='cell';
+    if(snap.phase===1&&snap.cur===v&&i===snap.nums.indexOf(v))cls+=(snap.action==='dup'?' dup':' cur');
+    return '<div class="'+cls+'"><div class="box">'+v+'</div><div class="ix">'+i+'</div></div>';
+  }).join('');
+}
+function renderSet(snap){
+  if(!snap.set.length){$('setBox').innerHTML='<span class="set-empty">集合为空</span>';return;}
+  const flashDup=snap.action==='dup'?snap.cur:null;
+  $('setBox').innerHTML=snap.set.map(v=>
+    '<div class="set-item'+(v===flashDup?' dupflash':'')+'">'+v+'</div>').join('');
+}
+function renderCands(snap){
+  const n=snap.nums.length;
+  let html='';
+  for(let i=1;i<=n+1;i++){
+    let cls='cand',st='待查';
+    if(snap.checked.includes(i)){cls+=' hit';st='在';}
+    if(snap.cur===i){
+      if(snap.action==='hit'){cls+=' looking';st='查找';}
+      else if(snap.action==='miss'){cls+=' miss';st='缺失';}
+      else if(snap.action==='end'){cls+=' miss';st='答案';}
+    }
+    if(snap.phase<2||(snap.cur<i&&!(snap.action==='end'&&i===n+1)))cls+=' dim';
+    html+='<div class="'+cls+'"><div class="box">'+i+'</div><div class="st">'+st+'</div></div>';
+  }
+  $('candBox').innerHTML=html;
+}
+function renderCode(){
+  $('codeBody').innerHTML=CODE_HTML.map((h,i)=>
+    '<div class="code-line" data-line="'+(i+1)+'"><span class="ln">'+(i+1)+'</span><span>'+h+'</span></div>').join('');
+}
+function render(){
+  const snap=steps[posIdx];
+  renderPhases(snap);renderNums(snap);renderSet(snap);renderCands(snap);
+  $('iPhase').textContent=snap.phase?('第 '+snap.phase+' 阶段'):'准备';
+  $('iCur').textContent=snap.cur!==null?snap.cur:'—';
+  $('iAns').textContent=snap.answer!==null?snap.answer:'—';
+  const actCls=snap.phase===2?' purple':'';
+  const actName={init:'准备',add:'加入',dup:'重复',hit:'查找',miss:'找到',end:'兜底'}[snap.action];
+  $('msgBox').innerHTML='<span class="act '+actCls+'">'+actName+'</span>'+snap.msg;
+  $('codeBody').querySelectorAll('.code-line').forEach(el=>
+    el.classList.toggle('hl',parseInt(el.dataset.line,10)===snap.line));
+  $('scrub').max=steps.length-1;$('scrub').value=posIdx;
+  $('stepTxt').textContent=posIdx+' / '+(steps.length-1);
+  const hlEl=$('codeBody').querySelector('.code-line.hl');
+  if(hlEl)hlEl.scrollIntoView({block:'nearest'});
+}
+function pause(){
+  playing=false;clearInterval(timer);timer=null;
+  $('playTxt').textContent='播放';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M8 5v14l11-7z"/>';
+}
+function play(){
+  if(playing){pause();return;}
+  playing=true;$('playTxt').textContent='暂停';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
+  if(posIdx>=steps.length-1){posIdx=0;render();}
+  timer=setInterval(()=>{
+    if(posIdx>=steps.length-1){pause();return;}
+    posIdx++;render();
+  },parseInt($('speedSel').value,10));
+}
+function loadCase(k){
+  pause();caseIdx=k;posIdx=0;
+  steps=buildSteps(CASES[k]);
+  renderCaseButtons();render();
+}
+$('playBtn').addEventListener('click',play);
+$('prevBtn').addEventListener('click',()=>{pause();if(posIdx>0){posIdx--;render();}});
+$('nextBtn').addEventListener('click',()=>{pause();if(posIdx<steps.length-1){posIdx++;render();}});
+$('resetBtn').addEventListener('click',()=>{pause();posIdx=0;render();});
+$('scrub').addEventListener('input',()=>{pause();posIdx=parseInt($('scrub').value,10);render();});
+$('speedSel').addEventListener('change',()=>{if(playing){pause();play();}});
+document.addEventListener('keydown',(e)=>{
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();if(posIdx<steps.length-1){posIdx++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(posIdx>0){posIdx--;render();}}
+  else if(e.key===' '){e.preventDefault();play();}
+});
+renderCode();steps=buildSteps(CASES[0]);renderCaseButtons();render();
+</script>
+</body>
+</html>

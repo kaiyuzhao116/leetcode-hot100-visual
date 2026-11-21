@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>394. 字符串解码 · 栈可视化</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --fg:#e6edf3; --muted:#8b949e;
+    --blue:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149; --purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;line-height:1.5;display:flex;flex-direction:column;overflow:hidden;
+  }
+  header{
+    display:flex;align-items:center;gap:14px;padding:10px 18px;
+    border-bottom:1px solid var(--border);background:var(--panel);flex-wrap:wrap;
+  }
+  header h1{font-size:15px;font-weight:600}
+  header .sub{color:var(--muted);font-size:12px}
+  .controls{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+  .btn{
+    background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;
+    font-family:var(--mono);transition:.15s;
+  }
+  .btn:hover{background:#272e3a;border-color:#444c56}
+  .btn.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  .btn.primary:hover{background:#388bfd}
+  .seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{
+    background:var(--panel2);color:var(--muted);border:none;padding:6px 10px;
+    cursor:pointer;font-family:var(--mono);font-size:12px;
+  }
+  .seg button.on{background:#1f6feb;color:#fff}
+  select{
+    background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    padding:6px 8px;border-radius:6px;font-family:var(--mono);
+  }
+  .progress-bar{
+    display:flex;align-items:center;gap:12px;padding:7px 18px;
+    background:var(--panel);border-bottom:1px solid var(--border);
+  }
+  .progress-bar input[type=range]{flex:1;accent-color:#1f6feb;cursor:pointer;height:22px}
+  .progress-bar .pl{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:74px}
+  main{
+    flex:1;display:grid;gap:10px;padding:10px 14px;
+    grid-template-columns:1.1fr 1fr;min-height:0;
+  }
+  .panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  }
+  .panel-head{
+    padding:8px 12px;border-bottom:1px solid var(--border);
+    font-size:12px;color:var(--muted);font-family:var(--mono);
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    background:var(--panel2);
+  }
+  .left-body{flex:1;display:flex;flex-direction:column;padding:14px;gap:14px;overflow:auto}
+  .input-str{display:flex;gap:4px;flex-wrap:wrap}
+  .ch-box{
+    font-family:var(--mono);font-size:15px;padding:7px 10px;border-radius:5px;
+    background:var(--panel2);border:1px solid var(--border);color:var(--muted);
+    min-width:30px;text-align:center;
+  }
+  .ch-box.scan{color:#fff;background:#1f6feb;border-color:#1f6feb;box-shadow:0 0 0 2px rgba(31,111,235,.4)}
+  .ch-box.done{color:var(--green)}
+  .stack-area{flex:1;display:flex;flex-direction:column;justify-content:flex-end}
+  .stack-lbl{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:8px}
+  .stack{display:flex;flex-direction:column-reverse;gap:5px}
+  .st-item{
+    font-family:var(--mono);padding:8px 12px;border-radius:6px;text-align:center;
+    border:1px solid;animation:pop .2s ease;
+  }
+  .st-item.letter{background:rgba(88,166,255,.15);color:var(--blue);border-color:rgba(88,166,255,.4)}
+  .st-item.digit{background:rgba(210,153,34,.15);color:var(--orange);border-color:rgba(210,153,34,.4)}
+  .st-item.bracket{background:rgba(248,81,73,.15);color:var(--red);border-color:rgba(248,81,73,.45)}
+  .st-item.expanded{background:rgba(63,185,80,.15);color:var(--green);border-color:rgba(63,185,80,.45)}
+  .st-item.top{box-shadow:0 0 0 2px #fff inset}
+  .st-ghost{
+    font-family:var(--mono);padding:8px 12px;border-radius:6px;text-align:center;
+    border:1px dashed var(--muted);color:var(--muted);animation:flyout .45s ease;
+  }
+  @keyframes flyout{
+    from{opacity:1;transform:translateY(8px)}
+    to{opacity:.35;transform:translateY(-14px)}
+  }
+  @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+  .stack-base{height:4px;background:var(--border);border-radius:2px;margin-top:6px}
+  .rightCol{display:flex;flex-direction:column;gap:10px;min-height:0}
+  .state-body{padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:9px;overflow:auto}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .meta{
+    background:var(--panel2);border-radius:6px;padding:8px 6px;text-align:center;
+    border:1px solid var(--border);
+  }
+  .meta .lbl{font-size:10px;color:var(--muted);font-family:var(--mono)}
+  .meta .val{font-size:13px;font-weight:700;font-family:var(--mono);margin-top:3px;word-break:break-all}
+  .desc{
+    background:var(--panel2);padding:9px 11px;border-radius:6px;
+    border-left:3px solid var(--blue);font-size:12.5px;line-height:1.6;
+  }
+  .desc.warn{border-left-color:var(--orange)}
+  .desc.bad{border-left-color:var(--red)}
+  .desc.ok{border-left-color:var(--green)}
+  /* 类型转换链 */
+  .chain{
+    display:none;gap:0;align-items:stretch;margin-bottom:11px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px 8px;
+  }
+  .chain.show{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 0}
+  .chain-node{flex:1;min-width:62px;text-align:center;padding:0 4px}
+  .chain-node .cn-type{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;min-height:26px}
+  .chain-node .cn-val{
+    font-family:var(--mono);font-size:13px;font-weight:700;margin-top:4px;
+    border-radius:5px;padding:5px 3px;border:1px solid var(--border);background:var(--bg);
+  }
+  .chain-node.n1 .cn-type{color:var(--orange)} .chain-node.n1 .cn-val{color:var(--orange);border-color:rgba(210,153,34,.5)}
+  .chain-node.n2 .cn-type{color:var(--blue)} .chain-node.n2 .cn-val{color:var(--blue);border-color:rgba(88,166,255,.5)}
+  .chain-node.n3 .cn-type{color:var(--purple)} .chain-node.n3 .cn-val{color:var(--purple);border-color:rgba(188,140,255,.5);font-size:11px}
+  .chain-node.n4 .cn-type{color:var(--green)} .chain-node.n4 .cn-val{color:var(--green);border-color:rgba(63,185,80,.5)}
+  .chain-arrow{
+    flex-shrink:0;align-self:center;color:var(--muted);font-family:var(--mono);
+    font-size:13px;padding:0 2px;
+  }
+  .chain.show .chain-node{animation:chainin .35s ease both}
+  .chain.show .chain-node.n2{animation-delay:.1s}
+  .chain.show .chain-node.n3{animation-delay:.2s}
+  .chain.show .chain-node.n4{animation-delay:.3s}
+  @keyframes chainin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  #codeBody{padding:8px 0;font-family:var(--mono);font-size:12px;overflow:auto;flex:1}
+  .code-line{display:flex;padding:2px 12px;white-space:pre;min-height:18px;color:#c9d1d9}
+  .code-line .ln{width:26px;color:#484f58;user-select:none;text-align:right;margin-right:12px;flex-shrink:0}
+  .code-line.cur{background:rgba(56,139,253,.15);border-left:2px solid var(--blue);padding-left:10px}
+  .kw{color:#ff7b72}.ty{color:#ffa657}.fn{color:#d2a8ff}.nm{color:#79c0ff}
+  .legend{display:flex;gap:10px;font-size:10.5px;font-family:var(--mono);color:var(--muted);flex-wrap:wrap}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:middle}
+  @media(max-width:900px){
+    main{grid-template-columns:1fr;overflow:auto}
+    body{overflow:auto}
+    .panel{min-height:280px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>394. 字符串解码 <span style="color:var(--muted);font-weight:400">| 栈 · 压入弹出与重复展开</span></h1>
+    <div class="sub">扫描到 ] 就弹出括号内字符串与数字，重复后压回栈</div>
+  </div>
+  <div class="controls">
+    <div class="seg" id="caseSeg">
+      <button data-c="3[a]2[bc]" class="on">3[a]2[bc]</button>
+      <button data-c="3[a2[c]]">3[a2[c]]</button>
+      <button data-c="2[abc]3[cd]ef">2[abc]3[cd]ef</button>
+    </div>
+    <button class="btn" id="btnReset">⟲ 重置</button>
+    <button class="btn" id="btnPrev">◀ 上一步</button>
+    <button class="btn primary" id="btnPlay">▶ 播放</button>
+    <button class="btn" id="btnNext">下一步 ▶</button>
+    <select id="speed">
+      <option value="1200">慢</option>
+      <option value="650" selected>中</option>
+      <option value="280">快</option>
+    </select>
+  </div>
+</header>
+
+<div class="progress-bar">
+  <span class="pl" id="plLabel">步骤 0 / 0</span>
+  <input type="range" id="slider" min="0" max="1" value="0">
+</div>
+
+<main>
+  <div class="panel">
+    <div class="panel-head">
+      <span>栈（栈顶在最上方）</span>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--blue)"></i>字母</span>
+        <span><i class="dot" style="background:var(--orange)"></i>数字</span>
+        <span><i class="dot" style="background:var(--red)"></i>[</span>
+        <span><i class="dot" style="background:var(--green)"></i>展开串</span>
+      </div>
+    </div>
+    <div class="left-body">
+      <div>
+        <div class="stack-lbl">输入字符串（蓝色=当前扫描）</div>
+        <div class="input-str" id="inputStr"></div>
+      </div>
+      <div class="stack-area">
+        <div class="stack-lbl">Deque&lt;String&gt; st</div>
+        <div class="stack" id="stack"></div>
+        <div class="stack-base"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rightCol">
+    <div class="panel" style="flex:1">
+      <div class="panel-head"><span>当前状态</span><span id="stepInfo">步骤 0 / 0</span></div>
+      <div class="state-body">
+        <div class="meta-grid">
+          <div class="meta"><div class="lbl">tmp 括号内</div><div class="val" id="tmpVal" style="color:var(--blue)">—</div></div>
+          <div class="meta"><div class="lbl">num 数字</div><div class="val" id="numVal" style="color:var(--orange)">—</div></div>
+          <div class="meta"><div class="lbl" id="resLbl">res 结果</div><div class="val" id="resVal" style="color:var(--green)">—</div></div>
+        </div>
+        <div class="chain" id="chain">
+          <div class="chain-node n1">
+            <div class="cn-type">StringBuilder<br>字符容器</div>
+            <div class="cn-val" id="cn1">—</div>
+          </div>
+          <div class="chain-arrow">→</div>
+          <div class="chain-node n2">
+            <div class="cn-type">toString()<br>String</div>
+            <div class="cn-val" id="cn2">—</div>
+          </div>
+          <div class="chain-arrow">→</div>
+          <div class="chain-node n3">
+            <div class="cn-type">parseInt()<br>解析</div>
+            <div class="cn-val">to int</div>
+          </div>
+          <div class="chain-arrow">→</div>
+          <div class="chain-node n4">
+            <div class="cn-type">int cnt<br>整数</div>
+            <div class="cn-val" id="cn4">—</div>
+          </div>
+        </div>
+        <div class="desc" id="desc">点击「播放」「下一步」，拖动进度条，或切换左侧用例。</div>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1.2">
+      <div class="panel-head"><span>Solution.java · 当前执行行高亮</span></div>
+      <div id="codeBody"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ============================================================
+   预生成步骤
+   ============================================================ */
+function isDigit(x){ return /^[0-9]$/.test(x); }
+function buildSteps(input){
+  const stack = [];
+  let tmp = '', num = '', res = '';
+  const steps = [];
+  const snap = o=>Object.assign({
+    stack: stack.slice(), i:0, ch:'', tmp, num, res
+  }, o);
+
+  for(let i=0;i<input.length;i++){
+    const ch = input[i];
+    if(ch !== ']'){
+      stack.push(ch);
+      const kind = ch==='[' ? '左括号' : (isDigit(ch)?'数字':'字母');
+      steps.push(snap({
+        action:'push', line:7, i, ch,
+        desc:`扫描到 '${ch}'（${kind}），不是 ']'，直接压入栈顶。`,
+        descType:''
+      }));
+    } else {
+      tmp='';
+      steps.push(snap({
+        action:'start', line:9, i, ch,
+        desc:"遇到 ']'，开始解码：先不断弹出栈顶，直到遇到 '['，收集括号内的字符串。",
+        descType:'warn'
+      }));
+      while(stack[stack.length-1] !== '['){
+        const top = stack[stack.length-1];
+        tmp = top + tmp;
+        stack.pop();
+        steps.push(snap({
+          action:'popStr', line:11, i, ch, popped:top,
+          desc:`弹出 '${top}' 插到 tmp 前面，tmp = "${tmp}"。`,
+          descType:''
+        }));
+      }
+      stack.pop();
+      steps.push(snap({
+        action:'popBracket', line:13, i, ch, popped:'[',
+        desc:"弹出 '['（它只是分隔标记，不参与拼接）。",
+        descType:'bad'
+      }));
+      num='';
+      while(stack.length && isDigit(stack[stack.length-1])){
+        const top = stack[stack.length-1];
+        num = top + num;
+        stack.pop();
+        steps.push(snap({
+          action:'popDigit', line:18, i, ch, popped:top,
+          desc:`弹出数字 '${top}' 插到 num 前面，num = "${num}"。`,
+          descType:'warn'
+        }));
+      }
+      const cnt = +num;
+      steps.push(snap({
+        action:'parseNum', line:20, i, ch, numStr:num, cnt,
+        desc:`num 是 StringBuilder，先 toString 得字符串 "${num}"，再 parseInt 解析成整数 ${cnt}，即重复次数。`,
+        descType:'warn'
+      }));
+      let str='';
+      for(let k=1;k<=cnt;k++){
+        str += tmp;
+        steps.push(snap({
+          action:'repeat', line:22, i, ch,
+          repeat:{k,cnt}, build:str,
+          desc:`第 ${k}/${cnt} 次 append tmp，str 累积为 "${str}"。`,
+          descType:''
+        }));
+      }
+      stack.push(str);
+      steps.push(snap({
+        action:'expand', line:23, i, ch,
+        desc:`重复 ${cnt} 次完成，"${str}" 作为一个整体压回栈顶。`,
+        descType:'ok'
+      }));
+    }
+  }
+  res='';
+  steps.push(snap({
+    action:'finalStart', line:26,
+    desc:"扫描结束，栈里剩的都是已解码片段，依次弹出并插到前面拼成最终结果。",
+    descType:'warn'
+  }));
+  while(stack.length){
+    const top = stack[stack.length-1];
+    res = top + res;
+    stack.pop();
+    steps.push(snap({
+      action:'finalPop', line:27, popped:top,
+      desc:`弹出 '${top}' 插到前面，res = "${res}"。`,
+      descType:''
+    }));
+  }
+  steps.push(snap({
+    action:'done', line:28,
+    desc:`解码完成，返回 res = "${res}"。`,
+    descType:'ok'
+  }));
+  return steps;
+}
+
+/* ===== Java 代码 ===== */
+const CODE = [
+ [1 , 'class Solution {'],
+ [2 , '    public String decodeString(String s) {'],
+ [3 , '        Deque<String> st = new ArrayDeque<>();'],
+ [4 , '        for (int i = 0; i < s.length(); i++) {'],
+ [5 , '            char ch = s.charAt(i);'],
+ [6 , "            if (ch != ']') {"],
+ [7 , '                st.push(String.valueOf(ch));'],
+ [8 , '            } else {'],
+ [9 , '                StringBuilder tmp = new StringBuilder();'],
+ [10, "                while (!st.peek().equals(\"[\")) {"],
+ [11, '                    tmp.insert(0, st.pop());'],
+ [12, '                }'],
+ [13, '                st.pop();'],
+ [14, '                StringBuilder num = new StringBuilder();'],
+ [15, '                while (!st.isEmpty()) {'],
+ [16, "                    char c = st.peek().charAt(0);"],
+ [17, '                    if (!Character.isDigit(c)) break;'],
+ [18, '                    num.insert(0, st.pop());'],
+ [19, '                }'],
+ [20, '                int cnt = Integer.parseInt(num.toString());'],
+ [21, '                StringBuilder str = new StringBuilder();'],
+ [22, '                for (int k = 0; k < cnt; k++) str.append(tmp);'],
+ [23, '                st.push(str.toString());'],
+ [24, '            }'],
+ [25, '        }'],
+ [26, '        StringBuilder res = new StringBuilder();'],
+ [27, '        while (!st.isEmpty()) res.insert(0, st.pop());'],
+ [28, '        return res.toString();'],
+ [29, '    }'],
+ [30, '}'],
+];
+const codeBody = document.getElementById('codeBody');
+function hl(code){
+  return code
+    .replace(/\b(class|public|private|void|if|else|return|break|for|new|char|int|while)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(Deque|ArrayDeque|String|StringBuilder|Character|st|tmp|num|str)\b/g,'<span class="ty">$1</span>')
+    .replace(/\b(decodeString|push|pop|peek|equals|isDigit|insert|append|parseInt|charAt|valueOf)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(s|i|ch|c|cnt|k|res)\b/g,'<span class="nm">$1</span>');
+}
+function renderCode(curLine){
+  codeBody.innerHTML = CODE.map(([ln,txt])=>{
+    const cls = ln===curLine ? 'code-line cur' : 'code-line';
+    return `<div class="${cls}"><span class="ln">${ln}</span><span>${hl(txt)||' '}</span></div>`;
+  }).join('');
+}
+
+/* ===== 状态机 ===== */
+let currentCase = '3[a]2[bc]';
+let steps = buildSteps(currentCase);
+let stepIdx = -1, timer = null;
+const stackEl = document.getElementById('stack');
+const inputStrEl = document.getElementById('inputStr');
+const descEl = document.getElementById('desc');
+const slider = document.getElementById('slider');
+const plLabel = document.getElementById('plLabel');
+
+function itemType(v){
+  if(v==='[') return 'bracket';
+  if(isDigit(v)) return 'digit';
+  if(v.length>1) return 'expanded';
+  return 'letter';
+}
+
+function render(){
+  const s = stepIdx>=0 ? steps[stepIdx] : null;
+  const st = s ? s.stack : [];
+  const scanI = s ? s.i : -1;
+
+  // 输入字符串
+  inputStrEl.innerHTML = [...currentCase].map((c,idx)=>{
+    let cls='ch-box';
+    if(idx===scanI) cls+=' scan';
+    else if(idx<scanI) cls+=' done';
+    return `<span class="${cls}">${c}</span>`;
+  }).join('');
+
+  // 栈（弹出步骤在栈顶上方显示虚线幽灵元素）
+  let stackHtml = st.map((v,idx)=>{
+    const top = idx===st.length-1 ? ' top':'';
+    return `<div class="st-item ${itemType(v)}${top}">${v}</div>`;
+  }).join('');
+  if(s && s.popped!==undefined){
+    stackHtml += `<div class="st-ghost">${s.popped}</div>`;
+  }
+  stackEl.innerHTML = stackHtml;
+
+  document.getElementById('tmpVal').textContent = s && s.tmp ? s.tmp : '—';
+  document.getElementById('numVal').textContent = s && s.num ? s.num : '—';
+  const resValEl = document.getElementById('resVal');
+  const resLblEl = document.getElementById('resLbl');
+  if(s && s.action==='repeat'){
+    resLblEl.textContent = `构建中 str (${s.repeat.k}/${s.repeat.cnt})`;
+    resValEl.textContent = s.build;
+    resValEl.style.color = 'var(--blue)';
+  } else {
+    resLblEl.textContent = 'res 结果';
+    resValEl.textContent = s && s.res ? s.res : '—';
+    resValEl.style.color = 'var(--green)';
+  }
+
+  // 类型转换链：仅在 parseNum 步骤显示
+  const chainEl = document.getElementById('chain');
+  if(s && s.action==='parseNum'){
+    document.getElementById('cn1').textContent = '"'+s.numStr+'"';
+    document.getElementById('cn2').textContent = '"'+s.numStr+'"';
+    document.getElementById('cn4').textContent = s.cnt;
+    chainEl.classList.add('show');
+  } else {
+    chainEl.classList.remove('show');
+  }
+
+  if(s){
+    descEl.textContent = s.desc;
+    descEl.className = 'desc '+(s.descType||'');
+    renderCode(s.line);
+  } else {
+    descEl.textContent = '点击「播放」「下一步」，拖动进度条，或切换左侧用例。';
+    descEl.className='desc'; renderCode(0);
+  }
+  document.getElementById('stepInfo').textContent =
+    `步骤 ${Math.max(stepIdx+1,0)} / ${steps.length}`;
+  slider.max = steps.length-1;
+  slider.value = Math.max(stepIdx,0);
+  plLabel.textContent = `步骤 ${Math.max(stepIdx+1,0)} / ${steps.length}`;
+}
+
+function next(){
+  if(stepIdx>=steps.length-1){pause();return;}
+  stepIdx++; render();
+}
+function prev(){ if(stepIdx>-1){stepIdx--;render();} }
+function reset(){ pause(); stepIdx=-1; render(); }
+function pause(){
+  if(timer){clearInterval(timer);timer=null;}
+  document.getElementById('btnPlay').textContent='▶ 播放';
+}
+function play(){
+  if(timer){pause();return;}
+  if(stepIdx>=steps.length-1) stepIdx=-1;
+  document.getElementById('btnPlay').textContent='⏸ 暂停';
+  timer=setInterval(()=>{
+    if(stepIdx>=steps.length-1){pause();return;}
+    next();
+  },+document.getElementById('speed').value);
+}
+
+document.getElementById('btnNext').onclick=()=>{pause();next();};
+document.getElementById('btnPrev').onclick=()=>{pause();prev();};
+document.getElementById('btnPlay').onclick=play;
+document.getElementById('btnReset').onclick=reset;
+document.getElementById('speed').onchange=()=>{if(timer){pause();play();}};
+slider.addEventListener('input',()=>{
+  pause();
+  stepIdx = +slider.value;
+  if(stepIdx===0) stepIdx=-1;
+  render();
+});
+document.querySelectorAll('#caseSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#caseSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    currentCase=b.dataset.c;
+    steps=buildSteps(currentCase);
+    reset();
+  };
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){pause();next();}
+  if(e.key==='ArrowLeft'){pause();prev();}
+  if(e.key===' '){e.preventDefault();play();}
+});
+render();
+</script>
+</body>
+</html>

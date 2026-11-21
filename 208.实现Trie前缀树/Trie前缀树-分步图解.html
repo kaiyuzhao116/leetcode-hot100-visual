@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeetCode 208 实现 Trie：前缀树分步图解</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23131718'/%3E%3Ccircle cx='11' cy='11' r='4' fill='%231A5470'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%239C7412'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#EDEEE9;
+  --paper-hi:#F8F9F5;
+  --ink:#131718;
+  --ink-2:#4A5257;
+  --ink-3:#7B8387;
+  --rule:rgba(19,23,24,.15);
+  --rule-2:rgba(19,23,24,.075);
+  --blue:#1A5470;
+  --blue-bg:#D8E6EC;
+  --gold:#9C7412;
+  --gold-bg:rgba(156,116,18,.12);
+  --red:#9E3529;
+  --gline:rgba(19,23,24,.045);
+  --sans:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --serif:"Songti SC","SimSun","STSong","Noto Serif SC",Georgia,serif;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.8;-webkit-font-smoothing:antialiased}
+.grid-layer{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--gline) 1px,transparent 1px),linear-gradient(90deg,var(--gline) 1px,transparent 1px);background-size:34px 34px}
+
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 20px}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.05em;color:var(--ink-3);display:flex;align-items:center;gap:10px;margin-top:38px}
+.kicker::before{content:"";width:22px;height:1px;background:var(--ink-3)}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(27px,4.8vw,42px);line-height:1.25;margin:14px 0 0}
+.lede{margin:16px 0 0;font-size:16px;color:var(--ink-2);max-width:46em}
+.lede b{color:var(--ink)}
+
+.console{margin-top:26px;border:1px solid var(--rule);background:var(--paper-hi)}
+.console-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px;border-bottom:1px solid var(--rule-2)}
+.btn{font-family:var(--sans);font-size:14px;padding:7px 15px;border:1px solid rgba(19,23,24,.55);background:transparent;color:var(--ink);cursor:pointer;min-height:40px;line-height:1.4}
+.btn:hover{background:rgba(19,23,24,.06)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.32;cursor:default}
+.btn.primary{background:var(--ink);color:var(--paper-hi);border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.ghost{border-color:var(--rule);color:var(--ink-2)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule)}
+.seg button{font-family:var(--sans);font-size:13px;padding:8px 11px;border:0;background:transparent;color:var(--ink-2);cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper-hi)}
+.seg button+button{border-left:1px solid var(--rule)}
+.step-ind{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-left:auto}
+
+.tree-svg{padding:10px 10px 4px}
+.tree-svg svg{display:block;width:100%;height:auto}
+.console-text{padding:12px 16px 14px;font-size:14.5px;line-height:1.8;color:var(--ink-2);border-top:1px solid var(--rule-2);min-height:66px}
+.console-text b{color:var(--ink)}
+.console-text .gold{color:var(--gold);font-weight:600}
+.console-text .red{color:var(--red);font-weight:600}
+.console-text .blue{color:var(--blue);font-weight:600}
+
+.stat-grid{display:grid;gap:12px;margin-top:16px}
+@media(min-width:760px){.stat-grid{grid-template-columns:repeat(3,1fr)}}
+.stat{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.stat h3{font-family:var(--mono);font-size:11.5px;font-weight:400;margin:0 0 9px;color:var(--ink-3)}
+.path-box{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+.pill{font-family:var(--mono);font-size:13px;padding:3px 9px;border:1px solid rgba(19,23,24,.4);color:var(--ink)}
+.pill.cur{border-color:var(--gold);background:var(--gold-bg)}
+.op-name{font-family:var(--mono);font-size:14px;color:var(--ink)}
+.op-name .tag{display:inline-block;padding:2px 9px;border:1px solid rgba(26,84,112,.5);background:rgba(216,230,236,.5);color:var(--blue);margin-right:8px}
+.res-list{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.res-item{font-family:var(--mono);font-size:12px;border:1px solid rgba(26,84,112,.4);background:rgba(216,230,236,.55);padding:2px 7px;color:var(--blue)}
+.res-empty{font-size:13px;color:var(--ink-3)}
+
+.code-panel{margin-top:22px;display:grid;gap:14px}
+@media(min-width:880px){.code-panel{grid-template-columns:1.25fr .75fr}}
+.codebox{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.codebox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px;font-weight:700}
+.code-scroll{max-height:480px;overflow:auto}
+pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.9;color:var(--ink-2);white-space:pre}
+pre .ln{display:block;padding:0 6px;margin:0 -6px;border-left:2px solid transparent}
+pre .ln.act{background:var(--gold-bg);border-left-color:var(--gold);color:var(--ink)}
+.tipbox{border:1px solid var(--rule);background:var(--paper-hi);padding:14px 16px}
+.tipbox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px}
+.tipbox ul{margin:0;padding-left:1.2em;font-size:14px;color:var(--ink-2);line-height:1.85}
+.tipbox li{margin:5px 0}
+.tipbox b{color:var(--ink)}
+
+.note{border-left:2px solid var(--gold);background:var(--gold-bg);padding:14px 16px;margin-top:22px;font-size:14.5px;color:var(--ink-2);line-height:1.8;max-width:52em}
+.note b{color:var(--ink)}
+.note.blue{border-left-color:var(--blue);background:rgba(26,84,112,.07)}
+code{font-family:var(--mono);font-size:.92em;background:rgba(19,23,24,.06);padding:1px 5px}
+
+footer{margin-top:60px;padding:26px 0 40px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink-3);line-height:1.9}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--paper-hi);font-size:14px;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.001s !important;animation-duration:.001s !important}}
+</style>
+</head>
+<body>
+<div class="grid-layer" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="kicker">LeetCode 208 · 中等 · 设计 / 字典树</div>
+  <h1>实现 Trie：前缀树<br>是怎么把单词存进一棵树的</h1>
+  <p class="lede">题目：实现前缀树的 <b>insert（插入）</b>、<b>search（精确查找）</b>、<b>startsWith（前缀判断）</b> 三个方法。你的写法是每个节点放一个 <b>26 长度的子节点数组 + isEnd 标记</b>。核心就一句话：<b>顺着字符往下走，没有就新建，走到末尾用 isEnd 标记一个完整单词</b>。下面把每个操作的每一步都画出来，建议直接点自动播放。</p>
+
+  <div class="console">
+    <div class="console-bar">
+      <button class="btn primary" id="btnPrev">上一步</button>
+      <button class="btn primary" id="btnNext">下一步</button>
+      <button class="btn" id="btnPlay">自动播放</button>
+      <button class="btn ghost" id="btnReset">重置</button>
+      <div class="seg" role="group" id="caseSeg" aria-label="操作序列"></div>
+      <span class="step-ind" id="stepInd"></span>
+    </div>
+    <div class="tree-svg">
+      <svg id="stage" viewBox="0 0 920 470" role="img" aria-label="Trie 前缀树分步生长与检索示意"></svg>
+    </div>
+    <div class="console-text" id="stepText"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <h3>当前操作</h3>
+      <div id="opBox"></div>
+    </div>
+    <div class="stat">
+      <h3>当前节点 cur（根到当前）</h3>
+      <div class="path-box" id="curBox"></div>
+    </div>
+    <div class="stat">
+      <h3>已插入的完整单词 isEnd</h3>
+      <div class="res-list" id="wordsBox"></div>
+    </div>
+  </div>
+
+  <div class="code-panel">
+    <div class="codebox">
+      <h3>你的代码（当前执行行高亮）</h3>
+      <div class="code-scroll">
+<pre id="srcCode"><span class="ln" data-l="1">class Trie {</span>
+<span class="ln" data-l="2">    public class Node{</span>
+<span class="ln" data-l="3">        Node[] chirldren = new Node[26];</span>
+<span class="ln" data-l="4">        boolean isEnd;</span>
+<span class="ln" data-l="5">    }</span>
+<span class="ln" data-l="6">    Node root;</span>
+<span class="ln" data-l="7"></span>
+<span class="ln" data-l="8">    public Trie() {</span>
+<span class="ln" data-l="9">        root = new Node();</span>
+<span class="ln" data-l="10">    }</span>
+<span class="ln" data-l="11"></span>
+<span class="ln" data-l="12">    public void insert(String word) {</span>
+<span class="ln" data-l="13">        Node cur = root;</span>
+<span class="ln" data-l="14">        for(int i = 0; i&lt;word.length();i++){</span>
+<span class="ln" data-l="15">            int c  = word.charAt(i) - 'a';</span>
+<span class="ln" data-l="16">            if(cur.chirldren[c] == null){</span>
+<span class="ln" data-l="17">                Node node = new Node();</span>
+<span class="ln" data-l="18">                cur.chirldren[c] = node;</span>
+<span class="ln" data-l="19">            }</span>
+<span class="ln" data-l="20">            cur = cur.chirldren[c];</span>
+<span class="ln" data-l="21">        }</span>
+<span class="ln" data-l="22">        cur.isEnd = true;</span>
+<span class="ln" data-l="23">    }</span>
+<span class="ln" data-l="24"></span>
+<span class="ln" data-l="25">    public boolean search(String word) {</span>
+<span class="ln" data-l="26">        Node cur = root ;</span>
+<span class="ln" data-l="27">        for(int i = 0;i&lt; word.length();i++){</span>
+<span class="ln" data-l="28">            int a = word.charAt(i) -'a';</span>
+<span class="ln" data-l="29">            if(cur.chirldren[a] == null){</span>
+<span class="ln" data-l="30">                return false;</span>
+<span class="ln" data-l="31">            }</span>
+<span class="ln" data-l="32">            cur = cur.chirldren[a];</span>
+<span class="ln" data-l="33">        }</span>
+<span class="ln" data-l="34">        return cur.isEnd;</span>
+<span class="ln" data-l="35">    }</span>
+<span class="ln" data-l="36"></span>
+<span class="ln" data-l="37">    public boolean startsWith(String prefix) {</span>
+<span class="ln" data-l="38">        Node cur = root ;</span>
+<span class="ln" data-l="39">        for(int i = 0;i&lt; prefix.length();i++){</span>
+<span class="ln" data-l="40">            int a = prefix.charAt(i) - 'a';</span>
+<span class="ln" data-l="41">            if(cur.chirldren[a] == null){</span>
+<span class="ln" data-l="42">                return false;</span>
+<span class="ln" data-l="43">            }</span>
+<span class="ln" data-l="44">            cur = cur.chirldren[a];</span>
+<span class="ln" data-l="45">        }</span>
+<span class="ln" data-l="46">        return true;</span>
+<span class="ln" data-l="47"></span>
+<span class="ln" data-l="48">    }</span>
+<span class="ln" data-l="49">}</span></pre>
+      </div>
+    </div>
+    <div class="tipbox">
+      <h3>看图抓三个点</h3>
+      <ul>
+        <li><b>一个节点 = 一个字符</b>；从根走到某节点，沿途拼起来就是一个前缀。</li>
+        <li><b>isEnd 才是完整单词</b>：search 走完还要看 isEnd，startsWith 只要路径在就返回 true。</li>
+        <li><b>共享前缀只存一份</b>：在分叉处复用同一条路径，这正是 Trie 省空间的原因。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note blue"><b>复杂度：</b>三个操作都沿字符串走一遍，时间 <b>O(L)</b>（L 为单词/前缀长度）；空间按实际节点数 <b>O(所有单词的字符总数)</b>，每个节点开 26 个槽但只在用到时才挂子节点。</div>
+  <div class="note"><b>search 和 startsWith 的区别：</b>两者都要先确认整条路径存在；差别在最后——<code>search</code> 还要 <code>return cur.isEnd</code>（路径终点必须是单词结尾），而 <code>startsWith</code> 路径走完直接 <code>return true</code>，不管它是不是完整单词。</div>
+  <div class="note"><b>为什么子节点用 26 长度数组：</b>题目限定小写字母，<code>charAt(i) - 'a'</code> 直接把字符映射成 0–25 的下标，定位下一个节点是 O(1)；isEnd 单独标记，因为同一个节点可能既是某个单词的结尾，又是更长单词的中间节点。</div>
+
+  <footer>
+    LeetCode 208 实现 Trie 前缀树 · 分步图解<br>
+    节点位置按最终树固定，金色为当前节点/单词结尾，蓝色为已存在路径，红色为路径中断。
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+var NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs){
+  var e = document.createElementNS(NS, tag);
+  if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+var toastTimer = null;
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('on'); }, 2200);
+}
+
+// ===== 用例（操作序列）=====
+var CASES = [
+  [['insert','apple'],['search','apple'],['search','app'],['startsWith','app'],['insert','app'],['search','app']],
+  [['insert','cat'],['insert','car'],['search','cat'],['search','can'],['startsWith','ca'],['search','car']],
+  [['insert','abc'],['insert','abcd'],['search','abc'],['search','abcd'],['search','ab']],
+  [['insert','hello'],['search','hell'],['search','hellow'],['startsWith','he'],['startsWith','helloo']],
+  [['insert','dog'],['insert','cat'],['insert','do'],['search','do'],['startsWith','d'],['search','dog']],
+  [['insert','a'],['search','a'],['startsWith','a'],['search','b']],
+  [['insert','tree'],['insert','trie'],['insert','trip'],['search','trie'],['startsWith','tr'],['search','tre']],
+  [['insert','abcd'],['search','ab'],['startsWith','ab'],['search','abcde']]
+];
+var OP_CN = { insert:'插入', search:'精确查找', startsWith:'前缀判断' };
+
+// ===== 帧生成（snap 独立快照）=====
+function buildSteps(ops) {
+  var root = { id:'', char:'', children:{}, isEnd:false };
+  var byId = { '': root };
+  var steps = [];
+  var created = {}, ends = {}, cur = root, activeNode = null,
+      activeEdge = null, result = null, newNode = null,
+      curOp = '', curWord = '', curI = -1;
+  function snap(phase, line) {
+    steps.push({
+      phase: phase, op: curOp, line: line, cur: cur ? cur.id : null, i: curI,
+      created: Object.assign({}, created), ends: Object.assign({}, ends),
+      activeNode: activeNode, activeEdge: activeEdge,
+      result: result, newNode: newNode, word: curWord
+    });
+  }
+  ops.forEach(function (call) {
+    var op = call[0], word = call[1];
+    curOp = op; curWord = word; result = null; newNode = null;
+    activeNode = null; activeEdge = null; cur = root; curI = -1;
+    snap('opstart', op==='insert'?12:(op==='search'?25:37));
+    for (var i = 0; i < word.length; i++) {
+      curI = i;
+      var ch = word[i];
+      if (op === 'insert') {
+        if (!cur.children[ch]) {
+          var nid = cur.id + ch;
+          var node = { id:nid, char:ch, children:{}, isEnd:false };
+          byId[nid] = node; cur.children[ch] = node;
+          created[nid] = true;
+          newNode = nid; activeNode = nid; activeEdge = cur.id + '>' + nid;
+          snap('create', 17);
+          cur = node; newNode = null; activeNode = node.id;
+          snap('move', 20);
+        } else {
+          cur = cur.children[ch];
+          activeNode = cur.id; activeEdge = null;
+          snap('move', 20);
+        }
+      } else {
+        var L = op==='search'
+          ? {miss:30, move:32, ret:34}
+          : {miss:42, move:44, ret:46};
+        if (!cur.children[ch]) {
+          activeNode = cur.id; result = false;
+          snap('miss', L.miss);
+          cur = null;
+          break;
+        }
+        cur = cur.children[ch];
+        activeNode = cur.id;
+        snap('move', L.move);
+      }
+    }
+    if (op === 'insert') {
+      cur.isEnd = true; ends[cur.id] = true;
+      activeNode = cur.id;
+      snap('endmark', 22);
+    } else if (cur !== null) {
+      result = op==='search' ? cur.isEnd : true;
+      activeNode = cur.id;
+      var L2 = op==='search'?34:46;
+      snap('ret', L2);
+    }
+    activeNode = null; activeEdge = null;
+  });
+  return { steps:steps, byId:byId, root:root };
+}
+
+// ===== 树布局（叶子均分、父节点居中），位置固定 =====
+function layout(root) {
+  var leaves = [];
+  (function walk(n){
+    var kids = Object.keys(n.children).map(function(k){return n.children[k];});
+    if (!kids.length) leaves.push(n);
+    else kids.forEach(walk);
+  })(root);
+  var W = 920, m = 64;
+  var spacing = leaves.length > 1 ? (W - 2*m)/(leaves.length-1) : 0;
+  leaves.forEach(function(n,i){ n.x = m + i*spacing; });
+  (function assign(n, depth){
+    var kids = Object.keys(n.children).map(function(k){return n.children[k];});
+    n.depth = depth;
+    if (kids.length) {
+      kids.forEach(function(k){ assign(k, depth+1); });
+      n.x = kids.reduce(function(s,k){return s+k.x;},0)/kids.length;
+    }
+    n.y = 38 + depth*80;
+  })(root, 0);
+}
+
+// ===== 运行状态 =====
+var stage = document.getElementById('stage');
+var built = null, step = 0, curCase = 0;
+
+function render() {
+  var f = built.steps[step];
+  stage.textContent = '';
+  // 边（只画已创建的）
+  (function edges(n){
+    var kids = Object.keys(n.children).map(function(k){return n.children[k];});
+    kids.forEach(function(k){
+      if (f.created[k.id]) {
+        var key = n.id + '>' + k.id;
+        var on = f.activeEdge === key;
+        stage.appendChild(svgEl('line', {
+          x1:n.x, y1:n.y+16, x2:k.x, y2:k.y-16,
+          stroke: on ? '#9C7412' : 'rgba(19,23,24,.34)',
+          'stroke-width': on ? 2.4 : 1.4
+        }));
+      }
+      edges(k);
+    });
+  })(built.root);
+  // 节点（只画已创建的）
+  (function nodes(n){
+    var kids = Object.keys(n.children).map(function(k){return n.children[k];});
+    kids.forEach(function(k){ if (f.created[k.id]) drawNode(k, f); nodes(k); });
+  })(built.root);
+  drawNode(built.root, f, true);
+  renderStats(f);
+  renderText(f);
+  renderCode(f);
+  document.getElementById('stepInd').textContent = '步骤 ' + (step+1) + ' / ' + built.steps.length;
+  document.getElementById('btnPrev').disabled = step === 0;
+  document.getElementById('btnNext').disabled = step === built.steps.length - 1;
+}
+function drawNode(n, f, isRoot) {
+  if (!isRoot && !f.created[n.id]) return;
+  var isCur = f.activeNode === n.id;
+  var isEnd = !!f.ends[n.id];
+  var fill, stroke, tcol, sw = 1.3;
+  if (isCur) { fill = '#9C7412'; stroke = '#9C7412'; tcol = '#F8F9F5'; sw = 1.4; }
+  else if (isEnd) { fill = '#F8F9F5'; stroke = '#9C7412'; tcol = '#9C7412'; sw = 2.4; }
+  else { fill = '#fff'; stroke = 'rgba(19,23,24,.5)'; tcol = '#4A5257'; }
+  stage.appendChild(svgEl('circle', {cx:n.x, cy:n.y, r:17, fill:fill, stroke:stroke, 'stroke-width':sw}));
+  var t = svgEl('text', {x:n.x, y:n.y+4.5, 'text-anchor':'middle', 'font-size': isRoot?11:13, fill:tcol, 'font-family':'Cascadia Code,Consolas,monospace'});
+  t.textContent = isRoot ? 'root' : n.char;
+  stage.appendChild(t);
+  if (isEnd && !isCur) {
+    stage.appendChild(svgEl('circle', {cx:n.x, cy:n.y+27, r:3.2, fill:'#9C7412'}));
+  }
+}
+
+// ===== 状态面板 =====
+function renderStats(f) {
+  document.getElementById('opBox').innerHTML =
+    '<span class="op-name"><span class="tag">' + OP_CN[f.op] + '</span>"' + f.word + '"</span>';
+  var chain = f.cur === null ? [] : f.cur.split('');
+  var curBox = document.getElementById('curBox');
+  if (!chain.length) {
+    curBox.innerHTML = '<span class="res-empty">' + (f.cur===null?'路径已中断':'root（还在根节点）') + '</span>';
+  } else {
+    curBox.innerHTML = '<span class="pill">root</span>' + chain.map(function(c,i){
+      return '<span class="pill' + (i===chain.length-1?' cur':'') + '">' + c + '</span>';
+    }).join('');
+  }
+  var words = Object.keys(f.ends);
+  document.getElementById('wordsBox').innerHTML = words.length
+    ? words.map(function(w){ return '<span class="res-item">'+(w||'')+'</span>'; }).join('')
+    : '<span class="res-empty">还没有完整单词</span>';
+}
+
+// ===== 步骤讲解 =====
+function renderText(f) {
+  var host = document.getElementById('stepText');
+  var at = f.i >= 0 ? '第 ' + (f.i+1) + ' 个字符 "' + f.word[f.i] + '"' : '';
+  var s;
+  switch (f.phase) {
+    case 'opstart':
+      s = '开始 <b>' + OP_CN[f.op] + '</b>，参数 "' + f.word + '"，cur 指向 root';
+      break;
+    case 'create':
+      s = at + '：该位置还没有子节点，<span class="gold">新建节点 "' + f.word[f.i] + '"</span> 并挂到数组对应槽位';
+      break;
+    case 'move':
+      s = at + '：子节点已存在，cur <span class="blue">下移到 "' + f.word[f.i] + '"</span>';
+      break;
+    case 'endmark':
+      s = '单词走完，把终点节点 <span class="gold">isEnd 置为 true</span>，"' + f.word + '" 成为一个完整单词';
+      break;
+    case 'miss':
+      s = at + '：当前节点没有 "' + f.word[f.i] + '" 这个子节点，路径断了，<span class="red">return false</span>';
+      break;
+    case 'ret':
+      s = f.result
+        ? '路径走完，<span class="gold">return ' + f.result + '</span>'
+        : '路径走完但终点不是单词结尾（isEnd 为 false），<span class="red">return false</span>';
+      break;
+  }
+  host.innerHTML = s + '。';
+}
+
+// ===== 代码高亮 =====
+function renderCode(f) {
+  var lines = document.querySelectorAll('#srcCode .ln');
+  lines.forEach(function(ln){
+    ln.classList.toggle('act', Number(ln.getAttribute('data-l')) === f.line);
+  });
+}
+
+// ===== 控制 =====
+var playTimer = null;
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  document.getElementById('btnPlay').textContent = '自动播放';
+}
+function nextStep() { if (step < built.steps.length-1) { step++; render(); } }
+function prevStep() { if (step > 0) { step--; render(); } }
+document.getElementById('btnNext').addEventListener('click', function(){ stopPlay(); nextStep(); });
+document.getElementById('btnPrev').addEventListener('click', function(){ stopPlay(); prevStep(); });
+document.getElementById('btnReset').addEventListener('click', function(){ stopPlay(); step=0; render(); });
+document.getElementById('btnPlay').addEventListener('click', function(){
+  if (playTimer) { stopPlay(); return; }
+  if (step === built.steps.length-1) { step=0; render(); }
+  document.getElementById('btnPlay').textContent = '暂停';
+  playTimer = setInterval(function(){
+    if (step >= built.steps.length-1) {
+      stopPlay();
+      toast('操作序列演示结束');
+      return;
+    }
+    step++; render();
+  }, 900);
+});
+document.addEventListener('keydown', function(e){
+  if (e.key === 'ArrowRight') { e.preventDefault(); stopPlay(); nextStep(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stopPlay(); prevStep(); }
+  else if (e.key === ' ') { e.preventDefault(); document.getElementById('btnPlay').click(); }
+  else if (e.key === 'Home') { e.preventDefault(); stopPlay(); step=0; render(); }
+  else if (e.key === 'End') { e.preventDefault(); stopPlay(); step=built.steps.length-1; render(); }
+});
+
+// ===== 用例切换 =====
+var seg = document.getElementById('caseSeg');
+CASES.forEach(function(c, i){
+  var b = document.createElement('button');
+  b.setAttribute('aria-pressed', i===0?'true':'false');
+  b.textContent = '序列' + (i+1);
+  b.addEventListener('click', function(){ switchCase(i); });
+  seg.appendChild(b);
+});
+function switchCase(i) {
+  stopPlay();
+  curCase = i; step = 0;
+  built = buildSteps(CASES[i]);
+  layout(built.root);
+  render();
+  document.querySelectorAll('#caseSeg button').forEach(function(b,j){
+    b.setAttribute('aria-pressed', j===i?'true':'false');
+  });
+}
+
+built = buildSteps(CASES[0]);
+layout(built.root);
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeetCode 46 全排列：回溯过程分步图解</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23131718'/%3E%3Ccircle cx='11' cy='11' r='4' fill='%231A5470'/%3E%3Ccircle cx='22' cy='22' r='4' fill='%239C7412'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#EDEEE9;
+  --paper-hi:#F8F9F5;
+  --ink:#131718;
+  --ink-2:#4A5257;
+  --ink-3:#7B8387;
+  --rule:rgba(19,23,24,.15);
+  --rule-2:rgba(19,23,24,.075);
+  --blue:#1A5470;
+  --blue-bg:#D8E6EC;
+  --gold:#9C7412;
+  --gold-bg:rgba(156,116,18,.12);
+  --red:#9E3529;
+  --gline:rgba(19,23,24,.045);
+  --sans:"Microsoft YaHei","PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --serif:"Songti SC","SimSun","STSong","Noto Serif SC",Georgia,serif;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.8;-webkit-font-smoothing:antialiased}
+.grid-layer{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--gline) 1px,transparent 1px),linear-gradient(90deg,var(--gline) 1px,transparent 1px);background-size:34px 34px}
+
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 20px}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.05em;color:var(--ink-3);display:flex;align-items:center;gap:10px;margin-top:38px}
+.kicker::before{content:"";width:22px;height:1px;background:var(--ink-3)}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(27px,4.8vw,42px);line-height:1.25;margin:14px 0 0}
+.lede{margin:16px 0 0;font-size:16px;color:var(--ink-2);max-width:46em}
+.lede b{color:var(--ink)}
+
+.console{margin-top:26px;border:1px solid var(--rule);background:var(--paper-hi)}
+.console-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:11px;border-bottom:1px solid var(--rule-2)}
+.btn{font-family:var(--sans);font-size:14px;padding:7px 15px;border:1px solid rgba(19,23,24,.55);background:transparent;color:var(--ink);cursor:pointer;min-height:40px;line-height:1.4}
+.btn:hover{background:rgba(19,23,24,.06)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.32;cursor:default}
+.btn.primary{background:var(--ink);color:var(--paper-hi);border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.ghost{border-color:var(--rule);color:var(--ink-2)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule)}
+.seg button{font-family:var(--sans);font-size:13px;padding:8px 12px;border:0;background:transparent;color:var(--ink-2);cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper-hi)}
+.seg button+button{border-left:1px solid var(--rule)}
+.step-ind{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-left:auto}
+
+.tree-svg{padding:8px 10px 2px}
+.tree-svg svg{display:block;width:100%;height:auto}
+.console-text{padding:12px 16px 14px;font-size:14.5px;line-height:1.8;color:var(--ink-2);border-top:1px solid var(--rule-2);min-height:66px}
+.console-text b{color:var(--ink)}
+.console-text .gold{color:var(--gold);font-weight:600}
+.console-text .red{color:var(--red);font-weight:600}
+
+.stat-grid{display:grid;gap:12px;margin-top:16px}
+@media(min-width:760px){.stat-grid{grid-template-columns:repeat(3,1fr)}}
+.stat{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px}
+.stat h3{font-family:var(--mono);font-size:11.5px;font-weight:400;margin:0 0 9px;color:var(--ink-3)}
+.path-box{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+.pill{font-family:var(--mono);font-size:13px;padding:3px 9px;border:1px solid rgba(19,23,24,.4);color:var(--ink)}
+.pill.cur{border-color:var(--gold);background:var(--gold-bg)}
+.used-row{display:flex;gap:8px;flex-wrap:wrap}
+.used-cell{font-family:var(--mono);font-size:12px;text-align:center;border:1px solid var(--rule);padding:4px 8px;min-width:42px;color:var(--ink-3)}
+.used-cell b{display:block;font-size:13px;color:var(--ink-2)}
+.used-cell.on{border-color:var(--blue);background:rgba(26,84,112,.1)}
+.used-cell.on b{color:var(--blue)}
+.res-list{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.res-item{font-family:var(--mono);font-size:12px;border:1px solid rgba(26,84,112,.4);background:rgba(216,230,236,.55);padding:2px 7px;color:var(--blue)}
+.res-empty{font-size:13px;color:var(--ink-3)}
+
+.code-panel{margin-top:22px;display:grid;gap:14px}
+@media(min-width:880px){.code-panel{grid-template-columns:1.22fr .78fr}}
+.codebox{border:1px solid var(--rule);background:var(--paper-hi);padding:12px 14px;min-width:0}
+.codebox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px;font-weight:700}
+.code-scroll{max-height:480px;overflow:auto}
+pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.9;color:var(--ink-2);white-space:pre}
+pre .ln{display:block;padding:0 6px;margin:0 -6px;border-left:2px solid transparent}
+pre .ln.act{background:var(--gold-bg);border-left-color:var(--gold);color:var(--ink)}
+.tipbox{border:1px solid var(--rule);background:var(--paper-hi);padding:14px 16px}
+.tipbox h3{font-family:var(--serif);font-size:17px;margin:0 0 10px}
+.tipbox ul{margin:0;padding-left:1.2em;font-size:14px;color:var(--ink-2);line-height:1.85}
+.tipbox li{margin:5px 0}
+.tipbox b{color:var(--ink)}
+
+.note{border-left:2px solid var(--gold);background:var(--gold-bg);padding:14px 16px;margin-top:22px;font-size:14.5px;color:var(--ink-2);line-height:1.8;max-width:52em}
+.note b{color:var(--ink)}
+.note.blue{border-left-color:var(--blue);background:rgba(26,84,112,.07)}
+code{font-family:var(--mono);font-size:.92em;background:rgba(19,23,24,.06);padding:1px 5px}
+
+footer{margin-top:60px;padding:26px 0 40px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink-3);line-height:1.9}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--paper-hi);font-size:14px;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.001s !important;animation-duration:.001s !important}}
+</style>
+</head>
+<body>
+<div class="grid-layer" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="kicker">LeetCode 46 · 中等 · 回溯</div>
+  <h1>全排列：回溯那棵树<br>到底是怎么长出来的</h1>
+  <p class="lede">题目：给定一个不含重复数字的数组 <b>nums</b>，返回它所有的全排列。你的写法是标准的 <b>used 数组 + path 回溯</b>。核心就一句话：<b>每层选一个没用过的数，递归下去，回来时把它撤销</b>。下面把每一次递归、每一次撤销都画成步骤，建议直接点自动播放。</p>
+
+  <div class="console">
+    <div class="console-bar">
+      <button class="btn primary" id="btnPrev">上一步</button>
+      <button class="btn primary" id="btnNext">下一步</button>
+      <button class="btn" id="btnPlay">自动播放</button>
+      <button class="btn ghost" id="btnReset">重置</button>
+      <div class="seg" role="group" aria-label="输入数组" id="inputSeg"></div>
+      <span class="step-ind" id="stepInd"></span>
+    </div>
+    <div class="tree-svg">
+      <svg id="stage" viewBox="0 0 920 430" role="img" aria-label="全排列回溯决策树的分步遍历示意"></svg>
+    </div>
+    <div class="console-text" id="stepText"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <h3>当前路径 path</h3>
+      <div class="path-box" id="pathBox"></div>
+    </div>
+    <div class="stat">
+      <h3>used 标记</h3>
+      <div class="used-row" id="usedBox"></div>
+    </div>
+    <div class="stat">
+      <h3>已收集结果 res</h3>
+      <div class="res-list" id="resBox"></div>
+    </div>
+  </div>
+
+  <div class="code-panel">
+    <div class="codebox">
+      <h3>你的代码（当前执行行高亮）</h3>
+      <div class="code-scroll">
+<pre id="srcCode"><span class="ln" data-l="1">class Solution {</span>
+<span class="ln" data-l="2">    List&lt;List&lt;Integer&gt;&gt; res = new ArrayList&lt;&gt;();</span>
+<span class="ln" data-l="3">    public List&lt;List&lt;Integer&gt;&gt; permute(int[] nums) {</span>
+<span class="ln" data-l="4">        int n = nums.length;</span>
+<span class="ln" data-l="5">        boolean[] used = new boolean[n];</span>
+<span class="ln" data-l="6">        List&lt;Integer&gt; path = new ArrayList&lt;&gt;();</span>
+<span class="ln" data-l="7"></span>
+<span class="ln" data-l="8">        backtracking(nums,used,path);</span>
+<span class="ln" data-l="9">        return res;</span>
+<span class="ln" data-l="10">    }</span>
+<span class="ln" data-l="11">    public void backtracking(int[] nums,boolean[] used,List&lt;Integer&gt; path){</span>
+<span class="ln" data-l="12">        if(path.size() == nums.length){</span>
+<span class="ln" data-l="13">            res.add(new ArrayList&lt;&gt;(path));</span>
+<span class="ln" data-l="14">            return;</span>
+<span class="ln" data-l="15">        }</span>
+<span class="ln" data-l="16">        for(int i = 0;i&lt; nums.length;i++){</span>
+<span class="ln" data-l="17">            if(used[i] == true){</span>
+<span class="ln" data-l="18">                continue;</span>
+<span class="ln" data-l="19">            }</span>
+<span class="ln" data-l="20">            used[i] = true;</span>
+<span class="ln" data-l="21">            path.add(nums[i]);</span>
+<span class="ln" data-l="22">            backtracking(nums,used,path);</span>
+<span class="ln" data-l="23">            used[i] = false;</span>
+<span class="ln" data-l="24">            path.remove(path.size()-1);</span>
+<span class="ln" data-l="25"></span>
+<span class="ln" data-l="26">        }</span>
+<span class="ln" data-l="27">    }</span>
+<span class="ln" data-l="28">}</span></pre>
+      </div>
+    </div>
+    <div class="tipbox">
+      <h3>看图抓三个点</h3>
+      <ul>
+        <li><b>树的层数</b> = 已选元素个数；到第 n 层就是叶子，得到一个完整排列。</li>
+        <li><b>每个节点的分支</b> = 当前还没用过的数，used 为 true 的分支根本不会长出来。</li>
+        <li><b>回溯 = 沿边退回去</b>：先撤销标记、再从 path 移除，父节点于是能继续试下一个分支。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note blue"><b>复杂度：</b>叶子共 n! 个，每个叶子拷贝长度为 n 的 path，时间 <b>O(n × n!)</b>；递归栈与 path 占 <b>O(n)</b> 辅助空间，结果集本身占 O(n × n!)（不算辅助空间）。</div>
+  <div class="note"><b>为什么必须撤销：</b>path 和 used 是全程复用的同一个对象，不撤销就会污染兄弟分支——比如选 1 的分支走完后不把 1 释放，选 2、选 3 的分支就永远用不到 1。「递归前做选择、递归后撤销」是所有排列/子集回溯题的固定骨架。</div>
+  <div class="note"><b>易错点：</b>收集时写 <code>res.add(path)</code> 是错的，必须 <code>new ArrayList&lt;&gt;(path)</code> 拷贝一份，否则后续回溯修改的是同一个对象，最终结果全是空或重复。</div>
+
+  <footer>
+    LeetCode 46 全排列 · 回溯分步图解<br>
+    树节点按 DFS 先序编号，金色为当前节点，蓝色为已访问路径。
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+var NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs){
+  var e = document.createElementNS(NS, tag);
+  if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+var toastTimer = null;
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('on'); }, 2200);
+}
+
+/* ===== 建树（先序编号 = DFS 访问顺序）===== */
+var stage = document.getElementById('stage');
+var curInput = [1, 2, 3];
+var tree = null;
+var step = 0;
+
+function buildTree(nums){
+  var nodes = [];
+  var used = new Array(nums.length).fill(false);
+  var path = [];
+  function rec(parentId){
+    var id = nodes.length;
+    nodes.push({
+      path: path.slice(), used: used.slice(),
+      parent: parentId, children: [], depth: path.length
+    });
+    if (parentId >= 0) nodes[parentId].children.push(id);
+    if (path.length === nums.length) return;
+    for (var i = 0; i < nums.length; i++){
+      if (used[i]) continue;
+      used[i] = true; path.push(nums[i]);
+      rec(id);
+      used[i] = false; path.pop();
+    }
+  }
+  rec(-1);
+
+  /* 布局：叶子均分，内部节点取子节点均值 */
+  var leaves = [];
+  nodes.forEach(function(nd){ if (nd.children.length === 0) leaves.push(nd); });
+  var W = 920, m = 72;
+  var spacing = leaves.length > 1 ? (W - 2*m)/(leaves.length-1) : 0;
+  leaves.forEach(function(nd, i){ nd.x = m + i*spacing; });
+  for (var k = nodes.length - 1; k >= 0; k--){
+    var nd = nodes[k];
+    if (nd.children.length){
+      var sum = 0;
+      nd.children.forEach(function(c){ sum += nodes[c].x; });
+      nd.x = sum / nd.children.length;
+    }
+    nd.y = 34 + nd.depth * 96;
+  }
+  return nodes;
+}
+function ancestorChain(id){
+  var chain = [], t = id;
+  while (t >= 0){ chain.push(t); t = tree[t].parent; }
+  return chain;
+}
+
+/* ===== 当前帧应高亮的真实行号 ===== */
+function activeLines() {
+  var node = tree[step];
+  if (step === 0) return [16];
+  if (node.children.length === 0) return [12, 13, 14];
+  var a = tree[step-1], common = 0;
+  while (common < a.path.length && common < node.path.length
+         && a.path[common] === node.path[common]) common++;
+  var undos = a.path.length - common;
+  return undos > 0 ? [23, 24, 20, 21, 22] : [20, 21, 22];
+}
+
+/* ===== 渲染 ===== */
+function render(){
+  stage.textContent = '';
+  var active = {};
+  ancestorChain(step).forEach(function(id){ active[id] = true; });
+
+  /* 边 */
+  tree.forEach(function(nd, id){
+    if (nd.parent < 0) return;
+    var p = tree[nd.parent];
+    var onPath = active[id] && active[nd.parent];
+    var visited = id <= step;
+    stage.appendChild(svgEl('line', {
+      x1: p.x, y1: p.y + 15, x2: nd.x, y2: nd.y - 16,
+      stroke: onPath ? '#9C7412' : (visited ? '#1A5470' : 'rgba(19,23,24,.22)'),
+      'stroke-width': onPath ? 2.2 : 1.3
+    }));
+  });
+
+  /* 节点 */
+  tree.forEach(function(nd, id){
+    var isCur = id === step, visited = id <= step;
+    var fill, stroke, tcolor;
+    if (isCur){ fill = '#9C7412'; stroke = '#9C7412'; tcolor = '#F8F9F5'; }
+    else if (visited){ fill = '#1A5470'; stroke = '#1A5470'; tcolor = '#F8F9F5'; }
+    else { fill = '#fff'; stroke = 'rgba(19,23,24,.35)'; tcolor = '#7B8387'; }
+    stage.appendChild(svgEl('circle', {cx: nd.x, cy: nd.y, r: 16, fill: fill, stroke: stroke, 'stroke-width': 1.2}));
+    var t = svgEl('text', {x: nd.x, y: nd.y + 4, 'text-anchor': 'middle', 'font-size': 12.5, fill: tcolor});
+    t.textContent = nd.depth === 0 ? '∅' : nd.path[nd.path.length - 1];
+    stage.appendChild(t);
+  });
+
+  /* 叶子下方标注完整排列（已访问的） */
+  tree.forEach(function(nd, id){
+    if (nd.children.length === 0 && id <= step){
+      var t = svgEl('text', {x: nd.x, y: nd.y + 34, 'text-anchor': 'middle', 'font-size': 10, fill: '#1A5470'});
+      t.textContent = '[' + nd.path.join(',') + ']';
+      stage.appendChild(t);
+    }
+  });
+
+  renderStats();
+  renderText();
+  renderCode();
+  document.getElementById('stepInd').textContent = '节点 ' + step + ' / ' + (tree.length - 1);
+  document.getElementById('btnPrev').disabled = step === 0;
+  document.getElementById('btnNext').disabled = step === tree.length - 1;
+}
+
+/* ===== 状态面板 ===== */
+function renderStats(){
+  var node = tree[step];
+  var pathBox = document.getElementById('pathBox');
+  if (node.path.length === 0){
+    pathBox.innerHTML = '<span class="res-empty">空（还没选任何数）</span>';
+  } else {
+    pathBox.innerHTML = node.path.map(function(v, i){
+      return '<span class="pill' + (i === node.path.length - 1 ? ' cur' : '') + '">' + v + '</span>';
+    }).join('');
+  }
+  document.getElementById('usedBox').innerHTML = node.used.map(function(on, i){
+    return '<div class="used-cell' + (on ? ' on' : '') + '"><b>' + curInput[i] + '</b>' + (on ? 'true' : 'false') + '</div>';
+  }).join('');
+  var leafNodes = tree.filter(function(nd){ return nd.children.length === 0 && tree.indexOf(nd) <= step; });
+  document.getElementById('resBox').innerHTML = leafNodes.length
+    ? leafNodes.map(function(nd){ return '<span class="res-item">[' + nd.path.join(',') + ']</span>'; }).join('')
+    : '<span class="res-empty">尚未收集到排列</span>';
+}
+
+/* ===== 步骤讲解 ===== */
+function renderText(){
+  var host = document.getElementById('stepText');
+  if (step === 0){
+    host.innerHTML = '从根节点开始：path 为空，进入 <b>for 循环</b>，按顺序尝试每个没用过的数。';
+    return;
+  }
+  var a = tree[step - 1], b = tree[step];
+  var common = 0;
+  while (common < a.path.length && common < b.path.length && a.path[common] === b.path[common]) common++;
+  var undos = a.path.length - common;
+  var parts = [];
+  if (undos > 0){
+    var undone = a.path.slice(common).reverse();
+    parts.push('<span class="red">回溯：撤销 ' + undone.join('、') + '</span>（used 置 false、path 移除）');
+  }
+  if (b.children.length === 0){
+    if (undos === 0) parts.push('选择 <b>' + b.path[b.path.length - 1] + '</b> 并递归');
+    parts.push('到达叶子：path 长度 = n，<span class="gold">收集排列 [' + b.path.join(',') + ']</span>，return 回上层');
+  } else if (undos === 0){
+    parts.push('选择 <b>' + b.path[b.path.length - 1] + '</b>：used 置 true、path 加入，递归深入到第 ' + (b.depth + 1) + ' 层');
+  } else {
+    parts.push('再选择 <b>' + b.path[common] + '</b>，递归进入新分支');
+  }
+  host.innerHTML = parts.join('；') + '。';
+}
+
+/* ===== 代码高亮（真实行号）===== */
+function renderCode(){
+  var set = activeLines();
+  document.querySelectorAll('#srcCode .ln').forEach(function(ln){
+    ln.classList.toggle('act', set.indexOf(Number(ln.getAttribute('data-l'))) > -1);
+  });
+}
+
+/* ===== 控制 ===== */
+var playTimer = null;
+function stopPlay(){
+  if (playTimer){ clearInterval(playTimer); playTimer = null; }
+  document.getElementById('btnPlay').textContent = '自动播放';
+}
+document.getElementById('btnNext').addEventListener('click', function(){
+  if (step < tree.length - 1){ step++; stopPlay(); render(); }
+});
+document.getElementById('btnPrev').addEventListener('click', function(){
+  if (step > 0){ step--; stopPlay(); render(); }
+});
+document.getElementById('btnReset').addEventListener('click', function(){
+  step = 0; stopPlay(); render();
+});
+document.getElementById('btnPlay').addEventListener('click', function(){
+  if (playTimer){ stopPlay(); return; }
+  if (step === tree.length - 1){ step = 0; render(); }
+  document.getElementById('btnPlay').textContent = '暂停';
+  playTimer = setInterval(function(){
+    if (step >= tree.length - 1){
+      stopPlay();
+      var leafCount = tree.filter(function(nd){ return nd.children.length === 0; }).length;
+      toast('遍历结束：共收集 ' + curInput.length + '! = ' + leafCount + ' 个排列');
+      return;
+    }
+    step++; render();
+  }, 1150);
+});
+document.addEventListener('keydown', function(e){
+  if (e.key === 'ArrowRight') { e.preventDefault(); stopPlay(); if (step<tree.length-1){step++;render();} }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stopPlay(); if (step>0){step--;render();} }
+  else if (e.key === ' ') { e.preventDefault(); document.getElementById('btnPlay').click(); }
+  else if (e.key === 'Home') { e.preventDefault(); stopPlay(); step=0; render(); }
+  else if (e.key === 'End') { e.preventDefault(); stopPlay(); step=tree.length-1; render(); }
+});
+
+/* ===== 输入切换 ===== */
+var INPUTS = [
+  { nums:[1,2,3], label:'[1,2,3]' },
+  { nums:[1,2], label:'[1,2]' },
+  { nums:[1], label:'[1]' },
+  { nums:[3,1,2], label:'[3,1,2]' },
+  { nums:[0,1], label:'[0,1]' },
+  { nums:[-1,1], label:'[-1,1]' },
+  { nums:[2,4,6], label:'[2,4,6]' },
+  { nums:[1,2,3,4], label:'[1,2,3,4]' }
+];
+var seg = document.getElementById('inputSeg');
+INPUTS.forEach(function(it, i){
+  var b = document.createElement('button');
+  b.setAttribute('aria-pressed', i===0?'true':'false');
+  b.textContent = it.label;
+  b.addEventListener('click', function(){ switchInput(i); });
+  seg.appendChild(b);
+});
+function switchInput(i){
+  stopPlay();
+  curInput = INPUTS[i].nums;
+  tree = buildTree(curInput);
+  step = 0; render();
+  document.querySelectorAll('#inputSeg button').forEach(function(b,j){
+    b.setAttribute('aria-pressed', j===i?'true':'false');
+  });
+}
+
+tree = buildTree(curInput);
+render();
+</script>
+</body>
+</html>

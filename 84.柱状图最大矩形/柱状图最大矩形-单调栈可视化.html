@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>R</text></svg>">
+<title>84. 柱状图中最大的矩形 · 单调栈可视化</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --fg:#e6edf3; --muted:#8b949e;
+    --blue:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149; --purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;line-height:1.6;overflow:hidden;height:100vh;
+    display:flex;flex-direction:column;
+  }
+  header{
+    display:flex;justify-content:space-between;align-items:center;gap:14px;
+    padding:13px 20px;border-bottom:1px solid var(--border);background:var(--panel);flex-wrap:wrap;
+  }
+  h1{font-size:18px}
+  .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{background:var(--bg);color:var(--muted);border:none;padding:7px 11px;cursor:pointer;font-family:var(--mono);font-size:11.5px}
+  .seg button.on{background:var(--blue);color:#fff}
+  .btn{background:var(--panel2);color:var(--fg);border:1px solid var(--border);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12.5px}
+  .btn:hover{background:#272e3a}
+  .btn.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  select{background:var(--panel2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:7px 6px;font-size:12px}
+  .progress-bar{display:flex;align-items:center;gap:12px;padding:8px 20px;background:var(--panel);border-bottom:1px solid var(--border)}
+  .pl{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+  input[type=range]{flex:1;accent-color:var(--blue)}
+  main{flex:1;display:grid;grid-template-columns:1.2fr 1fr;gap:14px;padding:14px 20px;overflow:hidden}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;font-family:var(--mono);color:var(--muted)}
+  .left-body{padding:15px;overflow:auto;display:flex;flex-direction:column;gap:18px}
+  .sec-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px}
+  .chart{position:relative;padding-left:2px}
+  .bars{display:flex;gap:8px;align-items:flex-end;padding-bottom:18px}
+  .bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:34px}
+  .bar{
+    width:100%;border-radius:4px 4px 0 0;border:1px solid rgba(88,166,255,.5);
+    background:rgba(88,166,255,.14);display:flex;align-items:flex-start;justify-content:center;
+    padding-top:3px;font-size:10.5px;font-weight:700;color:var(--blue);min-height:14px;
+  }
+  .bar.sentinel{border-color:var(--orange);background:rgba(210,153,34,.12);color:var(--orange);border-style:dashed}
+  .bar.pending{border-color:var(--border);background:var(--bg);border-style:dotted;color:var(--muted)}
+  .bar.instack{border-color:var(--red);background:rgba(248,81,73,.16);color:var(--red)}
+  .bar-col.scan .bar{box-shadow:0 0 0 2px var(--blue)}
+  .bidx{position:absolute;bottom:0;font-family:var(--mono);font-size:9.5px;color:var(--muted);width:34px;text-align:center}
+  .b-tag{
+    position:absolute;text-align:center;font-family:var(--mono);font-size:9px;
+    color:var(--red);font-weight:700;pointer-events:none;white-space:nowrap;
+  }
+  .rect-cover{
+    position:absolute;border:2px solid var(--green);background:rgba(63,185,80,.28);
+    border-radius:4px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);
+    animation:rIn .3s ease;pointer-events:none;
+  }
+  .rect-cover.best{border-color:var(--orange);background:rgba(210,153,34,.3);color:var(--orange)}
+  @keyframes rIn{from{opacity:0;transform:scaleY(.7)}to{opacity:1;transform:scaleY(1)}}
+  .vstack{display:flex;flex-direction:column-reverse;gap:6px}
+  .scell{
+    font-family:var(--mono);border:1px solid rgba(88,166,255,.5);background:rgba(88,166,255,.12);
+    border-radius:6px;padding:7px 10px;color:var(--blue);display:flex;justify-content:space-between;gap:10px;
+    animation:pop .25s ease;
+  }
+  .scell.is-top{font-weight:700}
+  .ghost{
+    font-family:var(--mono);border:1px dashed var(--red);color:var(--red);border-radius:6px;
+    padding:7px 10px;opacity:.65;display:flex;justify-content:space-between;gap:10px;animation:ghost .5s ease;
+  }
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes ghost{from{opacity:0;transform:translateY(8px)}to{opacity:.65;transform:translateY(0)}}
+  .rightCol{display:flex;flex-direction:column;gap:14px;overflow:hidden}
+  .state-body{padding:13px 14px;display:flex;flex-direction:column;gap:11px}
+  .meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .meta{background:var(--panel2);border-radius:6px;padding:8px 4px;text-align:center;border:1px solid var(--border)}
+  .meta .lbl{font-size:9.5px;color:var(--muted);font-family:var(--mono)}
+  .meta .val{font-size:13.5px;font-weight:700;font-family:var(--mono);margin-top:3px}
+  .result-big{
+    background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;
+    display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12px;
+  }
+  .result-big b{font-size:18px;color:var(--orange)}
+  .hist-lbl{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .hist{
+    max-height:96px;overflow:auto;display:flex;flex-direction:column;gap:4px;
+    border:1px solid var(--border);border-radius:6px;padding:6px;background:var(--panel2);
+  }
+  .hist-row{
+    font-family:var(--mono);font-size:11px;display:flex;justify-content:space-between;
+    padding:3px 7px;border-radius:4px;background:var(--bg);color:var(--muted);
+  }
+  .hist-row.best{color:var(--orange);border:1px solid rgba(210,153,34,.5);background:rgba(210,153,34,.1)}
+  .hist-row .ha{color:var(--green);font-weight:700}
+  .hist-row.best .ha{color:var(--orange)}
+  .desc{background:var(--panel2);padding:9px 11px;border-radius:6px;border-left:3px solid var(--blue);font-size:12.5px;line-height:1.6}
+  .desc.ok{border-left-color:var(--green)}
+  #codeBody{padding:8px 0;font-family:var(--mono);font-size:12px;overflow:auto;flex:1}
+  .code-line{display:flex;padding:2px 12px;white-space:pre;min-height:18px;color:#c9d1d9}
+  .code-line .ln{width:24px;color:#484f58;user-select:none;text-align:right;margin-right:12px;flex-shrink:0}
+  .code-line.cur{background:rgba(56,139,253,.15);border-left:2px solid var(--blue);padding-left:10px}
+  .kw{color:#ff7b72}.ty{color:#ffa657}.fn{color:#d2a8ff}.nm{color:#79c0ff}
+  @media(max-width:900px){
+    body{overflow:auto;height:auto}
+    main{grid-template-columns:1fr;overflow:auto}
+    .rightCol{overflow:visible}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>84. 柱状图中最大的矩形 <span style="color:var(--muted);font-weight:400">| 单调递增栈 + 哨兵</span></h1>
+    <div class="sub">弹出柱子时，左右第一个更矮的柱子决定它能撑出的最大矩形</div>
+  </div>
+  <div class="controls">
+    <div class="seg" id="caseSeg">
+      <button data-c="0" class="on">题目示例</button>
+      <button data-c="1">两柱</button>
+      <button data-c="2">等高</button>
+    </div>
+    <button class="btn" id="btnReset">重置</button>
+    <button class="btn" id="btnPrev">上一步</button>
+    <button class="btn primary" id="btnPlay">播放</button>
+    <button class="btn" id="btnNext">下一步</button>
+    <select id="speed">
+      <option value="1300">慢</option>
+      <option value="750" selected>中</option>
+      <option value="340">快</option>
+    </select>
+  </div>
+</header>
+
+<div class="progress-bar">
+  <span class="pl" id="plLabel">步骤 0 / 0</span>
+  <input type="range" id="slider" min="0" max="1" value="0">
+</div>
+
+<main>
+  <div class="panel">
+    <div class="panel-head"><span>柱状图（橙色虚线为哨兵 0）· 单调栈</span><span id="stepInfo">步骤 0 / 0</span></div>
+    <div class="left-body">
+      <div>
+        <div class="sec-lbl">柱状图与当前矩形（绿色）</div>
+        <div class="chart" id="chart"></div>
+      </div>
+      <div>
+        <div class="sec-lbl">Deque&lt;Integer&gt;（栈顶在上）</div>
+        <div class="vstack" id="stack"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rightCol">
+    <div class="panel" style="flex:0 0 auto">
+      <div class="panel-head"><span>当前状态</span></div>
+      <div class="state-body">
+        <div class="meta-grid">
+          <div class="meta"><div class="lbl">当前 i</div><div class="val" id="iVal" style="color:var(--blue)">—</div></div>
+          <div class="meta"><div class="lbl">h[i]</div><div class="val" id="hvVal" style="color:var(--orange)">—</div></div>
+          <div class="meta"><div class="lbl">mid</div><div class="val" id="midVal" style="color:var(--purple)">—</div></div>
+          <div class="meta"><div class="lbl">left</div><div class="val" id="leftVal">—</div></div>
+          <div class="meta"><div class="lbl">width</div><div class="val" id="wVal">—</div></div>
+          <div class="meta"><div class="lbl">area</div><div class="val" id="areaVal" style="color:var(--green)">—</div></div>
+          <div class="meta"><div class="lbl">栈顶</div><div class="val" id="topVal">—</div></div>
+          <div class="meta"><div class="lbl">栈大小</div><div class="val" id="sizeVal">0</div></div>
+        </div>
+        <div class="result-big"><span>result 最大面积</span><b id="resultVal">0</b></div>
+        <div class="hist-lbl">面积计算历史（橙色为当前最大）</div>
+        <div class="hist" id="areaHistory"></div>
+        <div class="desc" id="desc">点击「播放」「下一步」，拖动进度条，或切换上方用例。</div>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1">
+      <div class="panel-head"><span>Solution.java · 当前执行行高亮</span></div>
+      <div id="codeBody"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const CODE = [
+ [1 , 'class Solution {'],
+ [2 , '    public int largestRectangleArea(int[] heights) {'],
+ [3 , '        int[] h = new int[heights.length + 2];'],
+ [4 , '        for (int k = 0; k < heights.length; k++) {'],
+ [5 , '            h[k + 1] = heights[k];'],
+ [6 , '        }'],
+ [7 , '        Deque<Integer> st = new ArrayDeque<>();'],
+ [8 , '        int result = 0;'],
+ [9 , '        st.push(0);'],
+ [10, '        for (int i = 1; i < h.length; i++) {'],
+ [11, '            while (h[i] < h[st.peek()]) {'],
+ [12, '                int mid = st.pop();'],
+ [13, '                int left = st.peek();'],
+ [14, '                int width = i - left - 1;'],
+ [15, '                result = Math.max(result, h[mid] * width);'],
+ [16, '            }'],
+ [17, '            st.push(i);'],
+ [18, '        }'],
+ [19, '        return result;'],
+ [20, '    }'],
+ [21, '}'],
+];
+
+const HEIGHT_CASES = [
+  [2,1,5,6,2,3],
+  [2,4],
+  [1,1],
+];
+
+function buildSteps(heights){
+  const n=heights.length;
+  const h=new Array(n+2).fill(0);
+  const steps=[];
+  const st=[];
+  let result=0;
+  const snap=e=>Object.assign({h:h.slice(),stack:st.slice(),result,rect:null},e);
+
+  // 步骤1：新建长度 n+2 的 h，int 数组默认全 0
+  steps.push(snap({
+    action:'create',i:0,line:3,filledUpTo:0,
+    desc:`new 一个长度为 ${n}+2=${n+2} 的数组 h。int 数组默认值全是 0，目前中间位置都是待填充的空占位，首尾两个 0 将来就是哨兵。`
+  }));
+
+  // 步骤2..n+1：逐个把 heights 复制到 h[k+1]
+  for(let k=0;k<n;k++){
+    h[k+1]=heights[k];
+    steps.push(snap({
+      action:'copy',i:k+1,line:5,filledUpTo:k+1,
+      desc:`for 第 ${k} 轮：执行 h[${k}+1] = heights[${k}]，即 h[${k+1}] = ${heights[k]}，原数组这根柱子被复制进来。`
+    }));
+  }
+
+  // 压入左哨兵 0
+  st.push(0);
+  steps.push(snap({
+    action:'push0',i:0,line:9,filledUpTo:n,
+    desc:'h 构造完成，首尾各保留一个 0 哨兵。把左哨兵索引 0 压入栈，栈底从此永远有元素，后面 peek 无需再判空。'
+  }));
+
+  // 主循环
+  for(let i=1;i<h.length;i++){
+    while(h[i]<h[st[st.length-1]]){
+      const mid=st.pop();
+      const left=st[st.length-1];
+      const width=i-left-1;
+      const area=h[mid]*width;
+      const isBest=area>result;
+      result=Math.max(result,area);
+      steps.push(snap({
+        action:'pop',i,mid,left,width,area,line:12,
+        rect:{left:left+1,right:i-1,height:h[mid],area},
+        isBest,
+        desc:`h[${i}]=${h[i]} 比栈顶矮，弹出 mid=${mid}（高 ${h[mid]}）。左边界 ${left}、右边界 ${i}，宽 = ${i}−${left}−1 = ${width}，面积 = ${h[mid]}×${width} = ${area}。`,
+        descType:'ok'
+      }));
+    }
+    st.push(i);
+    steps.push(snap({
+      action:'push',i,line:17,
+      desc:`h[${i}]=${h[i]} 不低于栈顶，把索引 ${i} 压入，栈内对应高度保持单调递增。`,
+      descType:''
+    }));
+  }
+  steps.push(snap({
+    action:'done',i:h.length,line:19,
+    desc:`所有柱子计算完毕，右哨兵 0 把栈内元素全部弹出，最大面积为 ${result}。`,
+    descType:'ok'
+  }));
+  return steps;
+}
+
+const CH=140, BW=34, GAP=8, UNIT=42, BOT=18;
+let caseIdx=0;
+let heights=HEIGHT_CASES[0];
+let steps=buildSteps(heights);
+let stepIdx=-1,playing=false,timer=null;
+
+const chartEl=document.getElementById('chart');
+const stackEl=document.getElementById('stack');
+const codeBody=document.getElementById('codeBody');
+const slider=document.getElementById('slider');
+const descEl=document.getElementById('desc');
+
+function hl(code){
+  return code
+    .replace(/\b(class|public|int|while|for|return|new)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(Deque|ArrayDeque|Integer)\b/g,'<span class="ty">$1</span>')
+    .replace(/\b(push|pop|peek|max|length)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(st|h|heights|result|mid|left|width)\b/g,'<span class="nm">$1</span>');
+}
+function renderCode(curLine){
+  codeBody.innerHTML=CODE.map(([n,t])=>
+    `<div class="code-line${n===curLine?' cur':''}"><span class="ln">${n}</span><span>${hl(t)||'&nbsp;'}</span></div>`
+  ).join('');
+}
+
+// 栈元素按高度在当前用例中的相对位置生成区分色：矮→蓝，高→暖橙
+function colorFor(v,min,max){
+  const t=(v-min)/Math.max(max-min,1);
+  const hue=205-t*175;
+  return {
+    border:`hsl(${hue} 72% 62%)`,
+    bg:`hsl(${hue} 72% 58% / .16)`,
+    fg:`hsl(${hue} 88% 70%)`
+  };
+}
+
+function render(){
+  const s=stepIdx>=0?steps[stepIdx]:null;
+  const hArr=s?s.h:new Array(heights.length+2).fill(0).map((_,i)=>i>=1&&i<=heights.length?heights[i-1]:0);
+  const stk=s?s.stack:[];
+  const maxH=Math.max(...hArr,1);
+  const scanI=s?s.i:-1;
+
+  // 柱状图（create/copy 阶段区分哨兵、已填充、待填充；在栈中的柱子标红）
+  const building=s && (s.action==='create'||s.action==='copy');
+  const inStack=new Set(stk);
+  let bars='<div class="bars">';
+  hArr.forEach((v,idx)=>{
+    const isSentinel=(idx===0||idx===hArr.length-1);
+    const isPending=building && !isSentinel && idx>s.filledUpTo;
+    const bh=isPending?10:Math.max(Math.round(v/maxH*CH), v===0?6:14);
+    let cls='bar';
+    if(isSentinel) cls+=' sentinel';
+    if(isPending) cls+=' pending';
+    if(!isSentinel&&!isPending&&inStack.has(idx)) cls+=' instack';
+    const style=`height:${bh}px`;
+    const scan=idx===scanI?' scan':'';
+    const label=isPending?'':v;
+    bars += `<div class="bar-col${scan}" data-idx="${idx}" style="cursor:pointer"><div class="${cls}" style="${style}">${label}</div><div class="bidx">${idx}</div></div>`;
+  });
+  bars+='</div>';
+  let cover='';
+  if(s && s.rect){
+    const r=s.rect;
+    const rLeft=r.left*UNIT;
+    const rWidth=(r.right-r.left+1)*UNIT-GAP;
+    const rHeight=Math.round(r.height/maxH*CH);
+    cover=`<div class="rect-cover${s.isBest?' best':''}" style="left:${rLeft}px;bottom:${BOT}px;width:${rWidth}px;height:${rHeight}px">${r.area}</div>`;
+  }
+  // 左右边界标签（两个更矮的柱子）
+  let btags='';
+  if(s && s.action==='pop'){
+    [[s.left,'左界'],[s.i,'右界']].forEach(([idx,txt])=>{
+      const colH=Math.max(Math.round(hArr[idx]/maxH*CH), hArr[idx]===0?6:14);
+      btags += `<div class="b-tag" style="left:${idx*UNIT}px;bottom:${colH+BOT+3}px;width:${BW}px">${txt}</div>`;
+    });
+  }
+  chartEl.innerHTML=bars+cover+btags;
+
+  // 栈
+  let sh='';
+  if(s && s.action==='pop'){
+    sh += `<div class="ghost"><span>idx ${s.mid}</span><span>${s.h[s.mid]}</span></div>`;
+  }
+  const realMin=Math.min(...heights), realMax=Math.max(...heights);
+  sh += [...stk].reverse().map((idx,revIdx)=>{
+    const realIdx=stk.length-1-revIdx;
+    const isTop=realIdx===stk.length-1;
+    const v=s?s.h[idx]:0;
+    const isSentinel=(idx===0||idx===hArr.length-1);
+    let style;
+    if(isSentinel){
+      style='border-color:var(--orange);background:rgba(210,153,34,.12);color:var(--orange)';
+    } else {
+      const c=colorFor(v,realMin,realMax);
+      style=`border-color:${c.border};background:${c.bg};color:${c.fg}`;
+    }
+    if(isTop) style+=';border-width:2px';
+    return `<div class="scell${isTop?' is-top':''}" style="${style}"><span>idx ${idx}</span><span>${v}</span></div>`;
+  }).join('');
+  stackEl.innerHTML=sh;
+
+  document.getElementById('iVal').textContent=s?s.i:'—';
+  document.getElementById('hvVal').textContent=s?s.h[s.i]:'—';
+  document.getElementById('midVal').textContent=s&&s.action==='pop'?s.mid:'—';
+  document.getElementById('leftVal').textContent=s&&s.action==='pop'?s.left:'—';
+  document.getElementById('wVal').textContent=s&&s.action==='pop'?s.width:'—';
+  document.getElementById('areaVal').textContent=s&&s.action==='pop'?s.area:'—';
+  document.getElementById('topVal').textContent=stk.length?stk[stk.length-1]:'—';
+  document.getElementById('sizeVal').textContent=stk.length;
+  document.getElementById('resultVal').textContent=s?s.result:0;
+
+  // 面积历史：汇总当前步及之前所有 pop
+  const hist=[];
+  for(let k=0;k<=stepIdx;k++){
+    if(steps[k].action==='pop'){
+      hist.push({mid:steps[k].mid,h:steps[k].h[steps[k].mid],width:steps[k].width,area:steps[k].area});
+    }
+  }
+  const curBest=s?s.result:0;
+  document.getElementById('areaHistory').innerHTML = hist.length?hist.map(r=>
+    `<div class="hist-row${r.area===curBest?' best':''}"><span>mid=${r.mid}：${r.h}×${r.width}</span><span class="ha">${r.area}</span></div>`
+  ).join(''):'<div class="hist-row" style="justify-content:center">暂无计算</div>';
+
+  if(s){
+    descEl.textContent=s.desc;
+    descEl.className='desc '+(s.descType||'');
+    renderCode(s.line);
+  } else {
+    descEl.textContent='点击「播放」「下一步」，拖动进度条，或切换上方用例。';
+    descEl.className='desc';renderCode(0);
+  }
+  document.getElementById('stepInfo').textContent=`步骤 ${Math.max(stepIdx+1,0)} / ${steps.length}`;
+  slider.max=Math.max(steps.length-1,0);
+  slider.value=Math.max(stepIdx,0);
+  document.getElementById('plLabel').textContent=`步骤 ${Math.max(stepIdx+1,0)} / ${steps.length}`;
+}
+
+function next(){if(stepIdx<steps.length-1){stepIdx++;render();return true;}return false;}
+function prev(){if(stepIdx>-1){stepIdx--;render();}}
+function stop(){playing=false;if(timer){clearInterval(timer);timer=null;}document.getElementById('btnPlay').textContent='播放';}
+function play(){
+  if(playing){stop();return;}
+  playing=true;document.getElementById('btnPlay').textContent='暂停';
+  if(stepIdx>=steps.length-1){stepIdx=-1;render();}
+  timer=setInterval(()=>{if(!next())stop();},Number(document.getElementById('speed').value));
+}
+function reset(){stop();stepIdx=-1;render();}
+
+document.getElementById('btnPlay').addEventListener('click',play);
+document.getElementById('btnNext').addEventListener('click',()=>{stop();next();});
+document.getElementById('btnPrev').addEventListener('click',()=>{stop();prev();});
+document.getElementById('btnReset').addEventListener('click',reset);
+slider.addEventListener('input',()=>{stop();stepIdx=Number(slider.value);render();});
+chartEl.addEventListener('click',e=>{
+  const c=e.target.closest('.bar-col');if(!c)return;
+  const idx=Number(c.dataset.idx);
+  const matches=steps.map((st,k)=>({st,k})).filter(o=>o.st.i===idx);
+  const main=matches.find(o=>o.st.action==='push'||o.st.action==='pop');
+  const target=main?main.k:(matches[0]?matches[0].k:-1);
+  if(target>=0){stop();stepIdx=target;render();}
+});
+document.getElementById('caseSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('#caseSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');caseIdx=Number(b.dataset.c);
+  heights=HEIGHT_CASES[caseIdx];
+  steps=buildSteps(heights);
+  stop();stepIdx=-1;render();
+});
+document.getElementById('speed').addEventListener('change',()=>{if(playing){stop();play();}});
+document.addEventListener('keydown',e=>{
+  const tag=e.target.tagName;
+  if(tag==='INPUT'&&e.target.type!=='range')return;
+  if(e.code==='Space'){e.preventDefault();play();}
+  else if(e.code==='ArrowRight'){e.preventDefault();stop();next();}
+  else if(e.code==='ArrowLeft'){e.preventDefault();stop();prev();}
+});
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>接雨水：单调栈逐层结算</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#182230;--muted:#667085;--line:#e4e9f0;--blue:#2878d0;--blue-dark:#155aa2;--blue-light:#a9d6f5;--blue-pale:#eaf4fd;--gray:#aab4c0;--gray-dark:#718096;--teal:#0f8b78;--teal-pale:#e7f6f2;--amber:#b96b09;--amber-pale:#fff4df;--shadow:0 14px 40px rgba(30,50,80,.08)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.65}
+button,input{font:inherit}
+.page{max-width:1180px;margin:0 auto;padding:30px 24px 42px}
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:20px}
+.eyebrow{color:var(--blue);font-size:13px;font-weight:700;letter-spacing:.12em;margin-bottom:5px}
+h1{font-size:30px;line-height:1.3;margin:0 0 8px;letter-spacing:-.02em}
+.hero p{margin:0;color:var(--muted);font-size:15px}
+.badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-size:12px;color:var(--blue-dark);background:var(--blue-pale);border:1px solid #cfe5f8;padding:5px 10px;border-radius:999px;white-space:nowrap}
+.rule-strip{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin:0 0 18px;color:var(--muted);font-size:13px}
+.rule-strip span{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px}
+.rule-strip b{color:var(--blue);font-weight:500}
+.step-dots{display:flex;justify-content:center;gap:8px;margin:0 0 16px;flex-wrap:wrap}
+.step-dots label{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#fff;border:1px solid var(--line);color:var(--muted);font-size:13px;cursor:pointer;transition:.2s}
+.step-dots label:hover{border-color:var(--blue);color:var(--blue);transform:translateY(-1px)}
+.step-input{position:absolute;opacity:0;pointer-events:none}
+.app{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+.scene{display:none;grid-template-columns:minmax(0,1.45fr) minmax(300px,.85fr);gap:0;min-height:530px}
+.visual{padding:26px 28px 22px;background:#fbfcfe;border-right:1px solid var(--line)}
+.visual-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.visual-title{font-size:14px;font-weight:700}
+.ans{font-size:13px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px 10px}
+.ans strong{color:var(--blue-dark);font-size:18px;margin-left:5px}
+.chart{display:grid;grid-template-columns:repeat(5,minmax(54px,76px));justify-content:center;gap:12px;padding:14px 4px 0;border-bottom:2px solid #cdd5df;min-height:330px}
+.column{text-align:center;min-width:0}
+.role{height:30px;font-size:12px;font-weight:700;white-space:nowrap}
+.column.current .role{color:var(--blue)}
+.column.left .role{color:var(--teal)}
+.column.popped .role{color:var(--amber)}
+.units{height:235px;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;padding:0 5px}
+.unit{display:block;height:39px;border-radius:5px;flex:none}
+.solid{background:var(--gray);border:1px solid var(--gray-dark)}
+.column.current .solid{background:#8ea9c2;border-color:#5f7f9e}
+.column.left .solid{background:#81bdb1;border-color:#398f7f}
+.water{background:var(--blue-light);border:1px solid #68b6e8;position:relative;transform-origin:bottom;animation:waterIn .45s ease-out both}
+.water:after{content:"";display:block;height:3px;margin:5px 7px 0;background:rgba(255,255,255,.7);border-radius:3px}
+.water.new{background:#4aa8e5;border-color:var(--blue);animation:waterIn .55s ease-out both,waterPulse 1.8s .6s ease-in-out infinite}
+.index{font-size:13px;font-weight:700;margin-top:9px}
+.height{font-size:12px;color:var(--muted)}
+.stack-box{margin-top:20px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stack-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:9px}
+.stack-row{display:flex;gap:7px;align-items:center;min-height:36px;flex-wrap:wrap}
+.stack-item{background:var(--blue-pale);border:1px solid #bddbf4;color:var(--blue-dark);padding:4px 9px;border-radius:7px;font:12px ui-monospace,Consolas,monospace;animation:stackIn .35s ease-out both}
+.stack-empty{color:#98a2b3;font-size:13px}
+.explain{padding:28px 26px 22px;display:flex;flex-direction:column}
+.step-kicker{font-size:12px;color:var(--blue);font-weight:700;letter-spacing:.08em;margin-bottom:7px}
+.explain h2{font-size:22px;line-height:1.4;margin:0 0 12px}
+.explain p{font-size:14px;color:var(--muted);margin:0 0 16px}
+.code-now{background:#172231;color:#e8eef6;border-radius:10px;padding:12px 14px;font:13px/1.7 ui-monospace,Consolas,monospace;overflow:auto;margin-bottom:15px;white-space:nowrap}
+.code-now .comment{color:#9bb0c7}
+.formula{background:var(--blue-pale);border:1px solid #d2e7f8;border-radius:12px;padding:13px 14px;font-size:13px;margin-bottom:14px}
+.formula div+div{margin-top:5px}
+.formula strong{color:var(--blue-dark)}
+.result{color:var(--blue-dark);font-weight:700;font-size:16px}
+.note{background:var(--amber-pale);border-left:3px solid #d89131;padding:10px 12px;border-radius:0 8px 8px 0;color:#7d4c12;font-size:13px;margin-top:auto}
+.note.teal{background:var(--teal-pale);border-color:var(--teal);color:#176b5e}
+.scene-nav{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:15px 24px;background:#fff}
+.nav-btn{display:inline-flex;align-items:center;justify-content:center;min-width:104px;padding:8px 15px;border:1px solid var(--line);border-radius:9px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;user-select:none;background:#fff;transition:.2s}
+.nav-btn:hover{border-color:var(--blue);color:var(--blue);transform:translateY(-1px)}
+.nav-btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.nav-btn.primary:hover{background:var(--blue-dark);color:#fff}
+.nav-count{font-size:12px;color:var(--muted)}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.summary-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.summary-card b{display:block;font-size:13px;margin-bottom:3px}
+.summary-card span{font-size:12px;color:var(--muted)}
+details{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+summary{cursor:pointer;padding:13px 17px;font-size:14px;font-weight:700;user-select:none}
+pre{margin:0;padding:18px 22px;background:#172231;color:#e8eef6;overflow:auto;font:13px/1.65 ui-monospace,Consolas,monospace;border-top:1px solid var(--line)}
+pre .key{color:#8fc7ff}pre .fn{color:#ffd58a}pre .cm{color:#91a4b9}
+.footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
+#step0:checked~.app .scene-0,#step1:checked~.app .scene-1,#step2:checked~.app .scene-2,#step3:checked~.app .scene-3,#step4:checked~.app .scene-4,#step5:checked~.app .scene-5,#step6:checked~.app .scene-6,#step7:checked~.app .scene-7,#step8:checked~.app .scene-8{display:grid}
+#step0:checked~.app .dot-0,#step1:checked~.app .dot-1,#step2:checked~.app .dot-2,#step3:checked~.app .dot-3,#step4:checked~.app .dot-4,#step5:checked~.app .dot-5,#step6:checked~.app .dot-6,#step7:checked~.app .dot-7,#step8:checked~.app .dot-8{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 4px var(--blue-pale)}
+@keyframes waterIn{from{opacity:0;transform:scaleY(.1)}to{opacity:1;transform:scaleY(1)}}
+@keyframes waterPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.1)}}
+@keyframes stackIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:820px){.page{padding:20px 14px 30px}.hero{display:block}.badges{justify-content:flex-start;margin-top:12px}h1{font-size:25px}.scene{grid-template-columns:1fr}.visual{border-right:0;border-bottom:1px solid var(--line);padding:20px 14px}.explain{padding:22px 20px}.chart{gap:6px;grid-template-columns:repeat(5,minmax(48px,1fr));min-height:310px}.units{height:215px;padding:0 2px}.unit{height:35px}.role{font-size:10px}.summary{grid-template-columns:1fr}.scene-nav{padding:13px 15px}.nav-btn{min-width:90px;padding:8px 10px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="hero">
+<div>
+<div class="eyebrow">LEETCODE 42 · MONOTONIC STACK</div>
+<h1>接雨水：把凹槽一层层“舀出来”</h1>
+<p>示例 height = [5, 2, 1, 0, 3]　·　最终答案 = 6</p>
+</div>
+<div class="badges"><span class="badge">纯 CSS 交互</span><span class="badge">无 JavaScript</span><span class="badge">时间 O(n)</span></div>
+</div>
+<div class="rule-strip"><span>当前柱子更高</span><b>→</b><span>弹出槽底 top</span><b>→</b><span>新栈顶作左墙</span><b>→</b><span>计算一层水</span><b>→</b><span>继续判断</span></div>
+
+<input class="step-input" type="radio" name="step" id="step0" checked>
+<input class="step-input" type="radio" name="step" id="step1">
+<input class="step-input" type="radio" name="step" id="step2">
+<input class="step-input" type="radio" name="step" id="step3">
+<input class="step-input" type="radio" name="step" id="step4">
+<input class="step-input" type="radio" name="step" id="step5">
+<input class="step-input" type="radio" name="step" id="step6">
+<input class="step-input" type="radio" name="step" id="step7">
+<input class="step-input" type="radio" name="step" id="step8">
+
+<div class="app">
+<nav class="step-dots" aria-label="演示步骤">
+<label class="dot-0" for="step0" title="规则">0</label><label class="dot-1" for="step1" title="下标 0">1</label><label class="dot-2" for="step2" title="下标 1">2</label><label class="dot-3" for="step3" title="下标 2">3</label><label class="dot-4" for="step4" title="下标 3">4</label><label class="dot-5" for="step5" title="第一层水">5</label><label class="dot-6" for="step6" title="第二层水">6</label><label class="dot-7" for="step7" title="第三层水">7</label><label class="dot-8" for="step8" title="结束">8</label>
+</nav>
+
+<section class="scene scene-0">
+<div class="visual">
+<div class="visual-head"><span class="visual-title">先观察：左高、中间低、右高，才能存水</span><span class="ans">ans<strong>0</strong></span></div>
+<div class="chart">
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div>
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">h = 2</div></div>
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i></div><div class="index">2</div><div class="height">h = 1</div></div>
+<div class="column"><div class="role"></div><div class="units"></div><div class="index">3</div><div class="height">h = 0</div></div>
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div>
+</div>
+<div class="stack-box"><div class="stack-head"><span>栈：保存下标</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-empty">空</span></div></div>
+</div>
+<div class="explain"><div class="step-kicker">核心规则</div><h2>栈顶是“可能的槽底”</h2><p>栈内柱子高度保持<strong>单调不增</strong。一旦当前柱子比栈顶高，就说明当前柱子可能成为右墙。</p><div class="code-now">while (height[i] &gt; height[stack.peek()])</div><div class="formula"><div><strong>top</strong> = 弹出的槽底下标</div><div><strong>left</strong> = 弹出后的新栈顶</div><div><strong>i</strong> = 当前右墙下标</div></div><div class="note">记忆口诀：<strong>弹出的是底，新栈顶是左，当前 i 是右。</strong></div></div>
+<div class="scene-nav"><span></span><span class="nav-count">规则 · 0 / 8</span><label class="nav-btn primary" for="step1">开始扫描 →</label></div>
+</section>
+
+<section class="scene scene-1">
+<div class="visual"><div class="visual-head"><span class="visual-title">i = 0：第一根柱子先进入栈</span><span class="ans">ans<strong>0</strong></span></div><div class="chart">
+<div class="column current"><div class="role">当前 i</div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div>
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">h = 2</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i></div><div class="index">2</div><div class="height">h = 1</div></div><div class="column"><div class="role"></div><div class="units"></div><div class="index">3</div><div class="height">h = 0</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div></div>
+<div class="stack-box"><div class="stack-head"><span>入栈：0</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-item">[0] h=5</span></div></div></div>
+<div class="explain"><div class="step-kicker">步骤 1 · 入栈</div><h2>没有可弹出的槽底</h2><p>栈原本为空，不满足 while 条件。直接把下标 <strong>0</strong> 放进去，等待后面出现右墙。</p><div class="code-now">stack.push(0); <span class="comment">// [0]</span></div><div class="note teal">栈存<strong>下标</strong>而非高度，因为后面要用下标计算宽度。</div></div>
+<div class="scene-nav"><label class="nav-btn" for="step0">← 规则</label><span class="nav-count">1 / 8</span><label class="nav-btn primary" for="step2">扫描 i = 1 →</label></div>
+</section>
+
+<section class="scene scene-2">
+<div class="visual"><div class="visual-head"><span class="visual-title">i = 1：高度下降，继续入栈</span><span class="ans">ans<strong>0</strong></span></div><div class="chart">
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div><div class="column current"><div class="role">当前 i</div><div class="units"><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">h = 2</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i></div><div class="index">2</div><div class="height">h = 1</div></div><div class="column"><div class="role"></div><div class="units"></div><div class="index">3</div><div class="height">h = 0</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div></div>
+<div class="stack-box"><div class="stack-head"><span>入栈：1</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-item">[1] h=2</span><span class="stack-item">[0] h=5</span></div></div></div>
+<div class="explain"><div class="step-kicker">步骤 2 · 保持递减</div><h2>2 &lt; 5，没有凹槽</h2><p>当前柱子比栈顶矮，无法充当右墙，所以不结算，直接入栈。</p><div class="code-now">stack.push(1); <span class="comment">// 栈顶 [1]</span></div><div class="note teal">此时栈内高度为 <strong>2 → 5</strong>，从栈顶到栈底单调不减；从栈底到栈顶则单调不增。</div></div>
+<div class="scene-nav"><label class="nav-btn" for="step1">← 上一步</label><span class="nav-count">2 / 8</span><label class="nav-btn primary" for="step3">扫描 i = 2 →</label></div>
+</section>
+
+<section class="scene scene-3">
+<div class="visual"><div class="visual-head"><span class="visual-title">i = 2：仍然下降，继续入栈</span><span class="ans">ans<strong>0</strong></span></div><div class="chart">
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">h = 2</div></div><div class="column current"><div class="role">当前 i</div><div class="units"><i class="unit solid"></i></div><div class="index">2</div><div class="height">h = 1</div></div><div class="column"><div class="role"></div><div class="units"></div><div class="index">3</div><div class="height">h = 0</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div></div>
+<div class="stack-box"><div class="stack-head"><span>入栈：2</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-item">[2] h=1</span><span class="stack-item">[1] h=2</span><span class="stack-item">[0] h=5</span></div></div></div>
+<div class="explain"><div class="step-kicker">步骤 3 · 保持递减</div><h2>1 &lt; 2，直接入栈</h2><p>还没遇到更高的右墙。下标 2 进入栈顶，成为后续可能的槽底。</p><div class="code-now">stack.push(2); <span class="comment">// 栈顶 [2]</span></div><div class="note teal">这些连续变矮的柱子，后面会被同一面高墙<strong>逐个弹出、逐层结算</strong。</div></div>
+<div class="scene-nav"><label class="nav-btn" for="step2">← 上一步</label><span class="nav-count">3 / 8</span><label class="nav-btn primary" for="step4">扫描 i = 3 →</label></div>
+</section>
+
+<section class="scene scene-4">
+<div class="visual"><div class="visual-head"><span class="visual-title">i = 3：最低点也进入栈</span><span class="ans">ans<strong>0</strong></span></div><div class="chart">
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">h = 2</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i></div><div class="index">2</div><div class="height">h = 1</div></div><div class="column current"><div class="role">当前 i</div><div class="units"></div><div class="index">3</div><div class="height">h = 0</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div></div>
+<div class="stack-box"><div class="stack-head"><span>入栈：3</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-item">[3] h=0</span><span class="stack-item">[2] h=1</span><span class="stack-item">[1] h=2</span><span class="stack-item">[0] h=5</span></div></div></div>
+<div class="explain"><div class="step-kicker">步骤 4 · 凹槽准备完毕</div><h2>0 &lt; 1，仍然入栈</h2><p>下标 3 的高度是 0，图上没有灰色方块，但它依然要入栈：它马上就会成为第一个槽底。</p><div class="code-now">stack.push(3); <span class="comment">// 栈顶 [3]</span></div><div class="note">下一步右墙 <strong>h[4] = 3</strong> 到来，将连续触发三次 while。</div></div>
+<div class="scene-nav"><label class="nav-btn" for="step3">← 上一步</label><span class="nav-count">4 / 8</span><label class="nav-btn primary" for="step5">右墙到来 →</label></div>
+</section>
+
+<section class="scene scene-5">
+<div class="visual"><div class="visual-head"><span class="visual-title">i = 4：第一次弹出，结算最底层</span><span class="ans">ans<strong>1</strong></span></div><div class="chart">
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">h = 2</div></div><div class="column left"><div class="role">左墙 left</div><div class="units"><i class="unit solid"></i></div><div class="index">2</div><div class="height">h = 1</div></div><div class="column popped"><div class="role">槽底 top</div><div class="units"><i class="unit water new"></i></div><div class="index">3</div><div class="height">h = 0</div></div><div class="column current"><div class="role">右墙 i</div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div></div>
+<div class="stack-box"><div class="stack-head"><span>弹出 3，栈内还剩</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-item">[2] h=1</span><span class="stack-item">[1] h=2</span><span class="stack-item">[0] h=5</span></div></div></div>
+<div class="explain"><div class="step-kicker">步骤 5 · 第一层水</div><h2>弹出 3，左墙是 2</h2><p>因为 <strong>3 &gt; h[3] = 0</strong>，弹出下标 3。新栈顶是 2，当前下标 4 是右墙。</p><div class="code-now">top = 3; left = 2; i = 4;</div><div class="formula"><div>currWidth = 4 - 2 - 1 = <strong>1</strong></div><div>currHeight = min(1, 3) - 0 = <strong>1</strong></div><div class="result">ans += 1 × 1 → ans = 1</div></div><div class="note">水位由较矮的左墙决定，所以这一层只能升到高度 1。</div></div>
+<div class="scene-nav"><label class="nav-btn" for="step4">← 上一步</label><span class="nav-count">5 / 8</span><label class="nav-btn primary" for="step6">while 继续 →</label></div>
+</section>
+
+<section class="scene scene-6">
+<div class="visual"><div class="visual-head"><span class="visual-title">仍是 i = 4：第二次弹出，结算第二层</span><span class="ans">ans<strong>3</strong></span></div><div class="chart">
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div><div class="column left"><div class="role">左墙 left</div><div class="units"><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">h = 2</div></div><div class="column popped"><div class="role">槽底 top</div><div class="units"><i class="unit water new"></i><i class="unit solid"></i></div><div class="index">2</div><div class="height">h = 1</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit water new"></i><i class="unit water"></i></div><div class="index">3</div><div class="height">h = 0</div></div><div class="column current"><div class="role">右墙 i</div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div></div>
+<div class="stack-box"><div class="stack-head"><span>弹出 2，栈内还剩</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-item">[1] h=2</span><span class="stack-item">[0] h=5</span></div></div></div>
+<div class="explain"><div class="step-kicker">步骤 6 · 第二层水</div><h2>弹出 2，左墙变成 1</h2><p>当前右墙没变，仍有 <strong>3 &gt; h[2] = 1</strong>，所以 while 继续。此次横向覆盖下标 2、3。</p><div class="code-now">top = 2; left = 1; i = 4;</div><div class="formula"><div>currWidth = 4 - 1 - 1 = <strong>2</strong></div><div>currHeight = min(2, 3) - 1 = <strong>1</strong></div><div class="result">ans += 2 × 1 → ans = 3</div></div><div class="note">新结算的是<strong>高度 1 → 2</strong>这一层；下面已经算过的水不会重复计算。</div></div>
+<div class="scene-nav"><label class="nav-btn" for="step5">← 上一步</label><span class="nav-count">6 / 8</span><label class="nav-btn primary" for="step7">while 继续 →</label></div>
+</section>
+
+<section class="scene scene-7">
+<div class="visual"><div class="visual-head"><span class="visual-title">仍是 i = 4：第三次弹出，结算第三层</span><span class="ans">ans<strong>6</strong></span></div><div class="chart">
+<div class="column left"><div class="role">左墙 left</div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div><div class="column popped"><div class="role">槽底 top</div><div class="units"><i class="unit water new"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">h = 2</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit water new"></i><i class="unit water"></i><i class="unit solid"></i></div><div class="index">2</div><div class="height">h = 1</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit water new"></i><i class="unit water"></i><i class="unit water"></i></div><div class="index">3</div><div class="height">h = 0</div></div><div class="column current"><div class="role">右墙 i</div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div></div>
+<div class="stack-box"><div class="stack-head"><span>弹出 1，栈内还剩</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-item">[0] h=5</span></div></div></div>
+<div class="explain"><div class="step-kicker">步骤 7 · 第三层水</div><h2>弹出 1，左墙变成 0</h2><p>仍有 <strong>3 &gt; h[1] = 2</strong>。这次左墙高 5、右墙高 3，较矮的右墙把水位限制在高度 3。</p><div class="code-now">top = 1; left = 0; i = 4;</div><div class="formula"><div>currWidth = 4 - 0 - 1 = <strong>3</strong></div><div>currHeight = min(5, 3) - 2 = <strong>1</strong></div><div class="result">ans += 3 × 1 → ans = 6</div></div><div class="note">三次结算分别是 <strong>1、2、3</strong>，合起来正好是 6 格水。</div></div>
+<div class="scene-nav"><label class="nav-btn" for="step6">← 上一步</label><span class="nav-count">7 / 8</span><label class="nav-btn primary" for="step8">结束 while →</label></div>
+</section>
+
+<section class="scene scene-8">
+<div class="visual"><div class="visual-head"><span class="visual-title">扫描结束：所有积水已经逐层结算</span><span class="ans">ans<strong>6</strong></span></div><div class="chart">
+<div class="column"><div class="role"></div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">0</div><div class="height">h = 5</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit water"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">1</div><div class="height">1 格水</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit water"></i><i class="unit water"></i><i class="unit solid"></i></div><div class="index">2</div><div class="height">2 格水</div></div><div class="column"><div class="role"></div><div class="units"><i class="unit water"></i><i class="unit water"></i><i class="unit water"></i></div><div class="index">3</div><div class="height">3 格水</div></div><div class="column current"><div class="role">入栈 i = 4</div><div class="units"><i class="unit solid"></i><i class="unit solid"></i><i class="unit solid"></i></div><div class="index">4</div><div class="height">h = 3</div></div></div>
+<div class="stack-box"><div class="stack-head"><span>右墙 4 入栈</span><span>栈顶 → 栈底</span></div><div class="stack-row"><span class="stack-item">[4] h=3</span><span class="stack-item">[0] h=5</span></div></div></div>
+<div class="explain"><div class="step-kicker">步骤 8 · 完成</div><h2>3 &lt; 5，停止弹出</h2><p>新栈顶下标 0 的高度为 5，当前右墙不再比它高，while 结束。随后把下标 4 入栈。</p><div class="code-now">stack.push(4); <span class="comment">// 返回 ans = 6</span></div><div class="formula"><div>下标 1 接水：<strong>1</strong></div><div>下标 2 接水：<strong>2</strong></div><div>下标 3 接水：<strong>3</strong></div><div class="result">总水量 = 1 + 2 + 3 = 6</div></div><div class="note teal">每个下标最多入栈一次、出栈一次，所以总时间 <strong>O(n)</strong>，栈空间 <strong>O(n)</strong>。</div></div>
+<div class="scene-nav"><label class="nav-btn" for="step7">← 上一步</label><span class="nav-count">8 / 8 · 完成</span><label class="nav-btn primary" for="step0">重新演示 ↻</label></div>
+</section>
+</div>
+
+<div class="summary">
+<div class="summary-card"><b>为什么用 while？</b><span>一面高右墙可能连续弹出多个槽底，逐层向外结算。</span></div>
+<div class="summary-card"><b>为什么栈空就 break？</b><span>弹出后没有左墙，水会从左侧流走，不能计算。</span></div>
+<div class="summary-card"><b>为什么高度取 min？</b><span>水位不能超过较矮的墙，再减去槽底才是新增水层。</span></div>
+</div>
+<details><summary>查看完整 Java 代码</summary><pre><span class="key">class</span> Solution {
+    <span class="key">public int</span> <span class="fn">trap</span>(<span class="key">int</span>[] height) {
+        <span class="key">int</span> ans = 0;
+        Deque&lt;Integer&gt; stack = <span class="key">new</span> ArrayDeque&lt;Integer&gt;();
+        <span class="key">int</span> n = height.length;
+        <span class="key">for</span> (<span class="key">int</span> i = 0; i &lt; n; ++i) {
+            <span class="key">while</span> (!stack.isEmpty() &amp;&amp; height[i] &gt; height[stack.peek()]) {
+                <span class="key">int</span> top = stack.pop();       <span class="cm">// 槽底</span>
+                <span class="key">if</span> (stack.isEmpty()) {
+                    <span class="key">break</span>;                  <span class="cm">// 没有左墙</span>
+                }
+                <span class="key">int</span> left = stack.peek();     <span class="cm">// 左墙</span>
+                <span class="key">int</span> currWidth = i - left - 1;
+                <span class="key">int</span> currHeight = Math.min(height[left], height[i]) - height[top];
+                ans += currWidth * currHeight;
+            }
+            stack.push(i);
+        }
+        <span class="key">return</span> ans;
+    }
+}</pre></details>
+<div class="footer">点击顶部数字可跳到任意步骤 · 蓝色为积水 · 深蓝为当前新结算的水层</div>
+</div>
+</body>
+</html>

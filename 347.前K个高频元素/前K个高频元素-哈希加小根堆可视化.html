@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>F</text></svg>">
+<title>前K个高频元素 · 哈希+小根堆可视化</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#30363d;
+    --fg:#e6edf3;--muted:#8b949e;
+    --blue:#58a6ff;--green:#3fb950;--orange:#d29922;--red:#f85149;--purple:#bc8cff;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.55;padding:22px}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:12.5px;margin-bottom:16px}
+  .phase-tag{display:inline-block;font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:20px;margin-bottom:14px}
+  .phase-tag.p1{background:rgba(88,166,255,.15);color:var(--blue)}
+  .phase-tag.p2{background:rgba(188,140,255,.15);color:var(--purple)}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:7px 13px;cursor:pointer;font-size:12.5px}
+  .casebtn.active{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.1)}
+  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:14px}
+  .ctl{background:var(--panel2);border:1px solid var(--border);color:var(--fg);border-radius:7px;width:38px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .ctl:hover{background:#272e3a}
+  .ctl.play{width:auto;padding:0 16px;color:var(--green)}
+  input[type=range]{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .msg{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:8px;padding:11px 15px;margin-bottom:14px;font-size:13px;min-height:44px}
+  .grid{display:grid;grid-template-columns:1fr 290px;gap:16px}
+  .box{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .box h2{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:12px;font-weight:600}
+  .seq{display:flex;gap:7px;flex-wrap:wrap}
+  .cell{width:44px;border:1px solid var(--border);border-radius:6px;background:var(--panel2);text-align:center;font-family:var(--mono);padding:6px 0;transition:all .25s}
+  .cell .ci{display:block;font-size:9px;color:var(--muted)}
+  .cell.done{opacity:.45}
+  .cell.cur{border-color:var(--orange);box-shadow:0 0 0 1.5px var(--orange)}
+  .treewrap{margin-top:18px}
+  .tree{position:relative;height:270px;width:100%}
+  .tree svg{position:absolute;inset:0;width:100%;height:100%}
+  .tree line{stroke:var(--border);stroke-width:1.6}
+  .node{position:absolute;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--purple);color:var(--purple);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);transition:all .3s ease;z-index:2;line-height:1.15}
+  .node .nval{font-weight:700;font-size:13px}
+  .node .nfr{font-size:9.5px;color:var(--muted)}
+  .node.t0{border-color:var(--green);color:var(--green)}
+  .node.hi{border-color:var(--orange);box-shadow:0 0 0 3px rgba(210,153,34,.25)}
+  .node.cmp{border-color:var(--blue)}
+  .side{display:flex;flex-direction:column;gap:14px}
+  .maptable{width:100%;border-collapse:collapse;font-size:12px}
+  .maptable th,.maptable td{padding:7px 8px;border-bottom:1px solid var(--border);font-family:var(--mono);text-align:left}
+  .maptable th{color:var(--muted);font-size:10.5px}
+  .maptable tr.flash td{background:rgba(210,153,34,.15)}
+  .stat{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--border)}
+  .stat .k{color:var(--muted)}.stat .v{font-family:var(--mono);font-weight:700}
+  .kicklist{font-family:var(--mono);font-size:11px;max-height:80px;overflow:auto;display:flex;flex-direction:column;gap:4px}
+  .kick{color:var(--red)}
+  .empty{color:var(--muted)}
+  .codebox{margin-top:16px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:auto}
+  .codebox h2{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
+  pre{font-family:var(--mono);font-size:12.5px;line-height:1.85}
+  .ln{display:block;padding:0 10px;border-radius:5px;white-space:pre}
+  .ln.on{background:rgba(88,166,255,.13)}
+  .kw{color:#ff7b72}.ty{color:#79c0ff}.cmt{color:#8b949e}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}body{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>347 前 K 个高频元素 · 哈希 + 小根堆</h1>
+  <div class="sub">阶段一用 HashMap 统计频率，阶段二用按频率排序的小根堆保留前 k 个。</div>
+  <div class="phase-tag" id="phaseTag"></div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="controls">
+    <button class="ctl" id="reset">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="ctl play" id="play">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span id="playtxt">播放</span>
+    </button>
+    <button class="ctl" id="prev">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="ctl" id="next">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
+    <input type="range" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="grid">
+    <div class="box">
+      <h2 id="leftTitle">输入数组</h2>
+      <div class="seq" id="seq"></div>
+      <div class="treewrap" id="treewrap" style="display:none">
+        <h2 style="margin-bottom:6px">小根堆（按频率，父频率 ≤ 子）</h2>
+        <div class="tree">
+          <svg id="treelines" viewBox="0 0 1000 270" preserveAspectRatio="none"></svg>
+          <div id="treenodes"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="box">
+        <h2>HashMap 频率表</h2>
+        <table class="maptable">
+          <tr><th>元素 key</th><th>频率 value</th></tr>
+          <tbody id="mapbody"></tbody>
+        </table>
+      </div>
+      <div class="box">
+        <h2>状态</h2>
+        <div class="stat"><span class="k">k</span><span class="v" id="sK"></span></div>
+        <div class="stat"><span class="k">堆大小</span><span class="v" id="sSize"></span></div>
+        <div class="stat" style="border:none"><span class="k">答案</span><span class="v" id="sAns"></span></div>
+      </div>
+      <div class="box">
+        <h2>淘汰记录</h2>
+        <div class="kicklist" id="kicklist"><span class="empty">暂无</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="codebox">
+    <h2>Java 代码</h2>
+    <pre id="code"></pre>
+  </div>
+</div>
+
+<script>
+const CASES=[
+  {name:'[1,1,1,2,2,3] k=2',nums:[1,1,1,2,2,3],k:2,ans:[1,2]},
+  {name:'[1] k=1',nums:[1],k:1,ans:[1]},
+  {name:'[1,2,1,2,1,2,3,1,3,2] k=2',nums:[1,2,1,2,1,2,3,1,3,2],k:2,ans:[1,2]}
+];
+
+function buildSteps(nums,k){
+  const steps=[];const freq=new Map();
+  // 阶段一
+  for(let i=0;i<nums.length;i++){
+    const x=nums[i],old=freq.get(x)||0;
+    steps.push({phase:1,msg:`扫描 nums[${i}]=${x}，频率 ${old} → ${old+1}`,curIdx:i,map:new Map(freq),flashKey:x,heap:[],kicks:[],hi:-1,cmp:-1,line:2});
+    freq.set(x,old+1);
+  }
+  // 阶段二
+  let heap=[];let kicks=[];
+  const ph=(s)=>steps.push(Object.assign({phase:2,map:new Map(freq),flashKey:null,heap:[...heap],kicks:[...kicks],curIdx:-1,hi:-1,cmp:-1,line:0},s));
+  for(const key of [...freq.keys()]){
+    heap.push(key);
+    ph({msg:`offer 元素 ${key}（频率 ${freq.get(key)}），先加到末尾`,hi:heap.length-1,line:6});
+    let ci=heap.length-1;
+    while(ci>0){
+      const pi=(ci-1)>>1;
+      if(freq.get(heap[ci])<freq.get(heap[pi])){
+        ph({msg:`上浮：${heap[ci]}(频${freq.get(heap[ci])}) < 父 ${heap[pi]}(频${freq.get(heap[pi])})，交换`,hi:ci,cmp:pi,line:6});
+        [heap[ci],heap[pi]]=[heap[pi],heap[ci]];ci=pi;
+      }else{ph({msg:`上浮停止，小根堆性质恢复`,hi:ci,cmp:pi,line:6});break;}
+    }
+    if(heap.length>k){
+      const removed=heap[0];
+      ph({msg:`堆大小 ${heap.length} > k=${k}，poll 淘汰频率最小的 ${removed}(频${freq.get(removed)})`,hi:0,line:8});
+      const last=heap.pop();
+      if(heap.length>0){
+        heap[0]=last;
+        let p=0;
+        while(true){
+          const l=2*p+1,r=2*p+2;let m=p;
+          if(l<heap.length&&freq.get(heap[l])<freq.get(heap[m]))m=l;
+          if(r<heap.length&&freq.get(heap[r])<freq.get(heap[m]))m=r;
+          if(m===p){ph({msg:`下沉停止`,hi:p,line:8});break;}
+          ph({msg:`下沉：与频率较小子 ${heap[m]} 交换`,hi:p,cmp:m,line:8});
+          [heap[p],heap[m]]=[heap[m],heap[p]];p=m;
+        }
+      }
+      kicks.push(removed);
+    }else{
+      ph({msg:`堆大小 ${heap.length} ≤ k=${k}，不淘汰`,line:7});
+    }
+  }
+  ph({msg:`堆里 [${heap.join(',')}] 即频率前 ${k} 高，poll 进 res 后返回`,line:15,final:true});
+  return steps;
+}
+
+function nodePos(i){
+  const d=Math.floor(Math.log2(i+1)),ls=Math.pow(2,d)-1,lc=Math.pow(2,d),pos=i-ls;
+  return{x:((pos+0.5)/lc)*1000,y:d*78+30};
+}
+
+let curCase=0,steps=[],posIdx=0,timer=null;
+const $=id=>document.getElementById(id);
+
+function render(){
+  const cs=CASES[curCase],s=steps[posIdx];
+  $('msg').textContent=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('phaseTag').className='phase-tag '+(s.phase===1?'p1':'p2');
+  $('phaseTag').textContent=s.phase===1?'阶段一 · HashMap 统计频率':'阶段二 · 小根堆取前 k';
+  // 左区切换
+  $('treewrap').style.display=s.phase===2?'block':'none';
+  $('leftTitle').textContent=s.phase===1?'输入数组（扫描指针）':'输入数组（已统计完）';
+  // 数组
+  $('seq').innerHTML=cs.nums.map((v,i)=>{
+    let c='cell';
+    if(s.phase===1){if(i===s.curIdx)c+=' cur';else if(i<s.curIdx)c+=' done';}
+    else c+=' done';
+    return `<div class="${c}"><span class="ci">${i}</span>${v}</div>`;
+  }).join('');
+  // 堆
+  if(s.phase===2){
+    let lines='',nodes='';
+    s.heap.forEach((key,i)=>{
+      const P=nodePos(i);
+      if(i>0){const Q=nodePos((i-1)>>1);lines+=`<line x1="${Q.x}" y1="${Q.y}" x2="${P.x}" y2="${P.y}"/>`;}
+      let cls='node';
+      if(i===0)cls+=' t0';
+      if(i===s.hi)cls+=' hi';
+      if(i===s.cmp)cls+=' cmp';
+      nodes+=`<div class="${cls}" style="left:${P.x/10}%;top:${P.y}px"><span class="nval">${key}</span><span class="nfr">频${s.map.get(key)}</span></div>`;
+    });
+    $('treelines').innerHTML=lines;
+    $('treenodes').innerHTML=nodes||'<div class="empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">堆为空</div>';
+  }
+  // map 表
+  $('mapbody').innerHTML=[...s.map.entries()].map(([key,fr])=>
+    `<tr class="${key===s.flashKey?'flash':''}"><td>${key}</td><td>${fr}</td></tr>`).join('');
+  // 状态
+  $('sK').textContent=cs.k;$('sSize').textContent=s.heap.length;
+  $('sAns').textContent='['+cs.ans.join(',')+']';
+  $('kicklist').innerHTML=s.kicks.length?s.kicks.map(v=>`<span class="kick">poll 淘汰 ${v}</span>`).join(''):'<span class="empty">暂无</span>';
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+
+const CODE=[
+  'Map&lt;Integer,Integer&gt; map = <span class="kw">new</span> HashMap&lt;&gt;();',
+  '<span class="kw">for</span> (<span class="kw">int</span> x : nums) {',
+  '    map.put(x, map.getOrDefault(x, 0) + 1);',
+  '}',
+  'PriorityQueue&lt;Integer&gt; heap = <span class="kw">new</span> PriorityQueue&lt;&gt;((a,b)-&gt;map.get(a)-map.get(b));',
+  '<span class="kw">for</span> (<span class="kw">int</span> key : map.keySet()) {',
+  '    heap.offer(key);',
+  '    <span class="kw">if</span> (heap.size() &gt; k) {',
+  '        heap.poll();',
+  '    }',
+  '}',
+  '<span class="kw">int</span>[] res = <span class="kw">new</span> <span class="kw">int</span>[k];',
+  '<span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; k; i++) {',
+  '    res[i] = heap.poll();',
+  '}',
+  '<span class="kw">return</span> res;'
+];
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;steps=buildSteps(CASES[i].nums,CASES[i].k);posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">${c.name}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},750);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

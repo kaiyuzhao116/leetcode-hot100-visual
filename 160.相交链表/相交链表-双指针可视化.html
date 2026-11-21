@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>160. 相交链表 · 双指针可视化</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230d1117'/%3E%3Ccircle cx='8' cy='8' r='3' fill='%2358a6ff'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23e3b341'/%3E%3Cpath d='M10 10l4 4' stroke='%233fb950' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+  --orange:#e3b341;--purple:#bc8cff;--red:#f85149
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;line-height:1.6;padding:28px 20px 60px}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tag{font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--green);color:var(--green)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:18px}
+.intro{border-left:3px solid var(--blue)}
+.intro p{font-size:14.5px}
+.intro b{color:var(--blue)}
+.cases{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.case-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+.case-btn:hover{border-color:var(--blue);color:var(--text)}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+.viz-title{font-size:15px;font-weight:600;margin-bottom:10px}
+.viz-scroll{overflow:auto;max-width:100%}
+.canvas{position:relative;margin:6px 4px 10px}
+.edge-svg{position:absolute;top:0;left:0;pointer-events:none}
+.ln-node{position:absolute;width:56px;height:56px;border:1.5px solid var(--border);border-radius:12px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;font-family:Consolas,monospace;transition:all .25s}
+.ln-node.common{border-color:var(--purple)}
+.ln-node.pt-a{border-color:var(--blue);box-shadow:0 0 14px rgba(88,166,255,.5)}
+.ln-node.pt-b{border-color:var(--orange);box-shadow:0 0 14px rgba(227,179,65,.5)}
+.ln-node.pt-both{border:2px solid var(--green);background:rgba(63,185,80,.22);box-shadow:0 0 18px rgba(63,185,80,.6)}
+.ln-node.visited{opacity:.55}
+.ln-node .pt-tag{position:absolute;font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Consolas}
+.pt-tag.tag-a{top:-8px;left:-8px;background:var(--blue);color:#0d1117}
+.pt-tag.tag-b{top:-8px;right:-8px;background:var(--orange);color:#0d1117}
+.null-node{position:absolute;width:56px;height:30px;border:1.5px dashed var(--muted);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);font-family:Consolas,monospace}
+.head-lbl{position:absolute;font-size:11px;color:var(--muted);font-family:Consolas,monospace}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw-dot{width:13px;height:13px;border-radius:4px}
+
+.info{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.bi{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center;min-width:0}
+.bi .k{font-size:12px;color:var(--muted)}
+.bi .v{font-size:15px;font-weight:700;margin-top:2px;font-family:Consolas,monospace;word-break:break-all}
+.msg{margin-top:16px;font-size:14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.msg .act{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;margin-right:8px}
+.act.a-move{background:rgba(88,166,255,.18);color:var(--blue)}
+.act.a-jump{background:rgba(188,140,255,.18);color:var(--purple)}
+.act.a-meet{background:rgba(63,185,80,.18);color:var(--green)}
+.act.a-none{background:rgba(248,81,73,.18);color:var(--red)}
+
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:18px}
+.code-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border)}
+.dot{width:12px;height:12px;border-radius:50%}
+.cdot1{background:var(--red)}.cdot2{background:var(--orange)}.cdot3{background:var(--green)}
+.code-fname{margin-left:8px;font-size:13px;color:var(--muted)}
+.code-body{padding:12px 0;overflow:auto;max-height:420px}
+.code-line{display:flex;align-items:flex-start;padding:1.5px 14px;font-family:Consolas,monospace;font-size:13.5px;white-space:pre}
+.code-line .ln{width:26px;text-align:right;color:#48505c;margin-right:14px;flex-shrink:0;user-select:none}
+.code-line.hl{background:rgba(88,166,255,.16)}
+.code-line.hl .ln{color:var(--blue)}
+.t-kw{color:#ff7b72}.t-type{color:#79c0ff}.t-num{color:#a5d6ff}.t-meth{color:#d2a8ff}
+
+.controls{position:sticky;bottom:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.4)}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:42px;height:42px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn:hover{border-color:var(--blue)}
+.btn.play{width:auto;padding:0 20px;gap:8px;background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:700;font-size:14px}
+.btn.play:hover{filter:brightness(1.1)}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.scrub{flex:1;min-width:140px;accent-color:var(--blue);height:6px}
+.step-txt{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:60px;text-align:right}
+.speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+@media(max-width:760px){
+  .info{grid-template-columns:repeat(2,1fr)}
+  body{padding:18px 12px 50px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>160. 相交链表 <span class="tag">简单</span></h1>
+  <div class="sub">双指针拼接走法 · 时间 O(m+n) · 空间 O(1)</div>
+
+  <div class="panel intro">
+    <p>指针 A、B 分别从两条链表头出发，每次各走一步；<b>走到 null 就跳到另一条链表的头</b>继续走。两人总路程都等于"两条链表长度之和"，所以要么在相交节点相遇，要么同时走到 null（不相交）。</p>
+  </div>
+
+  <div class="cases" id="caseBox"></div>
+
+  <div class="panel">
+    <div class="viz-title">链表结构（蓝标 A 指针、橙标 B 指针；紫色节点为公共部分）</div>
+    <div class="viz-scroll"><div class="canvas" id="canvas"></div></div>
+    <div class="legend">
+      <span><span class="sw-dot" style="border:1.5px solid var(--blue)"></span>A 指针所在</span>
+      <span><span class="sw-dot" style="border:1.5px solid var(--orange)"></span>B 指针所在</span>
+      <span><span class="sw-dot" style="border:1.5px solid var(--purple)"></span>公共节点</span>
+      <span><span class="sw-dot" style="border:1.5px solid var(--green)"></span>相遇</span>
+    </div>
+    <div class="info">
+      <div class="bi"><div class="k">指针 A</div><div class="v" id="iA">—</div></div>
+      <div class="bi"><div class="k">指针 B</div><div class="v" id="iB">—</div></div>
+      <div class="bi"><div class="k">A 步数</div><div class="v" id="iSA">0</div></div>
+      <div class="bi"><div class="k">B 步数</div><div class="v" id="iSB">0</div></div>
+    </div>
+    <div class="msg" id="msgBox"></div>
+  </div>
+
+  <div class="code-panel">
+    <div class="code-bar"><span class="dot cdot1"></span><span class="dot cdot2"></span><span class="dot cdot3"></span><span class="code-fname">Solution.java</span></div>
+    <div class="code-body" id="codeBody"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn play" id="playBtn">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playTxt">播放</span>
+    </button>
+    <button class="btn" id="prevBtn" title="上一步（左箭头）"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+    <button class="btn" id="nextBtn" title="下一步（右箭头）"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+    <button class="btn" id="resetBtn" title="重置"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <input type="range" class="scrub" id="scrub" min="0" max="0" value="0">
+    <span class="step-txt" id="stepTxt">0 / 0</span>
+    <select class="speed" id="speedSel">
+      <option value="1000">0.5x</option>
+      <option value="600" selected>1x</option>
+      <option value="320">2x</option>
+      <option value="170">4x</option>
+    </select>
+  </div>
+</div>
+
+<script>
+const CODE_HTML=[
+  '<span class="t-kw">public class</span> <span class="t-type">Solution</span> {',
+  '  <span class="t-kw">public</span> <span class="t-type">ListNode</span> <span class="t-meth">getIntersectionNode</span>(<span class="t-type">ListNode</span> headA, <span class="t-type">ListNode</span> headB) {',
+  '    <span class="t-type">ListNode</span> A = headA, B = headB;',
+  '    <span class="t-kw">while</span> (A != B) {',
+  '      A = A != <span class="t-kw">null</span> ? A.next : headB;',
+  '      B = B != <span class="t-kw">null</span> ? B.next : headA;',
+  '    }',
+  '    <span class="t-kw">return</span> A;',
+  '  }',
+  '}'
+];
+
+const CASES=[
+  {name:'标准相交',
+   nodes:{
+     a1:{val:'a1',x:0,y:0},a2:{val:'a2',x:100,y:0},
+     b1:{val:'b1',x:0,y:200},b2:{val:'b2',x:100,y:200},b3:{val:'b3',x:200,y:200},
+     c1:{val:'c1',x:300,y:100,common:1},c2:{val:'c2',x:400,y:100,common:1},c3:{val:'c3',x:500,y:100,common:1},
+     na:{val:'null',x:600,y:113,isNull:1}
+   },
+   next:{a1:'a2',a2:'c1',b1:'b2',b2:'b3',b3:'c1',c1:'c2',c2:'c3',c3:'na'},
+   headA:'a1',headB:'b1',nullA:'na',nullB:'na'},
+  {name:'不相交',
+   nodes:{
+     n1:{val:'1',x:0,y:0},n2:{val:'2',x:100,y:0},n3:{val:'3',x:200,y:0},
+     m1:{val:'4',x:0,y:180},m2:{val:'5',x:100,y:180},
+     na:{val:'null',x:300,y:13,isNull:1},nb:{val:'null',x:200,y:193,isNull:1}
+   },
+   next:{n1:'n2',n2:'n3',n3:'na',m1:'m2',m2:'nb'},
+   headA:'n1',headB:'m1',nullA:'na',nullB:'nb'},
+  {name:'A长B短相交',
+   nodes:{
+     a1:{val:'a1',x:0,y:0},a2:{val:'a2',x:100,y:0},a3:{val:'a3',x:200,y:0},a4:{val:'a4',x:300,y:0},
+     b1:{val:'b1',x:0,y:200},
+     c1:{val:'c1',x:400,y:100,common:1},c2:{val:'c2',x:500,y:100,common:1},
+     na:{val:'null',x:600,y:113,isNull:1}
+   },
+   next:{a1:'a2',a2:'a3',a3:'a4',a4:'c1',b1:'c1',c1:'c2',c2:'na'},
+   headA:'a1',headB:'b1',nullA:'na',nullB:'na'},
+  {name:'头部相交',
+   nodes:{
+     c1:{val:'c1',x:0,y:100,common:1},c2:{val:'c2',x:100,y:100,common:1},c3:{val:'c3',x:200,y:100,common:1},
+     na:{val:'null',x:300,y:113,isNull:1}
+   },
+   next:{c1:'c2',c2:'c3',c3:'na'},
+   headA:'c1',headB:'c1',nullA:'na',nullB:'nb'}
+];
+
+function buildSteps(c){
+  var steps=[];
+  var A=c.headA,B=c.headB,sa=0,sb=0;
+  var visA={},visB={};
+  function snap(kind,line,msg){
+    steps.push({A:A,B:B,sa:sa,sb:sb,kind:kind,line:line,msg:msg,
+      visA:Object.assign({},visA),visB:Object.assign({},visB)});
+  }
+  snap('init',3,'初始化：A 指向 headA，B 指向 headB，准备同步前进');
+  if(A===B){
+    snap('meet',8,'起点就满足 A==B，该节点即相交起点，直接返回');
+    return steps;
+  }
+  function oneStep(who){
+    var cur=who==='A'?A:B;
+    var nd=c.nodes[cur];
+    if(nd.isNull){
+      if(who==='A'){A=c.headB;}else{B=c.headA;}
+      var hv=c.nodes[who==='A'?c.headB:c.headA].val;
+      snap('jump',who==='A'?5:6,who+' 此刻在 null，跳到另一条链表头（节点 '+hv+'）继续走');
+    }else{
+      if(who==='A'){visA[cur]=1;A=c.next[cur];}else{visB[cur]=1;B=c.next[cur];}
+      var target=who==='A'?A:B;
+      var tn=c.nodes[target];
+      if(tn.isNull){
+        snap('move',who==='A'?5:6,who+' 走到链表末尾的 null');
+      }else{
+        snap('move',who==='A'?5:6,who+' 前进一步，到达节点 '+tn.val);
+      }
+    }
+    if(who==='A')sa++;else sb++;
+  }
+  while(true){
+    oneStep('A');
+    oneStep('B');
+    var aNull=c.nodes[A].isNull,bNull=c.nodes[B].isNull;
+    if(aNull&&bNull){
+      snap('none',8,'两指针在同一轮都走到 null，说明链表不相交，返回 null');
+      break;
+    }
+    if(A===B){
+      snap('meet',8,'A==B，在节点 '+c.nodes[A].val+' 相遇，这就是相交起点，返回该节点');
+      break;
+    }
+  }
+  return steps;
+}
+
+let caseIdx=0,steps=[],posIdx=0,timer=null,playing=false;
+const $=(id)=>document.getElementById(id);
+
+function renderCaseButtons(){
+  $('caseBox').innerHTML=CASES.map((c,i)=>
+    '<button class="case-btn'+(i===caseIdx?' active':'')+'" data-k="'+i+'">用例 '+(i+1)+': '+c.name+'</button>').join('');
+  document.querySelectorAll('.case-btn').forEach(b=>b.addEventListener('click',
+    ()=>loadCase(parseInt(b.dataset.k,10))));
+}
+function center(c,id){var n=c.nodes[id];return [n.x+28,n.y+28];}
+function edgeLine(c,a,b){
+  var p1=center(c,a),p2=center(c,b);
+  var dx=p2[0]-p1[0],dy=p2[1]-p1[1],L=Math.sqrt(dx*dx+dy*dy);
+  var ux=dx/L,uy=dy/L,g=27;
+  return '<line x1="'+(p1[0]+ux*g)+'" y1="'+(p1[1]+uy*g)+'" x2="'+(p2[0]-ux*g)+'" y2="'+(p2[1]-uy*g)+'" stroke="#8b949e" stroke-width="2" marker-end="url(#arr)"/>';
+}
+function renderCanvas(c){
+  var mx=0,my=0;
+  Object.keys(c.nodes).forEach(id=>{var n=c.nodes[id];mx=Math.max(mx,n.x+56);my=Math.max(my,n.y+40);});
+  var W=mx+10,H=my+24;
+  var svg='<svg class="edge-svg" width="'+W+'" height="'+H+'"><defs><marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L8,4.5 L0,9 z" fill="#8b949e"/></marker></defs>';
+  Object.keys(c.next).forEach(a=>{svg+=edgeLine(c,a,c.next[a]);});
+  svg+='</svg>';
+  var heads='';
+  if(c.headA===c.headB){
+    var hn=c.nodes[c.headA];
+    heads+='<div class="head-lbl" style="left:'+hn.x+'px;top:'+(hn.y-19)+'px">headA / headB</div>';
+  }else{
+    var ha=c.nodes[c.headA],hb=c.nodes[c.headB];
+    heads+='<div class="head-lbl" style="left:'+ha.x+'px;top:'+(ha.y-19)+'px">headA</div>';
+    heads+='<div class="head-lbl" style="left:'+hb.x+'px;top:'+(hb.y-19)+'px">headB</div>';
+  }
+  $('canvas').style.width=W+'px';$('canvas').style.height=H+'px';
+  $('canvas').innerHTML=svg+heads+Object.keys(c.nodes).map(id=>{
+    var n=c.nodes[id];
+    return '<div class="node-slot" data-id="'+id+'" style="position:absolute;left:'+n.x+'px;top:'+n.y+'px"></div>';
+  }).join('');
+}
+function renderNodes(c,snap){
+  document.querySelectorAll('.node-slot').forEach(slot=>{
+    var id=slot.dataset.id,n=c.nodes[id];
+    var isA=snap.A===id,isB=snap.B===id;
+    var wasA=snap.visA[id],wasB=snap.visB[id];
+    if(n.isNull){
+      var cls='null-node';
+      if(isA)cls+=' pt-a';if(isB)cls+=' pt-b';
+      var tags=(isA?'<span class="pt-tag tag-a">A</span>':'')+(isB?'<span class="pt-tag tag-b">B</span>':'');
+      slot.innerHTML='<div class="'+cls+'" style="width:56px;height:30px">null'+tags+'</div>';
+      return;
+    }
+    var cls='ln-node';
+    if(n.common)cls+=' common';
+    if(isA&&isB)cls+=' pt-both';
+    else if(isA)cls+=' pt-a';
+    else if(isB)cls+=' pt-b';
+    else if(wasA||wasB)cls+=' visited';
+    var tags=(isA?'<span class="pt-tag tag-a">A</span>':'')+(isB?'<span class="pt-tag tag-b">B</span>':'');
+    slot.innerHTML='<div class="'+cls+'" style="width:56px;height:56px">'+n.val+tags+'</div>';
+  });
+}
+function renderCode(){
+  $('codeBody').innerHTML=CODE_HTML.map((h,i)=>
+    '<div class="code-line" data-line="'+(i+1)+'"><span class="ln">'+(i+1)+'</span><span>'+h+'</span></div>').join('');
+}
+function render(){
+  var c=CASES[caseIdx],snap=steps[posIdx];
+  renderCanvas(c);renderNodes(c,snap);
+  var na=c.nodes[snap.A],nb=c.nodes[snap.B];
+  $('iA').textContent=na.isNull?'null':na.val;
+  $('iB').textContent=nb.isNull?'null':nb.val;
+  $('iSA').textContent=snap.sa;$('iSB').textContent=snap.sb;
+  var actName={init:'开始',move:'移动',jump:'跳转',meet:'相遇',none:'不相交'}[snap.kind];
+  var actCls={init:'a-move',move:'a-move',jump:'a-jump',meet:'a-meet',none:'a-none'}[snap.kind];
+  $('msgBox').innerHTML='<span class="act '+actCls+'">'+actName+'</span>'+snap.msg;
+  $('codeBody').querySelectorAll('.code-line').forEach(el=>
+    el.classList.toggle('hl',parseInt(el.dataset.line,10)===snap.line));
+  $('scrub').max=steps.length-1;$('scrub').value=posIdx;
+  $('stepTxt').textContent=posIdx+' / '+(steps.length-1);
+}
+function pause(){
+  playing=false;clearInterval(timer);timer=null;
+  $('playTxt').textContent='播放';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M8 5v14l11-7z"/>';
+}
+function play(){
+  if(playing){pause();return;}
+  playing=true;$('playTxt').textContent='暂停';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
+  if(posIdx>=steps.length-1){posIdx=0;render();}
+  timer=setInterval(()=>{
+    if(posIdx>=steps.length-1){pause();return;}
+    posIdx++;render();
+  },parseInt($('speedSel').value,10));
+}
+function loadCase(k){
+  pause();caseIdx=k;posIdx=0;
+  steps=buildSteps(CASES[k]);
+  renderCaseButtons();render();
+}
+$('playBtn').addEventListener('click',play);
+$('prevBtn').addEventListener('click',()=>{pause();if(posIdx>0){posIdx--;render();}});
+$('nextBtn').addEventListener('click',()=>{pause();if(posIdx<steps.length-1){posIdx++;render();}});
+$('resetBtn').addEventListener('click',()=>{pause();posIdx=0;render();});
+$('scrub').addEventListener('input',()=>{pause();posIdx=parseInt($('scrub').value,10);render();});
+$('speedSel').addEventListener('change',()=>{if(playing){pause();play();}});
+document.addEventListener('keydown',(e)=>{
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();if(posIdx<steps.length-1){posIdx++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(posIdx>0){posIdx--;render();}}
+  else if(e.key===' '){e.preventDefault();play();}
+});
+renderCode();steps=buildSteps(CASES[0]);renderCaseButtons();render();
+</script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>51. N皇后 · DFS 回溯可视化</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --fg:#e6edf3; --muted:#8b949e;
+    --blue:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149; --purple:#bc8cff;
+    --light:#3b4250; --dark:#262c36;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);color:var(--fg);
+    font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;line-height:1.5;display:flex;flex-direction:column;overflow:hidden;
+  }
+  header{
+    display:flex;align-items:center;gap:14px;padding:10px 18px;
+    border-bottom:1px solid var(--border);background:var(--panel);flex-wrap:wrap;
+  }
+  header h1{font-size:15px;font-weight:600}
+  header .sub{color:var(--muted);font-size:12px}
+  .controls{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+  .btn{
+    background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;
+    font-family:var(--mono);transition:.15s;
+  }
+  .btn:hover{background:#272e3a;border-color:#444c56}
+  .btn.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  .btn.primary:hover{background:#388bfd}
+  .seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .seg button{
+    background:var(--panel2);color:var(--muted);border:none;padding:6px 12px;
+    cursor:pointer;font-family:var(--mono);font-size:13px;
+  }
+  .seg button.on{background:#1f6feb;color:#fff}
+  select{
+    background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+    padding:6px 8px;border-radius:6px;font-family:var(--mono);
+  }
+  .progress-bar{
+    display:flex;align-items:center;gap:12px;padding:7px 18px;
+    background:var(--panel);border-bottom:1px solid var(--border);
+  }
+  .progress-bar input[type=range]{flex:1;accent-color:#1f6feb;cursor:pointer;height:22px}
+  .progress-bar .pl{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:74px}
+  main{
+    flex:1;display:grid;gap:10px;padding:10px 14px;
+    grid-template-columns:1.1fr 1fr;min-height:0;
+  }
+  .panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  }
+  .panel-head{
+    padding:8px 12px;border-bottom:1px solid var(--border);
+    font-size:12px;color:var(--muted);font-family:var(--mono);
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    background:var(--panel2);
+  }
+  .board-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+  .board{display:grid;gap:4px;width:100%;max-width:440px}
+  .cell{
+    aspect-ratio:1;border-radius:4px;display:flex;align-items:center;
+    justify-content:center;position:relative;cursor:pointer;transition:all .15s;
+    font-family:var(--mono);
+  }
+  .cell.light{background:var(--light)}
+  .cell.dark{background:var(--dark)}
+  .cell.cur-row{box-shadow:inset 0 0 0 2px rgba(88,166,255,.7)}
+  .cell.trying{box-shadow:inset 0 0 0 3px var(--blue)}
+  .cell.conflict{background:rgba(248,81,73,.6);box-shadow:inset 0 0 0 3px var(--red)}
+  .cell .reason{
+    position:absolute;bottom:2px;font-size:10px;color:var(--red);
+    display:flex;gap:3px;
+  }
+  .cell .coord{position:absolute;top:3px;left:5px;font-size:8px;color:rgba(255,255,255,.35)}
+  .cell svg{width:62%;height:62%;z-index:2;position:relative}
+  /* 攻击范围覆盖 */
+  .cell.attacked::before{
+    content:'';position:absolute;inset:0;border-radius:4px;
+    background:rgba(248,81,73,.5);z-index:1;
+  }
+  /* 当前行的安全列 */
+  .cell.safe{box-shadow:inset 0 0 0 3px rgba(63,185,80,.9)}
+  .cell svg.pop{animation:qpop .3s ease}
+  @keyframes qpop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  .cell.conflict{animation:shake .25s ease}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+  /* 解展示区 */
+  .solutions-wrap{
+    border-top:1px solid var(--border);padding:9px 12px;
+    display:flex;gap:10px;overflow-x:auto;background:var(--panel2);
+  }
+  .solutions-wrap .sw-lbl{
+    font-size:11px;color:var(--muted);font-family:var(--mono);
+    display:flex;align-items:center;flex-shrink:0;
+  }
+  .mini-board{
+    display:grid;gap:1px;flex-shrink:0;padding:4px;border-radius:5px;
+    background:#0d1117;border:1px solid rgba(63,185,80,.4);
+    animation:qpop .3s ease;
+  }
+  .mini-cell{width:13px;height:13px;border-radius:2px}
+  .mini-cell.q{background:#ffd54d}
+  .mini-cell.e{background:#30363d}
+  .rightCol{display:flex;flex-direction:column;gap:10px;min-height:0}
+  .state-body{padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:9px;overflow:auto}
+  .sets{display:grid;grid-template-columns:1fr;gap:6px}
+  .set-box{
+    background:var(--panel2);border-radius:6px;padding:7px 10px;border:1px solid var(--border);
+  }
+  .set-box .lbl{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:4px}
+  .set-box .vals{display:flex;gap:4px;flex-wrap:wrap;min-height:20px}
+  .chip{
+    font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:4px;
+    background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.35);
+  }
+  .chip.add{background:rgba(210,153,34,.15);color:var(--orange);border-color:rgba(210,153,34,.35)}
+  .chip.sub{background:rgba(188,140,255,.15);color:var(--purple);border-color:rgba(188,140,255,.35)}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .meta{
+    background:var(--panel2);border-radius:6px;padding:7px;text-align:center;
+    border:1px solid var(--border);
+  }
+  .meta .lbl{font-size:10px;color:var(--muted);font-family:var(--mono)}
+  .meta .val{font-size:17px;font-weight:700;font-family:var(--mono);margin-top:2px}
+  .desc{
+    background:var(--panel2);padding:9px 11px;border-radius:6px;
+    border-left:3px solid var(--blue);font-size:12.5px;line-height:1.6;
+  }
+  /* res / board 快照 */
+  .snap-box{
+    background:var(--panel2);border:1px solid var(--border);border-radius:6px;
+    padding:10px 11px;font-family:var(--mono);font-size:11.5px;
+  }
+  .snap-box .snap-title{color:var(--muted);font-size:10.5px;margin-bottom:7px}
+  .snap-sol{margin-bottom:9px}
+  .snap-sol:last-child{margin-bottom:0}
+  .snap-sol .sol-tag{color:var(--green);font-size:10.5px;margin-bottom:3px}
+  .snap-sol .sol-lines{background:#0d1117;border-radius:5px;padding:6px 8px}
+  .snap-line{color:#e6edf3;letter-spacing:1.5px;white-space:pre}
+  .snap-line.cur{color:var(--green)}
+  .desc.warn{border-left-color:var(--orange)}
+  .desc.bad{border-left-color:var(--red)}
+  .desc.ok{border-left-color:var(--green)}
+  #codeBody{padding:8px 0;font-family:var(--mono);font-size:12px;overflow:auto;flex:1}
+  .code-line{display:flex;padding:2px 12px;white-space:pre;min-height:18px;color:#c9d1d9}
+  .code-line .ln{width:26px;color:#484f58;user-select:none;text-align:right;margin-right:12px;flex-shrink:0}
+  .code-line.cur{background:rgba(56,139,253,.15);border-left:2px solid var(--blue);padding-left:10px}
+  .kw{color:#ff7b72}.ty{color:#ffa657}.fn{color:#d2a8ff}.nm{color:#79c0ff}
+  .stats{display:flex;gap:10px;font-family:var(--mono);font-size:11px;flex-wrap:wrap}
+  .stats b{color:var(--fg)}
+  @media(max-width:900px){
+    main{grid-template-columns:1fr;overflow:auto}
+    body{overflow:auto}
+    .panel{min-height:280px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>51. N皇后 <span style="color:var(--muted);font-weight:400">| 逐行 DFS 回溯 + 剪枝</span></h1>
+    <div class="sub">每行放一个皇后 · 冲突列标红 · 三个集合记录列与两条对角线</div>
+  </div>
+  <div class="controls">
+    <div class="seg" id="nSeg">
+      <button data-n="4" class="on">n=4</button>
+      <button data-n="5">n=5</button>
+      <button data-n="6">n=6</button>
+    </div>
+    <button class="btn" id="btnReset">⟲ 重置</button>
+    <button class="btn" id="btnPrev">◀ 上一步</button>
+    <button class="btn primary" id="btnPlay">▶ 播放</button>
+    <button class="btn" id="btnNext">下一步 ▶</button>
+    <select id="speed">
+      <option value="1300">慢</option>
+      <option value="700" selected>中</option>
+      <option value="300">快</option>
+    </select>
+  </div>
+</header>
+
+<div class="progress-bar">
+  <span class="pl" id="plLabel">步骤 0 / 0</span>
+  <input type="range" id="slider" min="0" max="1" value="0">
+</div>
+
+<main>
+  <div class="panel">
+    <div class="panel-head">
+      <span>棋盘（点击格子跳到该列被尝试的步骤）</span>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="board-wrap"><div class="board" id="board"></div></div>
+    <div class="solutions-wrap">
+      <span class="sw-lbl">已找到的解 res：</span>
+      <div id="miniBoards" style="display:flex;gap:10px"></div>
+    </div>
+  </div>
+
+  <div class="rightCol">
+    <div class="panel" style="flex:1">
+      <div class="panel-head"><span>当前状态</span><span id="stepInfo">步骤 0 / 0</span></div>
+      <div class="state-body">
+        <div class="sets">
+          <div class="set-box">
+            <div class="lbl">列集合 cols（同列冲突）</div>
+            <div class="vals" id="colsVals"></div>
+          </div>
+          <div class="set-box">
+            <div class="lbl">主对角线 add（row+col 相等，↗ 方向）</div>
+            <div class="vals" id="addVals"></div>
+          </div>
+          <div class="set-box">
+            <div class="lbl">副对角线 sub（row-col 相等，↘ 方向）</div>
+            <div class="vals" id="subVals"></div>
+          </div>
+        </div>
+        <div class="meta-grid">
+          <div class="meta"><div class="lbl">当前行 row</div><div class="val" id="rowVal" style="color:var(--blue)">0</div></div>
+          <div class="meta"><div class="lbl">尝试列 col</div><div class="val" id="colVal" style="color:var(--orange)">—</div></div>
+        </div>
+        <div class="desc" id="desc">点击「播放」「下一步」，拖动进度条，或点击棋盘格子。</div>
+        <div id="snapshot" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1.2">
+      <div class="panel-head"><span>Solution.java · 当前执行行高亮</span></div>
+      <div id="codeBody"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* 皇冠 SVG */
+const CROWN = '<svg viewBox="0 0 24 24" fill="#ffd54d"><path d="M3 18h18l-1.6-9L15 12 12 4.5 9 12 4.6 9 3 18zm0 1.4v1.6h18v-1.6H3z"/></svg>';
+
+/* ============================================================
+   预生成步骤
+   ============================================================ */
+function buildSteps(n){
+  const board = Array.from({length:n},()=>Array(n).fill('.'));
+  const cols = new Set(), add = new Set(), sub = new Set();
+  const steps = [];
+  let queens = [];   // 当前皇后坐标
+  let conflictCount = 0;
+  const snap = o=>Object.assign({
+    queens: queens.slice(), row:0, col:0,
+    cols:[...cols], add:[...add], sub:[...sub],
+    conflict:null, trying:false
+  }, o);
+
+  function dfs(row){
+    if(row === n){
+      steps.push(snap({
+        action:'answer', line:11,
+        solution: board.map(r=>r.slice()),
+        desc:`row == n，n 个皇后全部放好且互不攻击 → 把当前棋盘加入 res，return。`,
+        descType:'ok'
+      }));
+      return;
+    }
+    for(let col=0; col<n; col++){
+      const cCol = cols.has(col);
+      const cAdd = add.has(row+col);
+      const cSub = sub.has(row-col);
+      if(cCol || cAdd || cSub){
+        conflictCount++;
+        const reasons = [];
+        if(cCol) reasons.push('|');
+        if(cAdd) reasons.push('↗');
+        if(cSub) reasons.push('↘');
+        steps.push(snap({
+          action:'conflict', line:16, row, col,
+          conflict:{reasons, cCol,cAdd,cSub},
+          desc:`第 ${row} 行尝试第 ${col} 列：与已放皇后冲突（${reasons.join(' ')}）→ continue，这一列被剪枝。`,
+          descType:'bad'
+        }));
+        continue;
+      }
+      // 放置
+      cols.add(col); add.add(row+col); sub.add(row-col);
+      board[row][col]='Q';
+      queens.push([row,col]);
+      steps.push(snap({
+        action:'place', line:19, row, col, trying:true,
+        desc:`第 ${row} 行第 ${col} 列不冲突，放下皇后，三个集合分别记录 col=${col}、row+col=${row+col}、row-col=${row-col}，递归到第 ${row+1} 行。`,
+        descType:''
+      }));
+      dfs(row+1);
+      // 撤销
+      board[row][col]='.';
+      cols.delete(col); add.delete(row+col); sub.delete(row-col);
+      queens.pop();
+      steps.push(snap({
+        action:'unplace', line:25, row, col,
+        desc:`下面的行都试完了，撤销第 ${row} 行第 ${col} 列的皇后，三个集合同步移除，继续试下一列。`,
+        descType:'warn'
+      }));
+    }
+  }
+  dfs(0);
+  const ansCount = steps.filter(s=>s.action==='answer').length;
+  steps.push(snap({
+    action:'done',
+    desc:`所有分支走完，共得到 ${ansCount} 种摆法，solveNQueens 返回 res。`,
+    descType:'ok'
+  }));
+  return {steps, conflictCount, ansCount};
+}
+
+/* ===== Java 代码 ===== */
+const CODE = [
+ [1 , 'class Solution {'],
+ [2 , '    public List<List<String>> solveNQueens(int n) {'],
+ [3 , '        List<List<String>> res = new ArrayList<>();'],
+ [4 , '        char[][] board = new char[n][n];'],
+ [5 , '        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) board[i][j] = \'.\';'],
+ [6 , '        Set<Integer> cols = new HashSet<>();'],
+ [7 , '        Set<Integer> add = new HashSet<>();'],
+ [8 , '        Set<Integer> sub = new HashSet<>();'],
+ [9 , '        dfs(res, board, cols, add, sub, n, 0);'],
+ [10, '        return res;'],
+ [11, '    }'],
+ [12, ''],
+ [13, '    void dfs(List<List<String>> res, char[][] board, Set<Integer> cols,'],
+ [14, '            Set<Integer> add, Set<Integer> sub, int n, int row) {'],
+ [15, '        if (row == n) { res.add(toBoard(board)); return; }'],
+ [16, '        for (int col = 0; col < n; col++) {'],
+ [17, '            if (cols.contains(col) || add.contains(row + col)'],
+ [18, '                    || sub.contains(row - col)) continue;'],
+ [19, '            cols.add(col); add.add(row + col); sub.add(row - col);'],
+ [20, "            board[row][col] = 'Q';"],
+ [21, '            dfs(res, board, cols, add, sub, n, row + 1);'],
+ [22, "            board[row][col] = '.';"],
+ [23, '            cols.remove(col); add.remove(row + col); sub.remove(row - col);'],
+ [24, '        }'],
+ [25, '    }'],
+ [26, ''],
+ [27, '    private List<String> toBoard(char[][] board) {'],
+ [28, '        List<String> one = new ArrayList<>();'],
+ [29, '        for (char[] r : board) one.add(new String(r));'],
+ [30, '        return one;'],
+ [31, '    }'],
+ [32, '}'],
+];
+const codeBody = document.getElementById('codeBody');
+function hl(code){
+  return code
+    .replace(/\b(class|public|private|void|if|else|return|for|new|char|int)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(List|Set|HashSet|String|board|cols|add|sub)\b/g,'<span class="ty">$1</span>')
+    .replace(/\b(dfs|solveNQueens|contains|fill|toBoard)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(res|n|row|col|r)\b/g,'<span class="nm">$1</span>');
+}
+function renderCode(curLine){
+  codeBody.innerHTML = CODE.map(([ln,txt])=>{
+    const cls = ln===curLine ? 'code-line cur' : 'code-line';
+    return `<div class="${cls}"><span class="ln">${ln}</span><span>${hl(txt)||' '}</span></div>`;
+  }).join('');
+}
+
+/* ===== 状态机 ===== */
+let currentN = 4;
+let data = buildSteps(currentN);
+let stepIdx = -1, timer = null;
+const boardEl = document.getElementById('board');
+const descEl = document.getElementById('desc');
+const statsEl = document.getElementById('stats');
+const slider = document.getElementById('slider');
+const plLabel = document.getElementById('plLabel');
+
+function renderChips(elId, vals, cls){
+  const el = document.getElementById(elId);
+  if(!vals.length){ el.innerHTML = '<span style="font-size:11px;color:#484f58">空</span>'; return; }
+  el.innerHTML = vals.map(v=>`<span class="chip ${cls}">${v}</span>`).join('');
+}
+
+function render(){
+  const s = stepIdx>=0 ? data.steps[stepIdx] : null;
+  const queens = s ? s.queens : [];
+  const qSet = new Set(queens.map(q=>q[0]+','+q[1]));
+  const row = s ? s.row : 0;
+  const col = s ? s.col : -1;
+  const conflict = s ? s.conflict : null;
+
+  // 某格子是否被任一皇后攻击（列/两条对角线）
+  const isAttacked = (r,c)=>queens.some(([qr,qc])=>
+    qc===c || qr+qc===r+c || qr-qc===r-c);
+
+  boardEl.style.gridTemplateColumns = `repeat(${currentN},1fr)`;
+  const isPlaceStep = s && s.action==='place';
+  let html = '';
+  for(let r=0;r<currentN;r++){
+    for(let c=0;c<currentN;c++){
+      let cls = 'cell ' + ((r+c)%2===0 ? 'light':'dark');
+      if(r===row && s) cls += ' cur-row';
+      const isQ = qSet.has(r+','+c);
+      if(r===row && c===col){
+        if(conflict) cls += ' conflict';
+        else if(s.trying) cls += ' trying';
+      }
+      // 攻击范围（皇后自身不算）
+      if(!isQ && isAttacked(r,c)) cls += ' attacked';
+      // 当前行的安全列（当前正在尝试的列除外）
+      if(r===row && s && !isAttacked(r,c) && !(r===row&&c===col)) cls += ' safe';
+      let reasonHtml = '';
+      if(r===row && c===col && conflict){
+        reasonHtml = `<span class="reason">${conflict.reasons.join(' ')}</span>`;
+      }
+      const crownSvg = isQ
+        ? CROWN.replace('<svg', (isPlaceStep && r===row && c===col)
+            ? '<svg class="pop"' : '<svg')
+        : '';
+      html += `<div class="${cls}" data-r="${r}" data-c="${c}">
+        <span class="coord">${r},${c}</span>
+        ${crownSvg}
+        ${reasonHtml}
+      </div>`;
+    }
+  }
+  boardEl.innerHTML = html;
+
+  // 迷你解棋盘（累积当前步骤之前的 answer）
+  const miniBoards = document.getElementById('miniBoards');
+  const solutions = [];
+  for(let i=0;i<=stepIdx;i++){
+    if(data.steps[i].solution) solutions.push(data.steps[i].solution);
+  }
+  miniBoards.innerHTML = solutions.map(sol=>{
+    const cells = sol.flatMap(r=>r.map(ch=>
+      `<div class="mini-cell ${ch==='Q'?'q':'e'}"></div>`).join('')).join('');
+    return `<div class="mini-board" style="grid-template-columns:repeat(${currentN},1fr)">${cells}</div>`;
+  }).join('');
+
+  // 集合 chips
+  renderChips('colsVals', s?s.cols:[], '');
+  renderChips('addVals', s?s.add:[], 'add');
+  renderChips('subVals', s?s.sub:[], 'sub');
+
+  document.getElementById('rowVal').textContent = s ? s.row : 0;
+  document.getElementById('colVal').textContent = s ? s.col : '—';
+
+  if(s){
+    descEl.textContent = s.desc;
+    descEl.className = 'desc '+(s.descType||'');
+    renderCode(s.line);
+  } else {
+    descEl.textContent = '点击「播放」「下一步」，拖动进度条，或点击棋盘格子。';
+    descEl.className='desc'; renderCode(0);
+  }
+
+  // board 状态每步常驻；answer 步骤额外展示 res 完整解
+  const snapEl = document.getElementById('snapshot');
+  const boardGrid = Array.from({length:currentN},()=>Array(currentN).fill('.'));
+  queens.forEach(([r,c])=>boardGrid[r][c]='Q');
+  const boardLines = boardGrid.map(r=>
+    `<div class="snap-line">"${r.join('')}"</div>`).join('');
+
+  let resHtml = '';
+  if(s && s.action==='answer'){
+    const answers = [];
+    for(let i=0;i<=stepIdx;i++){
+      if(data.steps[i].solution) answers.push(data.steps[i].solution);
+    }
+    const solHtml = answers.map((sol,idx)=>{
+      const isCur = idx===answers.length-1;
+      const lines = sol.map(r=>{
+        const str = r.map(ch=>ch==='Q'?'Q':'.').join('');
+        return `<div class="snap-line ${isCur?'cur':''}">"${str}"</div>`;
+      }).join('');
+      return `<div class="snap-sol">
+        <div class="sol-tag">解 ${idx+1}${isCur?'　本次加入 res':''}</div>
+        <div class="sol-lines">${lines}</div>
+      </div>`;
+    }).join('');
+    resHtml = `<div style="margin-top:10px">
+      <div class="snap-title">res 当前共 ${answers.length} 个解</div>
+      ${solHtml}
+    </div>`;
+  }
+  snapEl.innerHTML = `<div class="snap-box">
+    <div class="snap-title">board 当前状态（char[][]，每步实时更新）</div>
+    <div class="sol-lines">${boardLines}</div>
+    ${resHtml}
+  </div>`;
+  snapEl.style.display='block';
+
+  document.getElementById('stepInfo').textContent =
+    `步骤 ${Math.max(stepIdx+1,0)} / ${data.steps.length}`;
+  statsEl.innerHTML =
+    `<span>已放皇后 <b>${queens.length}</b></span>`+
+    `<span>冲突剪枝 <b style="color:var(--red)">${data.conflictCount}</b></span>`+
+    `<span>解 <b style="color:var(--green)">${data.ansCount}</b></span>`;
+  slider.max = data.steps.length-1;
+  slider.value = Math.max(stepIdx,0);
+  plLabel.textContent = `步骤 ${Math.max(stepIdx+1,0)} / ${data.steps.length}`;
+}
+
+function next(){
+  if(stepIdx>=data.steps.length-1){pause();return;}
+  stepIdx++; render();
+}
+function prev(){ if(stepIdx>-1){stepIdx--;render();} }
+function reset(){ pause(); stepIdx=-1; render(); }
+function pause(){
+  if(timer){clearInterval(timer);timer=null;}
+  document.getElementById('btnPlay').textContent='▶ 播放';
+}
+function play(){
+  if(timer){pause();return;}
+  if(stepIdx>=data.steps.length-1) stepIdx=-1;
+  document.getElementById('btnPlay').textContent='⏸ 暂停';
+  timer=setInterval(()=>{
+    if(stepIdx>=data.steps.length-1){pause();return;}
+    next();
+  },+document.getElementById('speed').value);
+}
+
+document.getElementById('btnNext').onclick=()=>{pause();next();};
+document.getElementById('btnPrev').onclick=()=>{pause();prev();};
+document.getElementById('btnPlay').onclick=play;
+document.getElementById('btnReset').onclick=reset;
+document.getElementById('speed').onchange=()=>{if(timer){pause();play();}};
+slider.addEventListener('input',()=>{
+  pause();
+  stepIdx = +slider.value;
+  if(stepIdx===0) stepIdx=-1;
+  render();
+});
+// 点击格子：跳到该 (r,c) 第一次被枚举的步骤
+boardEl.addEventListener('click', e=>{
+  const cell = e.target.closest('.cell');
+  if(!cell) return;
+  const r=+cell.getAttribute('data-r'), c=+cell.getAttribute('data-c');
+  const target = data.steps.findIndex(st=> st.row===r && st.col===c);
+  if(target>=0){ pause(); stepIdx=target; render(); }
+});
+document.querySelectorAll('#nSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#nSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    currentN=+b.dataset.n;
+    data=buildSteps(currentN);
+    reset();
+  };
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){pause();next();}
+  if(e.key==='ArrowLeft'){pause();prev();}
+  if(e.key===' '){e.preventDefault();play();}
+});
+render();
+</script>
+</body>
+</html>

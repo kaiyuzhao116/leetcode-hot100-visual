@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>73. 矩阵置零 · 标记数组可视化</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230d1117'/%3E%3Cpath d='M4 4h16v16H4z' fill='none' stroke='%2358a6ff' stroke-width='2'/%3E%3Cpath d='M9 4v16M4 9h16' stroke='%23f85149' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+  --orange:#e3b341;--purple:#bc8cff;--red:#f85149
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;line-height:1.6;padding:28px 20px 60px}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:26px;font-weight:700;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tag{font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--orange);color:var(--orange)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:18px}
+.intro{border-left:3px solid var(--blue)}
+.intro p{font-size:14.5px}
+.intro b{color:var(--blue)}
+.cases{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.case-btn{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+.case-btn:hover{border-color:var(--blue);color:var(--text)}
+.case-btn.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.ph-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;transition:.2s;min-width:0;position:relative}
+.ph-num{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:1px}
+.ph-name{font-size:14.5px;font-weight:600;margin-top:4px}
+.ph-desc{font-size:12.5px;color:var(--muted);margin-top:4px}
+.ph-card.p1{border-color:var(--blue)} .ph-card.p1 .ph-num{color:var(--blue)}
+.ph-card.p2{border-color:var(--purple)} .ph-card.p2 .ph-num{color:var(--purple)}
+.ph-card.p3{border-color:var(--orange)} .ph-card.p3 .ph-num{color:var(--orange)}
+.ph-card.on{box-shadow:0 0 0 1px currentColor}
+.ph-card.done{opacity:.6}
+.ph-card .tick{position:absolute;top:10px;right:10px;width:16px;height:16px;display:none}
+.ph-card.done .tick{display:block}
+
+.viz-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.m-area{display:inline-block;max-width:100%;overflow:auto}
+.m-top{display:flex;gap:8px;margin-bottom:8px;padding-left:42px}
+.heng-cells{display:grid;gap:8px}
+.h-cell{height:34px;border:1px solid var(--border);border-radius:7px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--blue);font-family:Consolas,monospace;transition:all .2s}
+.h-cell.on{border-color:var(--blue);background:rgba(88,166,255,.18)}
+.h-cell.cur{border-color:var(--orange);background:rgba(227,179,65,.2)}
+.m-main{display:flex;gap:8px}
+.shu-cells{display:grid;gap:8px}
+.v-cell{width:34px;border:1px solid var(--border);border-radius:7px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--purple);font-family:Consolas,monospace;transition:all .2s}
+.v-cell.on{border-color:var(--purple);background:rgba(188,140,255,.18)}
+.v-cell.cur{border-color:var(--orange);background:rgba(227,179,65,.2)}
+.matrix-grid{display:grid;gap:8px}
+.m-cell{width:56px;height:56px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;font-family:Consolas,monospace;transition:all .25s}
+.m-cell.cur-scan{border:2px solid var(--blue);background:rgba(88,166,255,.16)}
+.m-cell.cur-mark{border:2px solid var(--red);background:rgba(248,81,73,.18);animation:pop .4s ease}
+.m-cell.clearing{border-color:var(--orange);background:rgba(227,179,65,.18);animation:fadezero .5s ease}
+.m-cell.is-zero{color:var(--red)}
+@keyframes pop{0%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes fadezero{0%{opacity:.4}100%{opacity:1}}
+.mark-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:12.5px;color:var(--muted)}
+.mark-legend span{display:flex;align-items:center;gap:6px}
+.sw-dot{width:13px;height:13px;border-radius:4px}
+
+.info{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px}
+.info-card{flex:1;min-width:130px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:11px 14px}
+.info-card .k{font-size:12px;color:var(--muted)}
+.info-card .v{font-size:15px;font-weight:600;margin-top:3px;font-family:Consolas,monospace}
+.msg{margin-top:14px;font-size:14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.msg .act{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px;margin-right:8px;background:rgba(88,166,255,.16);color:var(--blue)}
+.msg .act.purple{background:rgba(188,140,255,.16);color:var(--purple)}
+.msg .act.orange{background:rgba(227,179,65,.16);color:var(--orange)}
+
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:18px}
+.code-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border)}
+.dot{width:12px;height:12px;border-radius:50%}
+.d1{background:var(--red)}.d2{background:var(--orange)}.d3{background:var(--green)}
+.code-fname{margin-left:8px;font-size:13px;color:var(--muted)}
+.code-body{padding:12px 0;overflow:auto;max-height:430px}
+.code-line{display:flex;align-items:flex-start;padding:1.5px 14px;font-family:Consolas,monospace;font-size:13.5px;white-space:pre}
+.code-line .ln{width:26px;text-align:right;color:#48505c;margin-right:14px;flex-shrink:0;user-select:none}
+.code-line.hl{background:rgba(88,166,255,.16)}
+.code-line.hl .ln{color:var(--blue)}
+.t-kw{color:#ff7b72}.t-type{color:#79c0ff}.t-num{color:#a5d6ff}
+
+.controls{position:sticky;bottom:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(0,0,0,.4)}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:42px;height:42px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn:hover{border-color:var(--blue)}
+.btn.play{width:auto;padding:0 20px;gap:8px;background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:700;font-size:14px}
+.btn.play:hover{filter:brightness(1.1)}
+.btn svg{width:18px;height:18px;fill:currentColor}
+.scrub{flex:1;min-width:140px;accent-color:var(--blue);height:6px}
+.step-txt{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:52px;text-align:right}
+.speed{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+@media(max-width:760px){
+  .phases{grid-template-columns:1fr}
+  .m-cell{width:44px;height:44px;font-size:14px}
+  .h-cell{font-size:11px}.v-cell{font-size:11px}
+  body{padding:18px 12px 50px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>73. 矩阵置零 <span class="tag">中等</span></h1>
+  <div class="sub">标记数组解法 · 时间 O(m×n) · 空间 O(m+n)，原地修改</div>
+
+  <div class="panel intro">
+    <p>扫描矩阵，遇到 0 就在顶部 <b>heng（列标记）</b>和左边 <b>shu（行标记）</b>对应位置记 1；扫描完先按 shu 把整行清零，再按 heng 把整列清零。注意本版代码里 <b>heng 实际标记列、shu 实际标记行</b>，与名字相反。</p>
+  </div>
+
+  <div class="cases" id="caseBox"></div>
+  <div class="phases" id="phaseBox"></div>
+
+  <div class="panel">
+    <div class="viz-title">矩阵与标记条（顶部 heng 标列，左侧 shu 标行）</div>
+    <div class="m-area" id="mArea">
+      <div class="m-top">
+        <div class="heng-cells" id="hengCells"></div>
+      </div>
+      <div class="m-main">
+        <div class="shu-cells" id="shuCells"></div>
+        <div class="matrix-grid" id="matrixGrid"></div>
+      </div>
+    </div>
+    <div class="mark-legend">
+      <span><span class="sw-dot" style="border:1px solid var(--blue)"></span>扫描中</span>
+      <span><span class="sw-dot" style="background:rgba(248,81,73,.3);border:1px solid var(--red)"></span>发现 0</span>
+      <span><span class="sw-dot" style="background:rgba(227,179,65,.3);border:1px solid var(--orange)"></span>正在清零</span>
+    </div>
+
+    <div class="info">
+      <div class="info-card"><div class="k">当前阶段</div><div class="v" id="iPhase">—</div></div>
+      <div class="info-card"><div class="k">当前位置</div><div class="v" id="iCur">—</div></div>
+      <div class="info-card"><div class="k">动作</div><div class="v" id="iAct" style="font-size:13px">—</div></div>
+    </div>
+    <div class="msg" id="msgBox"></div>
+  </div>
+
+  <div class="code-panel">
+    <div class="code-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="code-fname">Solution.java</span></div>
+    <div class="code-body" id="codeBody"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn play" id="playBtn">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playTxt">播放</span>
+    </button>
+    <button class="btn" id="prevBtn" title="上一步（左箭头）"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+    <button class="btn" id="nextBtn" title="下一步（右箭头）"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+    <button class="btn" id="resetBtn" title="重置"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <input type="range" class="scrub" id="scrub" min="0" max="0" value="0">
+    <span class="step-txt" id="stepTxt">0 / 0</span>
+    <select class="speed" id="speedSel"><option value="1100">0.5x</option><option value="700" selected>1x</option><option value="380">2x</option><option value="200">4x</option></select>
+  </div>
+</div>
+
+<script>
+const CASES=[
+  {mat:[[1,1,1],[1,0,1],[1,1,1]],label:'3x3 中心0'},
+  {mat:[[0,1,2],[3,4,5]],label:'2x3 左上角0'},
+  {mat:[[0,1,2,0],[3,4,5,2],[1,3,1,5]],label:'3x4 两个0'},
+  {mat:[[1,0]],label:'1x2'},
+  {mat:[[1,2],[3,4]],label:'无0'}
+];
+
+const CODE_HTML=[
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '  <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-meth">setZeroes</span>(<span class="t-kw">int</span>[][] matrix) {',
+  '    <span class="t-kw">int</span> m = matrix.length;',
+  '    <span class="t-kw">int</span> n = matrix[<span class="t-num">0</span>].length;',
+  '    <span class="t-kw">int</span>[] heng = <span class="t-kw">new</span> <span class="t-kw">int</span>[n];',
+  '    <span class="t-kw">int</span>[] shu = <span class="t-kw">new</span> <span class="t-kw">int</span>[m];',
+  '    <span class="t-kw">for</span>(<span class="t-kw">int</span> i=<span class="t-num">0</span>;i&lt;m;i++){',
+  '      <span class="t-kw">for</span>(<span class="t-kw">int</span> j=<span class="t-num">0</span>;j&lt;n;j++){',
+  '        <span class="t-kw">if</span>(matrix[i][j]==<span class="t-num">0</span>){',
+  '          heng[j]=<span class="t-num">1</span>;',
+  '          shu[i]=<span class="t-num">1</span>;',
+  '        }',
+  '      }',
+  '    }',
+  '    <span class="t-kw">for</span>(<span class="t-kw">int</span> i=<span class="t-num">0</span>;i&lt;m;i++){',
+  '      <span class="t-kw">if</span>(shu[i]==<span class="t-num">1</span>){',
+  '        <span class="t-kw">for</span>(<span class="t-kw">int</span> j=<span class="t-num">0</span>;j&lt;n;j++) matrix[i][j]=<span class="t-num">0</span>;',
+  '      }',
+  '    }',
+  '    <span class="t-kw">for</span>(<span class="t-kw">int</span> j=<span class="t-num">0</span>;j&lt;n;j++){',
+  '      <span class="t-kw">if</span>(heng[j]==<span class="t-num">1</span>){',
+  '        <span class="t-kw">for</span>(<span class="t-kw">int</span> i=<span class="t-num">0</span>;i&lt;m;i++) matrix[i][j]=<span class="t-num">0</span>;',
+  '      }',
+  '    }',
+  '  }',
+  '}'
+];
+
+const PHASE_DEFS=[
+  {cls:'p1',name:'扫描并打标记',desc:'遇0记 heng[j]=1、shu[i]=1'},
+  {cls:'p2',name:'按 shu 整行清零',desc:'shu[i]=1 的行全部置0'},
+  {cls:'p3',name:'按 heng 整列清零',desc:'heng[j]=1 的列全部置0'}
+];
+
+function buildSteps(c){
+  const matrix=c.mat.map(r=>r.slice());
+  const m=matrix.length,n=matrix[0].length;
+  const heng=new Array(n).fill(0),shu=new Array(m).fill(0);
+  const steps=[];
+  const snap=(o)=>steps.push(Object.assign({
+    line:0,phase:0,matrix:matrix.map(r=>r.slice()),
+    heng:heng.slice(),shu:shu.slice(),cur:null,
+    clearRow:-1,clearCol:-1,action:'',msg:''
+  },o));
+
+  snap({line:3,action:'init',
+    msg:'m='+m+', n='+n+'，创建 heng（列标记，长度'+n+'）和 shu（行标记，长度'+m+'），开始从左到右、从上到下扫描'});
+
+  for(let i=0;i<m;i++)for(let j=0;j<n;j++){
+    if(matrix[i][j]===0){
+      heng[j]=1;shu[i]=1;
+      snap({line:10,phase:1,cur:[i,j],action:'mark',
+        msg:'matrix['+i+']['+j+']=0，顶部 heng['+j+']=1（标记第'+j+'列）、左边 shu['+i+']=1（标记第'+i+'行）'});
+    }else{
+      snap({line:9,phase:1,cur:[i,j],action:'scan',
+        msg:'扫描 matrix['+i+']['+j+']='+matrix[i][j]+'，非 0，不打标记'});
+    }
+  }
+
+  for(let i=0;i<m;i++)if(shu[i]===1){
+    for(let j=0;j<n;j++)matrix[i][j]=0;
+    snap({line:17,phase:2,clearRow:i,action:'rowclear',
+      msg:'shu['+i+']=1，第 '+i+' 行整行清零'});
+  }
+
+  for(let j=0;j<n;j++)if(heng[j]===1){
+    for(let i=0;i<m;i++)matrix[i][j]=0;
+    snap({line:22,phase:3,clearCol:j,action:'colclear',
+      msg:'heng['+j+']=1，第 '+j+' 列整列清零'});
+  }
+
+  snap({line:0,phase:3,action:'end',
+    msg:'所有被标记的行、列都已置 0，原地修改完成'});
+  return steps;
+}
+
+let caseIdx=0,steps=[],posIdx=0,timer=null,playing=false;
+const $=(id)=>document.getElementById(id);
+
+function renderCaseButtons(){
+  $('caseBox').innerHTML=CASES.map((c,i)=>
+    '<button class="case-btn'+(i===caseIdx?' active':'')+'" data-k="'+i+'">用例 '+(i+1)+': '+c.label+'</button>').join('');
+  document.querySelectorAll('.case-btn').forEach(b=>b.addEventListener('click',
+    ()=>loadCase(parseInt(b.dataset.k,10))));
+}
+function renderPhases(snap){
+  $('phaseBox').innerHTML=PHASE_DEFS.map((p,i)=>{
+    const cur=snap.phase===i+1&&snap.action!=='end';
+    const done=snap.phase>i+1||(snap.phase===3&&snap.action==='end');
+    return '<div class="ph-card '+p.cls+(cur?' on':'')+(done?' done':'')+'">'+
+      '<svg class="tick" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+      '<div class="ph-num">PHASE '+(i+1)+'</div><div class="ph-name">'+p.name+'</div>'+
+      '<div class="ph-desc">'+p.desc+'</div></div>';
+  }).join('');
+}
+function renderMatrix(snap){
+  const m=snap.matrix.length,n=snap.matrix[0].length;
+  $('hengCells').style.gridTemplateColumns='repeat('+n+',56px)';
+  $('shuCells').style.gridTemplateRows='repeat('+m+',56px)';
+  $('matrixGrid').style.gridTemplateColumns='repeat('+n+',56px)';
+  $('matrixGrid').style.gridTemplateRows='repeat('+m+',56px)';
+
+  $('hengCells').innerHTML=snap.heng.map((v,j)=>{
+    let cls='h-cell';
+    if(v===1)cls+=' on';
+    if(snap.cur&&snap.action==='mark'&&snap.cur[1]===j)cls+=' cur';
+    return '<div class="'+cls+'">'+(v===1?'1':'')+'</div>';
+  }).join('');
+  $('shuCells').innerHTML=snap.shu.map((v,i)=>{
+    let cls='v-cell';
+    if(v===1)cls+=' on';
+    if(snap.cur&&snap.action==='mark'&&snap.cur[0]===i)cls+=' cur';
+    return '<div class="'+cls+'">'+(v===1?'1':'')+'</div>';
+  }).join('');
+  $('matrixGrid').innerHTML=snap.matrix.map((row,i)=>row.map((v,j)=>{
+    let cls='m-cell';
+    if(v===0)cls+=' is-zero';
+    if(snap.cur&&snap.cur[0]===i&&snap.cur[1]===j)
+      cls+=snap.action==='mark'?' cur-mark':' cur-scan';
+    if(snap.clearRow===i||snap.clearCol===j)cls+=' clearing';
+    return '<div class="'+cls+'">'+v+'</div>';
+  }).join('')).join('');
+}
+function renderCode(){
+  $('codeBody').innerHTML=CODE_HTML.map((h,i)=>
+    '<div class="code-line" data-line="'+(i+1)+'"><span class="ln">'+(i+1)+'</span><span>'+h+'</span></div>').join('');
+}
+function render(){
+  const snap=steps[posIdx];
+  renderPhases(snap);renderMatrix(snap);
+  $('iPhase').textContent=snap.phase?('第 '+snap.phase+' 阶段'):'准备';
+  $('iCur').textContent=snap.cur?('['+snap.cur[0]+','+snap.cur[1]+']'):'—';
+  const actName={init:'初始化',scan:'扫描',mark:'打标记',rowclear:'行清零',colclear:'列清零',end:'完成'}[snap.action];
+  $('iAct').textContent=actName;
+  const cls=snap.phase===2?' purple':(snap.phase===3?' orange':'');
+  $('msgBox').innerHTML='<span class="act '+cls+'">'+actName+'</span>'+snap.msg;
+  $('codeBody').querySelectorAll('.code-line').forEach(el=>
+    el.classList.toggle('hl',parseInt(el.dataset.line,10)===snap.line));
+  $('scrub').max=steps.length-1;$('scrub').value=posIdx;
+  $('stepTxt').textContent=posIdx+' / '+(steps.length-1);
+  const hlEl=$('codeBody').querySelector('.code-line.hl');
+  if(hlEl)hlEl.scrollIntoView({block:'nearest'});
+}
+function pause(){
+  playing=false;clearInterval(timer);timer=null;
+  $('playTxt').textContent='播放';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M8 5v14l11-7z"/>';
+}
+function play(){
+  if(playing){pause();return;}
+  playing=true;$('playTxt').textContent='暂停';
+  $('playBtn').querySelector('svg').innerHTML='<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
+  if(posIdx>=steps.length-1){posIdx=0;render();}
+  timer=setInterval(()=>{
+    if(posIdx>=steps.length-1){pause();return;}
+    posIdx++;render();
+  },parseInt($('speedSel').value,10));
+}
+function loadCase(k){
+  pause();caseIdx=k;posIdx=0;
+  steps=buildSteps(CASES[k]);
+  renderCaseButtons();render();
+}
+$('playBtn').addEventListener('click',play);
+$('prevBtn').addEventListener('click',()=>{pause();if(posIdx>0){posIdx--;render();}});
+$('nextBtn').addEventListener('click',()=>{pause();if(posIdx<steps.length-1){posIdx++;render();}});
+$('resetBtn').addEventListener('click',()=>{pause();posIdx=0;render();});
+$('scrub').addEventListener('input',()=>{pause();posIdx=parseInt($('scrub').value,10);render();});
+$('speedSel').addEventListener('change',()=>{if(playing){pause();play();}});
+document.addEventListener('keydown',(e)=>{
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();if(posIdx<steps.length-1){posIdx++;render();}}
+  else if(e.key==='ArrowLeft'){e.preventDefault();if(posIdx>0){posIdx--;render();}}
+  else if(e.key===' '){e.preventDefault();play();}
+});
+renderCode();steps=buildSteps(CASES[0]);renderCaseButtons();render();
+</script>
+</body>
+</html>

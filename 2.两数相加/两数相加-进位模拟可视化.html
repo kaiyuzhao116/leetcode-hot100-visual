@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2. 两数相加 · 进位模拟可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%2358a6ff'/><path d='M8 14l4-6 4 6' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/></svg>">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --blue:#58a6ff; --green:#3fb950;
+  --orange:#e3b341; --purple:#bc8cff; --red:#f85149;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:"Segoe UI","Microsoft YaHei",-apple-system,sans-serif;
+  font-size:15px; line-height:1.6; padding:28px 18px 60px;
+}
+.wrap{max-width:1080px;margin:0 auto;}
+h1{font-size:26px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.badge{font-size:13px;font-weight:600;padding:2px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);}
+.badge.med{color:var(--orange);border-color:rgba(227,179,65,.5);}
+.sub{color:var(--muted);font-size:14px;margin:0 0 18px;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.intro{font-size:14px;color:var(--text);}
+.intro b.red{color:var(--red);} .intro b.pur{color:var(--purple);} .intro b.grn{color:var(--green);} .intro b.org{color:var(--orange);}
+
+/* 用例按钮 */
+.case-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.case-btn{
+  background:var(--panel);color:var(--muted);border:1px solid var(--border);
+  border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;
+  font-family:inherit;transition:border-color .15s,color .15s;
+}
+.case-btn:hover{color:var(--text);border-color:var(--muted);}
+.case-btn.active{color:var(--text);border-color:var(--blue);background:rgba(88,166,255,.1);}
+
+/* 舞台 */
+.stage-wrap{display:flex;justify-content:center;}
+.stage{
+  position:relative;width:540px;height:320px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;
+}
+#svgLayer{position:absolute;left:0;top:0;}
+.node-layer{position:absolute;left:0;top:0;width:540px;height:320px;}
+.row-label{
+  position:absolute;left:14px;font-size:12px;color:var(--muted);
+  font-weight:600;letter-spacing:.5px;
+}
+.node{
+  position:absolute;width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:600;transition:opacity .25s,border-color .2s,box-shadow .2s;
+  background:var(--panel);border:2px solid var(--border);color:var(--text);
+}
+/* 输入链表配色 */
+.node.l1{background:rgba(248,81,73,.14);border-color:rgba(248,81,73,.65);}
+.node.l2{background:rgba(188,140,255,.14);border-color:rgba(188,140,255,.65);}
+.node.taken{opacity:.28;}
+.node.cur1{border-color:var(--red);box-shadow:0 0 0 3px rgba(248,81,73,.22);}
+.node.cur2{border-color:var(--purple);box-shadow:0 0 0 3px rgba(188,140,255,.22);}
+/* dummy */
+.node.dummy{
+  background:transparent;border:2px dashed var(--muted);
+  color:var(--muted);font-size:11px;font-weight:600;
+}
+/* 结果节点：新建，蓝色 */
+.node.res{background:rgba(88,166,255,.16);border-color:var(--blue);}
+.node.fresh{animation:pop .35s ease;}
+@keyframes pop{0%{transform:scale(.6);opacity:0;}100%{transform:scale(1);opacity:1;}}
+.node.tail-mark{box-shadow:0 0 0 3px rgba(63,185,80,.3);}
+
+/* 进位徽章 */
+.carry-badge{
+  position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:8px;padding:4px 13px;font-size:13px;z-index:5;
+}
+.carry-badge .carry-label{color:var(--muted);font-size:12px;letter-spacing:.5px;}
+.carry-badge .carry-val{font-weight:700;font-family:Consolas,monospace;color:var(--muted);font-size:15px;}
+.carry-badge.hot{border-color:var(--orange);background:rgba(227,179,65,.12);animation:carryPulse .6s ease;}
+.carry-badge.hot .carry-val{color:var(--orange);}
+@keyframes carryPulse{0%{transform:translateX(-50%) scale(.85);}60%{transform:translateX(-50%) scale(1.08);}100%{transform:translateX(-50%) scale(1);}}
+
+/* 指针标签 */
+.ptr{
+  position:absolute;left:50%;transform:translateX(-50%);
+  font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap;
+}
+.ptr.p-l1{background:rgba(248,81,73,.18);color:var(--red);top:-17px;}
+.ptr.p-l2{background:rgba(188,140,255,.18);color:var(--purple);top:-17px;}
+.ptr.p-tail{background:rgba(63,185,80,.18);color:var(--green);top:-17px;}
+.legend{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:12px;color:var(--muted);}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;}
+
+/* 信息卡片 */
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.info-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;min-width:0;}
+.info-card .k{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.info-card .v{font-size:19px;font-weight:700;}
+.v.red{color:var(--red);} .v.purple{color:var(--purple);} .v.orange{color:var(--orange);} .v.blue{color:var(--blue);}
+
+/* 消息 */
+.msg{
+  background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);
+  border-radius:8px;padding:11px 16px;font-size:14px;margin-bottom:16px;
+}
+.msg .ph{font-weight:700;color:var(--blue);margin-right:8px;}
+.msg.good{border-left-color:var(--green);} .msg.good .ph{color:var(--green);}
+.msg .eq{color:var(--orange);font-weight:700;}
+
+/* 代码面板 */
+.code-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.code-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);}
+.mac{width:11px;height:11px;border-radius:50%;}
+.code-body{display:flex;font-family:"Cascadia Code",Consolas,"Courier New",monospace;font-size:13.5px;line-height:1.7;overflow-x:auto;}
+.lineno{padding:12px 0;color:var(--muted);text-align:right;user-select:none;background:var(--panel2);min-width:46px;}
+.lineno div{padding:0 12px;}
+.code-lines{flex:1;padding:12px 0;min-width:0;}
+.code-lines div{padding:0 16px;white-space:pre;}
+.code-lines div.hl{background:rgba(88,166,255,.14);box-shadow:inset 3px 0 var(--blue);}
+.t-kw{color:#ff7b72;} .t-type{color:#79c0ff;} .t-fn{color:#d2a8ff;}
+.t-id{color:#e6edf3;} .t-bool{color:#79c0ff;} .t-num{color:#e3b341;}
+
+/* 控制栏 */
+.controls{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.ctrl-btn{
+  background:var(--panel2);color:var(--text);border:1px solid var(--border);
+  border-radius:8px;height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;
+  cursor:pointer;font-size:13px;font-family:inherit;
+}
+.ctrl-btn:hover:not(:disabled){border-color:var(--muted);}
+.ctrl-btn:disabled{opacity:.4;cursor:default;}
+.ctrl-btn.primary{background:var(--blue);border-color:var(--blue);color:#0d1117;font-weight:600;}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--blue);height:4px;}
+.step-count{font-size:13px;color:var(--muted);font-family:Consolas,monospace;min-width:52px;text-align:right;}
+select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;}
+.kbd-hint{width:100%;font-size:12px;color:var(--muted);}
+.kbd-hint b{color:var(--text);font-weight:600;}
+
+@media (max-width:760px){
+  .info-grid{grid-template-columns:repeat(2,1fr);}
+  .stage{width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>2. 两数相加 <span class="badge med">中等</span></h1>
+  <p class="sub">dummty 虚拟头 + cur 尾指针 + carry 进位逐位模拟 · 时间 O(max(n,m)) · 空间 O(max(n,m))</p>
+
+  <div class="panel intro">
+    两个链表按 <b class="org">逆序</b> 存数字（头节点是个位）。每轮用 <b>x、y</b> 取 <b class="red">l1</b>、<b class="pur">l2</b> 当前位（缺位补 0），
+    连同上一位的 <b class="org">carry</b> 求和：<b class="org">先算 carry = 和 / 10</b>，<b class="grn">再让本位 = 和 % 10</b>，new 一个节点接到 cur 后。
+    while 条件只看 <b>l1、l2 是否非空</b>，两指针都走完后，若 carry 为 1 就在循环外再补一个最高位节点，最后返回 <b class="grn">dummty.next</b>。
+  </div>
+
+  <div class="case-row" id="caseRow"></div>
+
+  <div class="panel stage-wrap">
+    <div class="stage" id="stage">
+      <svg id="svgLayer" width="540" height="320"></svg>
+      <div class="node-layer" id="nodeLayer"></div>
+      <div class="carry-badge" id="carryBadge"><span class="carry-label">carry</span><span class="carry-val" id="carryVal">0</span></div>
+      <div class="row-label" style="top:40px;">l1</div>
+      <div class="row-label" style="top:126px;">l2</div>
+      <div class="row-label" style="top:232px;">结果</div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--red);"></i>l1 输入</span>
+    <span><i class="dot" style="background:var(--purple);"></i>l2 输入</span>
+    <span><i class="dot" style="background:var(--blue);"></i>新建结果节点</span>
+    <span><i class="dot" style="background:var(--green);"></i>cur 尾指针</span>
+  </div>
+
+  <div style="height:16px;"></div>
+  <div class="info-grid">
+    <div class="info-card"><div class="k">x（l1 本位）</div><div class="v red" id="infoV1">—</div></div>
+    <div class="info-card"><div class="k">y（l2 本位）</div><div class="v purple" id="infoV2">—</div></div>
+    <div class="info-card"><div class="k">进位 carry</div><div class="v orange" id="infoCarry">—</div></div>
+    <div class="info-card"><div class="k">本位写入</div><div class="v blue" id="infoNew">—</div></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="code-panel">
+    <div class="code-head">
+      <span class="mac" style="background:#ff5f56;"></span>
+      <span class="mac" style="background:#ffbd2e;"></span>
+      <span class="mac" style="background:#27c93f;"></span>
+      <span style="margin-left:6px;">Solution.java</span>
+    </div>
+    <div class="code-body">
+      <div class="lineno" id="lineno"></div>
+      <div class="code-lines" id="codeLines"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn primary" id="playBtn"></button>
+    <button class="ctrl-btn" id="prevBtn"></button>
+    <button class="ctrl-btn" id="nextBtn"></button>
+    <button class="ctrl-btn" id="resetBtn"></button>
+    <input type="range" id="scrub" min="0" value="0" step="1">
+    <span class="step-count" id="stepCount"></span>
+    <select id="speedSel">
+      <option value="1200">0.5x</option>
+      <option value="800" selected>1x</option>
+      <option value="450">1.5x</option>
+      <option value="250">2x</option>
+    </select>
+    <div class="kbd-hint">键盘：<b>←/→</b> 单步 · <b>空格</b> 播放暂停 · <b>Home/End</b> 首末</div>
+  </div>
+</div>
+
+<script>
+/* ===== 用例数据 ===== */
+var CASES = [
+  { label: '用例 1：(2,4,3) + (5,6,4)', l1: [2, 4, 3], l2: [5, 6, 4] },
+  { label: '用例 2：(0) + (0)', l1: [0], l2: [0] },
+  { label: '用例 3：(5) + (5)', l1: [5], l2: [5] },
+  { label: '用例 4：(1,2) + (3,4)', l1: [1, 2], l2: [3, 4] },
+  { label: '用例 5：7个9 + 4个9', l1: [9, 9, 9, 9, 9, 9, 9], l2: [9, 9, 9, 9] },
+  { label: '用例 6：(1) + (9,9)', l1: [1], l2: [9, 9] },
+  { label: '用例 7：(9,9) + (1)', l1: [9, 9], l2: [1] },
+  { label: '用例 8：(2) + (3)', l1: [2], l2: [3] }
+];
+
+/* ===== 几何常量与布局 ===== */
+var STAGE_W = 540;
+var NODE = 44, GAP = 28, PITCH = NODE + GAP;
+var L1Y = 66, L2Y = 152, RY = 258;
+
+function rowCenters(count, y) {
+  if (count <= 0) return [];
+  var total = count * NODE + (count - 1) * GAP;
+  var startCx = (STAGE_W - total) / 2 + NODE / 2;
+  var arr = [];
+  for (var k = 0; k < count; k++) arr.push({ cx: startCx + k * PITCH, cy: y });
+  return arr;
+}
+function resultSlots(m, y) {
+  var slots = m + 1; // 第 0 个是 dummy
+  var total = slots * NODE + (slots - 1) * GAP;
+  var startCx = (STAGE_W - total) / 2 + NODE / 2;
+  var arr = [];
+  for (var k = 0; k < slots; k++) arr.push({ cx: startCx + k * PITCH, cy: y });
+  return arr;
+}
+
+/* ===== Java 代码（语法高亮） ===== */
+var CODE = [
+  '<span class="t-kw">class</span> <span class="t-type">Solution</span> {',
+  '    <span class="t-kw">public</span> <span class="t-type">ListNode</span> <span class="t-fn">addTwoNumbers</span>(<span class="t-type">ListNode</span> <span class="t-id">l1</span>, <span class="t-type">ListNode</span> <span class="t-id">l2</span>) {',
+  '        <span class="t-type">ListNode</span> <span class="t-id">dummty</span> = <span class="t-kw">new</span> <span class="t-type">ListNode</span>(<span class="t-num">0</span>);',
+  '        <span class="t-type">ListNode</span> <span class="t-id">cur</span> = <span class="t-id">dummty</span>;',
+  '        <span class="t-kw">int</span> <span class="t-id">carry</span> = <span class="t-num">0</span>;',
+  '        <span class="t-kw">while</span> (<span class="t-id">l1</span> != <span class="t-bool">null</span> || <span class="t-id">l2</span> != <span class="t-bool">null</span>) {',
+  '            <span class="t-kw">int</span> <span class="t-id">x</span> ;',
+  '            <span class="t-kw">int</span> <span class="t-id">y</span>;',
+  '            <span class="t-kw">if</span> (<span class="t-id">l1</span> == <span class="t-bool">null</span>) {',
+  '                <span class="t-id">x</span> = <span class="t-num">0</span>;',
+  '            } <span class="t-kw">else</span> {',
+  '                <span class="t-id">x</span> = <span class="t-id">l1</span>.val;',
+  '            }',
+  '            <span class="t-kw">if</span> (<span class="t-id">l2</span> == <span class="t-bool">null</span>) {',
+  '                <span class="t-id">y</span> = <span class="t-num">0</span>;',
+  '            } <span class="t-kw">else</span> {',
+  '                <span class="t-id">y</span> = <span class="t-id">l2</span>.val;',
+  '            }',
+  '            <span class="t-kw">int</span> <span class="t-id">sum</span> = <span class="t-id">x</span> + <span class="t-id">y</span> + <span class="t-id">carry</span>;',
+  '            <span class="t-id">carry</span> = <span class="t-id">sum</span> / <span class="t-num">10</span>;',
+  '            <span class="t-id">sum</span> = <span class="t-id">sum</span> % <span class="t-num">10</span>;',
+  '            <span class="t-type">ListNode</span> <span class="t-id">p</span> = <span class="t-kw">new</span> <span class="t-type">ListNode</span>(<span class="t-id">sum</span>);',
+  '            <span class="t-id">cur</span>.next = <span class="t-id">p</span>;',
+  '            <span class="t-id">cur</span> = <span class="t-id">cur</span>.next;',
+  '            <span class="t-kw">if</span> (<span class="t-id">l1</span> != <span class="t-bool">null</span>) <span class="t-id">l1</span> = <span class="t-id">l1</span>.next;',
+  '            <span class="t-kw">if</span> (<span class="t-id">l2</span> != <span class="t-bool">null</span>) <span class="t-id">l2</span> = <span class="t-id">l2</span>.next;',
+  '        }',
+  '        <span class="t-kw">if</span> (<span class="t-id">carry</span> == <span class="t-num">1</span>) {',
+  '            <span class="t-id">cur</span>.next = <span class="t-kw">new</span> <span class="t-type">ListNode</span>(<span class="t-id">carry</span>);',
+  '        }',
+  '        <span class="t-kw">return</span> <span class="t-id">dummty</span>.next;',
+  '    }',
+  '}'
+];
+
+/* ===== 状态 ===== */
+var caseIndex = 0, current = 0, steps = [], playing = false, timer = null;
+
+/* ===== 步骤生成 ===== */
+function buildSteps(cd) {
+  var a = cd.l1, b = cd.l2;
+  var i = 0, j = 0, carry = 0;
+  var taken1 = {}, taken2 = {};
+  var result = [];
+  var frames = [];
+
+  function base(o) {
+    return {
+      phase: o.phase,
+      i: (i < a.length) ? i : null,
+      j: (j < b.length) ? j : null,
+      taken1: Object.assign({}, taken1),
+      taken2: Object.assign({}, taken2),
+      result: result.slice(),
+      tailPos: result.length,
+      fresh: (o.fresh === undefined ? -1 : o.fresh),
+      x: (o.x === undefined ? null : o.x),
+      y: (o.y === undefined ? null : o.y),
+      carryIn: (o.carryIn === undefined ? 0 : o.carryIn),
+      carryOut: (o.carryOut === undefined ? 0 : o.carryOut),
+      sum: (o.sum === undefined ? null : o.sum),
+      line: o.line, msgClass: o.msgClass || '', msg: o.msg
+    };
+  }
+
+  frames.push(base({ phase: 'init', line: 5,
+    msg: '建立 dummty 与 cur，carry 初始为 0；while 条件只看 l1、l2 是否非空，最高位进位留到循环外处理' }));
+
+  while (i < a.length || j < b.length) {
+    var carryIn = carry;
+    var x = 0, y = 0;
+    if (i < a.length) { x = a[i]; taken1[i] = true; }
+    if (j < b.length) { y = b[j]; taken2[j] = true; }
+    var raw = x + y + carryIn;
+    var carryOut = Math.floor(raw / 10); // 先算进位
+    var digit = raw % 10;               // 再拆本位
+    result.push(digit);
+    carry = carryOut;
+    if (i < a.length) i++;              // 指针在循环末尾统一移动
+    if (j < b.length) j++;
+
+    frames.push(base({
+      phase: 'digit', fresh: result.length - 1,
+      x: x, y: y, carryIn: carryIn, carryOut: carryOut, sum: digit,
+      line: carryOut === 1 ? 20 : 21,
+      msg: x + ' + ' + y + ' + ' + carryIn + ' = ' + raw +
+        '，先记进位 ' + carryOut + '，本位写 ' + digit
+    }));
+  }
+
+  // 循环外：carry 仍为 1 就补一个最高位节点
+  if (carry === 1) {
+    result.push(1);
+    frames.push(base({
+      phase: 'extra', fresh: result.length - 1,
+      carryIn: 1, carryOut: 1,
+      line: 29,
+      msg: 'while 已结束但 carry 仍为 1，循环外 cur.next 补一个值为 1 的最高位节点'
+    }));
+  }
+
+  frames.push(base({ phase: 'done', line: 31, msgClass: 'good',
+    msg: '返回 dummty.next，结果共 ' + result.length + ' 位' }));
+  return frames;
+}
+
+/* ===== 代码渲染 ===== */
+function renderCode() {
+  var lineno = document.getElementById('lineno');
+  var codeLines = document.getElementById('codeLines');
+  lineno.innerHTML = '';
+  codeLines.innerHTML = '';
+  CODE.forEach(function (src, i) {
+    var no = document.createElement('div');
+    no.textContent = (i + 1);
+    lineno.appendChild(no);
+    var cl = document.createElement('div');
+    cl.innerHTML = src;
+    cl.setAttribute('data-line', i + 1);
+    codeLines.appendChild(cl);
+  });
+}
+function highlightLine(line) {
+  var lines = document.getElementById('codeLines').children;
+  for (var i = 0; i < lines.length; i++) {
+    lines[i].className = (+lines[i].getAttribute('data-line') === line) ? 'hl' : '';
+  }
+}
+
+/* ===== 用例按钮 ===== */
+function renderCaseButtons() {
+  var row = document.getElementById('caseRow');
+  row.innerHTML = '';
+  CASES.forEach(function (c, idx) {
+    var b = document.createElement('button');
+    b.className = 'case-btn' + (idx === caseIndex ? ' active' : '');
+    b.textContent = c.label;
+    b.addEventListener('click', function () { switchCase(idx); });
+    row.appendChild(b);
+  });
+}
+function switchCase(idx) {
+  stopPlay();
+  caseIndex = idx;
+  steps = buildSteps(CASES[idx]);
+  current = 0;
+  renderCaseButtons();
+  updateScrubRange();
+  render();
+}
+
+/* ===== SVG 与节点层（createElementNS 初始化） ===== */
+var SVG_NS = 'http://www.w3.org/2000/svg';
+var nodeLayer = document.getElementById('nodeLayer');
+var svg = document.getElementById('svgLayer');
+(function initSvg() {
+  var defs = document.createElementNS(SVG_NS, 'defs');
+  var marker = document.createElementNS(SVG_NS, 'marker');
+  marker.setAttribute('id', 'arrowHead');
+  marker.setAttribute('markerWidth', '9');
+  marker.setAttribute('markerHeight', '9');
+  marker.setAttribute('refX', '7');
+  marker.setAttribute('refY', '4.5');
+  marker.setAttribute('orient', 'auto');
+  marker.setAttribute('markerUnits', 'userSpaceOnUse');
+  var mp = document.createElementNS(SVG_NS, 'path');
+  mp.setAttribute('d', 'M0,0 L8,4.5 L0,9 Z');
+  mp.setAttribute('fill', '#7d8590');
+  marker.appendChild(mp);
+  defs.appendChild(marker);
+  var g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('id', 'arrowG');
+  svg.appendChild(defs);
+  svg.appendChild(g);
+})();
+
+function makeNodeEl(p, cls, text) {
+  var el = document.createElement('div');
+  el.className = cls;
+  el.style.left = (p.cx - 22) + 'px';
+  el.style.top = (p.cy - 22) + 'px';
+  el.textContent = text;
+  return el;
+}
+function addPtr(el, cls, text) {
+  var t = document.createElement('span');
+  t.className = 'ptr ' + cls;
+  t.textContent = text;
+  el.appendChild(t);
+}
+function addLine(x1, y1, x2, y2, color, arrow) {
+  var l = document.createElementNS(SVG_NS, 'line');
+  l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+  l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+  l.setAttribute('stroke', color); l.setAttribute('stroke-width', '2');
+  if (arrow) l.setAttribute('marker-end', 'url(#arrowHead)');
+  document.getElementById('arrowG').appendChild(l);
+}
+
+function renderStage(fr) {
+  nodeLayer.innerHTML = '';
+  document.getElementById('arrowG').innerHTML = '';
+  var cd = CASES[caseIndex];
+
+  // 输入 l1
+  var c1 = rowCenters(cd.l1.length, L1Y);
+  c1.forEach(function (p, idx) {
+    var cls = 'node l1';
+    if (fr.taken1[idx]) cls += ' taken';
+    if (fr.i === idx) cls += ' cur1';
+    var el = makeNodeEl(p, cls, cd.l1[idx]);
+    if (fr.i === idx) addPtr(el, 'p-l1', 'l1');
+    nodeLayer.appendChild(el);
+  });
+  for (var a = 0; a < c1.length - 1; a++) addLine(c1[a].cx + 22, L1Y, c1[a + 1].cx - 22, L1Y, '#3d444d', false);
+
+  // 输入 l2
+  var c2 = rowCenters(cd.l2.length, L2Y);
+  c2.forEach(function (p, idx) {
+    var cls = 'node l2';
+    if (fr.taken2[idx]) cls += ' taken';
+    if (fr.j === idx) cls += ' cur2';
+    var el = makeNodeEl(p, cls, cd.l2[idx]);
+    if (fr.j === idx) addPtr(el, 'p-l2', 'l2');
+    nodeLayer.appendChild(el);
+  });
+  for (var b = 0; b < c2.length - 1; b++) addLine(c2[b].cx + 22, L2Y, c2[b + 1].cx - 22, L2Y, '#3d444d', false);
+
+  // 结果链：按最终结果长度预留固定槽位
+  var slots = resultSlots(fr.result.length, RY);
+  var dummyEl = makeNodeEl(slots[0], 'node dummy', 'dummty');
+  if (fr.tailPos === 0) addPtr(dummyEl, 'p-tail', 'cur');
+  nodeLayer.appendChild(dummyEl);
+
+  fr.result.forEach(function (val, k) {
+    var p = slots[k + 1];
+    var cls = 'node res';
+    if (k === fr.fresh) cls += ' fresh';
+    if (k === fr.tailPos - 1) cls += ' tail-mark';
+    var el = makeNodeEl(p, cls, val);
+    if (k === fr.tailPos - 1) addPtr(el, 'p-tail', 'cur');
+    nodeLayer.appendChild(el);
+  });
+  for (var d = 0; d < fr.result.length; d++) addLine(slots[d].cx + 22, RY, slots[d + 1].cx - 22, RY, '#7d8590', true);
+}
+
+/* ===== 信息与消息 ===== */
+function renderInfo(fr) {
+  document.getElementById('infoV1').textContent = (fr.x === null) ? '—' : fr.x;
+  document.getElementById('infoV2').textContent = (fr.y === null) ? '—' : fr.y;
+  document.getElementById('infoCarry').textContent = fr.carryOut;
+  document.getElementById('infoNew').textContent = (fr.sum === null) ? '—' : fr.sum;
+
+  var badge = document.getElementById('carryBadge');
+  badge.className = 'carry-badge' + (fr.carryOut === 1 ? ' hot' : '');
+  document.getElementById('carryVal').textContent = fr.carryOut;
+
+  var msg = document.getElementById('msg');
+  msg.className = 'msg ' + fr.msgClass;
+  var phText = { init: '初始化', digit: '逐位相加', extra: '补最高位', done: '完成' }[fr.phase];
+  msg.innerHTML = '<span class="ph">' + phText + '</span>' + fr.msg;
+}
+
+/* ===== 总渲染 ===== */
+function render() {
+  var fr = steps[current];
+  renderStage(fr);
+  renderInfo(fr);
+  highlightLine(fr.line);
+  document.getElementById('scrub').value = current;
+  document.getElementById('stepCount').textContent = current + ' / ' + (steps.length - 1);
+  updateCtrlButtons();
+}
+
+/* ===== 控制栏 ===== */
+var ICONS = {
+  play: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>',
+  pause: '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></svg>',
+  prev: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M18 6v12l-9-6z" fill="currentColor"/><rect x="5" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  next: '<svg width="17" height="17" viewBox="0 0 24 24"><path d="M6 6v12l9-6z" fill="currentColor"/><rect x="17" y="6" width="2" height="12" fill="currentColor"/></svg>',
+  reset: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>'
+};
+var playBtn = document.getElementById('playBtn');
+var prevBtn = document.getElementById('prevBtn');
+var nextBtn = document.getElementById('nextBtn');
+var resetBtn = document.getElementById('resetBtn');
+var scrub = document.getElementById('scrub');
+var speedSel = document.getElementById('speedSel');
+prevBtn.innerHTML = ICONS.prev;
+nextBtn.innerHTML = ICONS.next;
+resetBtn.innerHTML = ICONS.reset;
+
+function updatePlayLabel() {
+  playBtn.innerHTML = (playing ? ICONS.pause : ICONS.play) + '<span>' + (playing ? '暂停' : '播放') + '</span>';
+}
+function updateCtrlButtons() {
+  prevBtn.disabled = (current === 0);
+  nextBtn.disabled = (current === steps.length - 1);
+}
+function updateScrubRange() {
+  scrub.max = steps.length - 1;
+  scrub.value = current;
+}
+function stepNext() { if (current < steps.length - 1) { current++; render(); } else { stopPlay(); } }
+function stepPrev() { if (current > 0) { current--; render(); } }
+
+function tick() {
+  if (!playing) return;
+  if (current >= steps.length - 1) { stopPlay(); return; }
+  current++;
+  render();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function startPlay() {
+  if (current >= steps.length - 1) current = 0;
+  playing = true;
+  updatePlayLabel();
+  timer = setTimeout(tick, +speedSel.value);
+}
+function stopPlay() {
+  playing = false;
+  if (timer) { clearTimeout(timer); timer = null; }
+  updatePlayLabel();
+}
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+
+playBtn.addEventListener('click', togglePlay);
+nextBtn.addEventListener('click', stepNext);
+prevBtn.addEventListener('click', stepPrev);
+resetBtn.addEventListener('click', function () { stopPlay(); current = 0; render(); });
+scrub.addEventListener('input', function () {
+  stopPlay();
+  current = +scrub.value;
+  render();
+});
+
+/* ===== 键盘 ===== */
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  switch (e.key) {
+    case 'ArrowRight': e.preventDefault(); stepNext(); break;
+    case 'ArrowLeft': e.preventDefault(); stepPrev(); break;
+    case ' ': e.preventDefault(); togglePlay(); break;
+    case 'Home': e.preventDefault(); stopPlay(); current = 0; render(); break;
+    case 'End': e.preventDefault(); stopPlay(); current = steps.length - 1; render(); break;
+  }
+});
+
+/* ===== 初始化 ===== */
+steps = buildSteps(CASES[0]);
+renderCode();
+renderCaseButtons();
+updateScrubRange();
+updatePlayLabel();
+render();
+</script>
+</body>
+</html>

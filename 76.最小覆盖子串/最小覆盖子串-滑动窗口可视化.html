@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>76</text></svg>">
+<title>76 最小覆盖子串 - 滑动窗口可视化</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;
+    --blue:#58a6ff;--green:#3fb950;--orange:#e3b341;--purple:#bc8cff;--red:#f85149;
+    --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.55;padding:24px}
+  .wrap{max-width:1280px;margin:0 auto}
+  h1{font-size:22px;display:flex;align-items:center;gap:10px}
+  .badge{font-size:12px;font-weight:600;color:#ffdcd7;background:rgba(248,81,73,.15);border:1px solid rgba(248,81,73,.4);border-radius:20px;padding:2px 10px}
+  .sub{color:var(--muted);font-size:12.5px;margin:6px 0 16px}
+  .idea{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:13px 16px;font-size:13px;margin-bottom:18px}
+  .idea b{color:var(--blue)}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 13px;cursor:pointer;font-size:12px;font-family:var(--mono)}
+  .casebtn.active{color:var(--text);border-color:var(--blue);background:rgba(88,166,255,.12)}
+  .layout{display:grid;grid-template-columns:1fr 430px;gap:18px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .card h2{font-size:12.5px;font-family:var(--mono);color:var(--muted);margin-bottom:12px;font-weight:600}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-bottom:8px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .svgbox{width:100%;overflow-x:auto}
+  svg{display:block;width:100%;min-width:640px}
+  .havebar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .havetrack{flex:1;height:10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .havefill{height:100%;background:linear-gradient(90deg,#58a6ff,#3fb950);transition:width .3s}
+  .havetxt{font-family:var(--mono);font-size:13px;font-weight:700;min-width:78px;text-align:right}
+  .twomap{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .mapcol h3{font-size:11.5px;font-family:var(--mono);color:var(--muted);margin-bottom:9px}
+  .kvrow{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-family:var(--mono);font-size:13px}
+  .kvrow .ch{width:34px;height:34px;border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;background:var(--panel2)}
+  .kvrow .nums{font-weight:700}
+  .kvrow.ok .ch{border-color:var(--green);color:var(--green)}
+  .kvrow.lack .ch{border-color:var(--orange);color:var(--orange)}
+  .infos{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px}
+  .info{background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center}
+  .info .k{font-size:11px;color:var(--muted)}
+  .info .v{font-family:var(--mono);font-size:16px;font-weight:700;margin-top:3px}
+  .msg{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;min-height:52px;margin-top:14px}
+  .codecard{padding:0;overflow:hidden;position:sticky;top:16px}
+  .codehead{display:flex;align-items:center;gap:7px;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--panel2)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .codefile{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-left:6px}
+  #code{padding:12px 0;max-height:540px;overflow:auto;font-family:var(--mono);font-size:12.5px;line-height:1.65}
+  .ln{display:block;padding:0 14px;white-space:pre;color:var(--muted)}
+  .ln.on{background:rgba(88,166,255,.13);color:var(--text);border-left:3px solid var(--blue);padding-left:11px}
+  .kw{color:var(--purple)}
+  .controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:16px}
+  .ctl{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 15px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px}
+  .ctl:hover{border-color:var(--blue)}
+  .ctl svg{width:15px;height:15px;fill:var(--text)}
+  #slider{flex:1;min-width:160px;accent-color:var(--blue);cursor:pointer}
+  .stepmeta{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:64px;text-align:center}
+  .spdgroup{display:flex;gap:5px}
+  .spd{background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:7px 10px;cursor:pointer;font-size:11.5px}
+  .spd.active{color:var(--text);border-color:var(--blue)}
+  @media(max-width:980px){
+    .layout{grid-template-columns:1fr}
+    .codecard{position:static}
+    #code{max-height:380px}
+    body{padding:14px}
+    .infos{grid-template-columns:repeat(2,1fr)}
+    .twomap{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>76. 最小覆盖子串 <span class="badge">困难</span></h1>
+  <div class="sub">滑动窗口 + 两张哈希表 · 时间 O(n) 左右指针各走一遍 · 空间 O(字符种类)</div>
+
+  <div class="idea">
+    右指针不断扩张，把需要的字符计入 <b>window</b>；用 <b>have / tCount</b> 判断窗口是否已覆盖 t 的全部字符。
+    一旦合法（have==tCount），左指针就<b>尽量收缩</b>，边收缩边记录更短的答案，直到窗口不再合法。
+  </div>
+
+  <div class="casebar" id="casebar"></div>
+
+  <div class="layout">
+    <div>
+      <div class="card">
+        <h2>字符串 s 与滑动窗口</h2>
+        <div class="legend">
+          <span><i style="background:var(--orange)"></i>右指针 right</span>
+          <span><i style="background:var(--purple)"></i>左指针 left</span>
+          <span><i style="background:rgba(139,148,158,.35)"></i>当前窗口</span>
+          <span><i style="background:var(--green)"></i>已找到的最佳窗口</span>
+        </div>
+        <div class="svgbox"><svg id="svg" viewBox="0 0 980 230"></svg></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>覆盖进度 与 两张哈希表</h2>
+        <div class="havebar">
+          <div class="havetrack"><div class="havefill" id="havefill" style="width:0%"></div></div>
+          <div class="havetxt" id="havetxt">have 0/0</div>
+        </div>
+        <div class="twomap">
+          <div class="mapcol">
+            <h3>need（t 的需求，固定）</h3>
+            <div id="needcol"></div>
+          </div>
+          <div class="mapcol">
+            <h3>window（当前窗口计数）</h3>
+            <div id="wincol"></div>
+          </div>
+        </div>
+        <div class="infos" style="margin-top:14px">
+          <div class="info"><div class="k">窗口 [L..R]</div><div class="v" id="vRange" style="color:var(--muted)">—</div></div>
+          <div class="info"><div class="k">当前长度</div><div class="v" id="vCurLen" style="color:var(--blue)">—</div></div>
+          <div class="info"><div class="k">最佳起点</div><div class="v" id="vStart" style="color:var(--green)">—</div></div>
+          <div class="info"><div class="k">最佳长度</div><div class="v" id="vBest" style="color:var(--green)">—</div></div>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <div class="card codecard">
+      <div class="codehead">
+        <span class="dot" style="background:#ff5f57"></span>
+        <span class="dot" style="background:#febc2e"></span>
+        <span class="dot" style="background:#28c840"></span>
+        <span class="codefile">Solution.java</span>
+      </div>
+      <div id="code"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl" id="reset"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 7l5 5V8a5 5 0 1 1-5 5H5a7 7 0 1 0 7-8z"/></svg>重置</button>
+    <button class="ctl" id="prev"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6V6z"/></svg>上一步</button>
+    <button class="ctl" id="play"><svg viewBox="0 0 24 24"><path id="playic" d="M8 5v14l11-7L8 5z"/></svg><span id="playtxt">播放</span></button>
+    <button class="ctl" id="next">下一步<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6V6z"/></svg></button>
+    <input type="range" id="slider" min="0" value="0" step="1">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+    <div class="spdgroup">
+      <button class="spd" data-ms="1200">0.5x</button>
+      <button class="spd active" data-ms="700">1x</button>
+      <button class="spd" data-ms="350">2x</button>
+    </div>
+  </div>
+</div>
+<script>
+const CASES=[
+  {s:"ADOBECODEBANC",t:"ABC"},
+  {s:"a",t:"a"},
+  {s:"a",t:"aa"},
+  {s:"cabwefgewcwaefcf",t:"cae"},
+  {s:"aa",t:"aa"}
+];
+const CODE=[
+  '<span class="kw">class</span> Solution {',
+  '  <span class="kw">public</span> String minWindow(String s, String t) {',
+  '      <span class="kw">if</span>(s.length()==0 || t.length()==0){',
+  '          <span class="kw">return</span> "";',
+  '      }',
+  '      Map&lt;Character,Integer&gt; need = <span class="kw">new</span> HashMap&lt;&gt;();',
+  '      Map&lt;Character,Integer&gt; window = <span class="kw">new</span> HashMap&lt;&gt;();',
+  '      <span class="kw">for</span>(<span class="kw">int</span> i=0;i&lt;t.length();i++){',
+  '          <span class="kw">char</span> c=t.charAt(i);',
+  '          need.put(c, need.getOrDefault(c,0)+1);',
+  '      }',
+  '      <span class="kw">int</span> tCount=need.size();',
+  '      <span class="kw">int</span> have=0;',
+  '      <span class="kw">int</span> resStart=0;',
+  '      <span class="kw">int</span> resLen=Integer.MAX_VALUE;',
+  '      <span class="kw">int</span> left=0;',
+  '      <span class="kw">for</span>(<span class="kw">int</span> right=0;right&lt;s.length();right++){',
+  '          <span class="kw">char</span> c=s.charAt(right);',
+  '          <span class="kw">if</span>(need.containsKey(c)){',
+  '              window.put(c, window.getOrDefault(c,0)+1);',
+  '              <span class="kw">if</span>(window.get(c).intValue()==need.get(c).intValue()){',
+  '                  have++;',
+  '              }',
+  '          }',
+  '          <span class="kw">while</span>(have==tCount){',
+  '              <span class="kw">if</span>(right-left+1&lt;resLen){',
+  '                  resLen=right-left+1;',
+  '                  resStart=left;',
+  '              }',
+  '              <span class="kw">char</span> lc=s.charAt(left);',
+  '              <span class="kw">if</span>(need.containsKey(lc)){',
+  '                  window.put(lc, window.get(lc)-1);',
+  '                  <span class="kw">if</span>(window.get(lc) &lt; need.get(lc)){',
+  '                      have--;',
+  '                  }',
+  '              }',
+  '              left++;',
+  '          }',
+  '      }',
+  '      <span class="kw">if</span>(resLen==Integer.MAX_VALUE){',
+  '          <span class="kw">return</span> "";',
+  '      }',
+  '      <span class="kw">return</span> s.substring(resStart, resStart+resLen);',
+  '  }',
+  '}'
+];
+function $(id){return document.getElementById(id);}
+$('code').innerHTML=CODE.map(l=>`<span class="ln">${l}</span>`).join('');
+
+function buildSteps(cs){
+  const s=cs.s,t=cs.t;
+  const need={},window={};
+  for(let i=0;i<t.length;i++){const c=t[i];need[c]=(need[c]||0)+1;}
+  const tCount=Object.keys(need).length;
+  let have=0,left=0,resStart=0,resLen=Number.MAX_SAFE_INTEGER;
+  const out=[];
+  const snap=()=>({right:null,left,need:Object.assign({},need),window:Object.assign({},window),
+    have,tCount,resStart,resLen,line:null,action:'init'});
+  const push=(msg,line,extra)=>{const o=snap();o.msg=msg;o.line=line;if(extra)Object.assign(o,extra);out.push(o);};
+  if(s.length===0||t.length===0){push(`s 或 t 为空，直接返回空字符串。`,3,{action:'end'});return out;}
+  const needDesc=Object.keys(need).map(c=>c+':'+need[c]).join(', ');
+  push(`初始化：need 统计 t 的需求（${needDesc}），tCount=${tCount}，have=0，left=0，resLen=MAX。`,11);
+  for(let right=0;right<s.length;right++){
+    const c=s[right];
+    if(!need[c]){
+      push(`right=${right}，字符 '${c}' 不在 need 里，忽略，window 不变。`,18,{right,action:'expand'});
+    }else{
+      window[c]=(window[c]||0)+1;
+      push(`right=${right}，'${c}' 是需要字符，window['${c}'] 加到 ${window[c]}。`,19,{right,action:'expand'});
+      if(window[c]===need[c]){
+        have++;
+        push(`window['${c}'](${window[c]}) 刚好达到 need(${need[c]})，have++ = ${have}。`,21,{right,action:'expand'});
+      }else{
+        push(`'${c}' 当前 ${window[c]}，未到或已超过需求 ${need[c]}，have 不变。`,20,{right,action:'expand'});
+      }
+    }
+    while(have===tCount){
+      const curLen=right-left+1;
+      if(curLen<resLen){
+        resLen=curLen;resStart=left;
+        push(`窗口合法 [${left}..${right}]，长度 ${curLen} 更短，更新最佳 resStart=${left}, resLen=${resLen}。`,27,{right,action:'shrink'});
+      }else{
+        push(`窗口合法但长度 ${curLen} 不比最佳 ${resLen} 短，不更新。`,25,{right,action:'shrink'});
+      }
+      const lc=s[left];
+      if(need[lc]){
+        window[lc]--;
+        if(window[lc]<need[lc]){
+          have--;
+          push(`移走 left=${left} 的 '${lc}'，window 降到 ${window[lc]} &lt; need ${need[lc]}，have-- = ${have}，窗口将不再合法。`,33,{right,action:'shrink'});
+        }else{
+          push(`移走 '${lc}' 后 window=${window[lc]} 仍 ≥ need ${need[lc]}，have 不变，可继续收缩。`,32,{right,action:'shrink'});
+        }
+      }else{
+        push(`left=${left} 的 '${lc}' 不在 need 里，直接移走，不影响 have。`,30,{right,action:'shrink'});
+      }
+      left++;
+      push(`left++ = ${left}。`,36,{right,action:'shrink'});
+    }
+  }
+  if(resLen===Number.MAX_SAFE_INTEGER){
+    push(`从未出现合法窗口，resLen 仍是 MAX，返回空字符串 ""。`,40,{action:'end'});
+  }else{
+    const ans=s.substring(resStart,resStart+resLen);
+    push(`遍历结束，最佳窗口 [${resStart}..${resStart+resLen-1}]，substring 返回 "${ans}"。`,42,{action:'end'});
+  }
+  return out;
+}
+
+let steps=[],posIdx=0,curCase=0,timer=null,playMs=700;
+
+function drawSvg(st){
+  const str=CASES[curCase].s,n=str.length;
+  const padX=40,totalW=980-2*padX;
+  const cellW=totalW/n,boxW=Math.min(cellW*.72,52);
+  const boxY=95,boxH=58;
+  const cx=idx=>padX+cellW*idx+cellW/2;
+  let g='';
+  const hasBest=st.resLen!==Number.MAX_SAFE_INTEGER;
+  if(hasBest){
+    const x1=cx(st.resStart)-boxW/2-6,x2=cx(st.resStart+st.resLen-1)+boxW/2+6;
+    g+=`<rect x="${x1}" y="${boxY-10}" width="${x2-x1}" height="${boxH+20}" rx="11" fill="rgba(63,185,80,.08)" stroke="#3fb950" stroke-width="1.6"/>`;
+  }
+  if(st.right!==null){
+    const x1=cx(st.left)-boxW/2-6,x2=cx(st.right)+boxW/2+6;
+    g+=`<rect x="${x1}" y="${boxY-10}" width="${x2-x1}" height="${boxH+20}" rx="11" fill="rgba(139,148,158,.07)" stroke="#8b949e" stroke-width="1.4" stroke-dasharray="5 4"/>`;
+  }
+  for(let idx=0;idx<n;idx++){
+    const x=cx(idx)-boxW/2;
+    let fill='#161b22',stroke='#30363d',tcol='#8b949e';
+    if(st.right!==null&&idx>=st.left&&idx<=st.right){fill='#1c2128';tcol='#e6edf3';}
+    if(idx===st.left&&st.right!==null){stroke='#bc8cff';}
+    if(idx===st.right){stroke='#e3b341';tcol='#e3b341';}
+    g+=`<rect x="${x}" y="${boxY}" width="${boxW}" height="${boxH}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    g+=`<text x="${cx(idx)}" y="${boxY+36}" text-anchor="middle" font-size="18" font-weight="700" fill="${tcol}">${str[idx]}</text>`;
+    g+=`<text x="${cx(idx)}" y="${boxY+boxH+19}" text-anchor="middle" font-size="11.5" fill="#8b949e">${idx}</text>`;
+  }
+  if(st.right!==null){
+    g+=`<text x="${cx(st.left)}" y="${boxY-18}" text-anchor="middle" font-size="11" font-weight="700" fill="#bc8cff">L</text>`;
+    g+=`<text x="${cx(st.right)}" y="${boxY-18}" text-anchor="middle" font-size="11" font-weight="700" fill="#e3b341">R</text>`;
+  }
+  $('svg').innerHTML=g;
+}
+function drawMaps(st){
+  const keys=Object.keys(st.need);
+  let nh='',wh='';
+  keys.forEach(c=>{
+    const nv=st.need[c],wv=st.window[c]||0,ok=wv>=nv;
+    nh+=`<div class="kvrow"><span class="ch">${c}</span><span class="nums">需 ${nv}</span></div>`;
+    wh+=`<div class="kvrow ${ok?'ok':'lack'}"><span class="ch">${c}</span><span class="nums">${wv} / ${nv}</span></div>`;
+  });
+  $('needcol').innerHTML=nh;
+  $('wincol').innerHTML=wh;
+  const pct=st.tCount===0?0:Math.round(st.have/st.tCount*100);
+  $('havefill').style.width=pct+'%';
+  $('havetxt').textContent=`have ${st.have}/${st.tCount}`;
+}
+function render(){
+  const st=steps[posIdx];
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('msg').innerHTML=st.msg;
+  $('vRange').textContent=st.right===null?'—':`[${st.left}..${st.right}]`;
+  $('vCurLen').textContent=st.right===null?'—':(st.right-st.left+1);
+  const hasBest=st.resLen!==Number.MAX_SAFE_INTEGER;
+  $('vStart').textContent=hasBest?st.resStart:'—';
+  $('vBest').textContent=hasBest?st.resLen:'—';
+  drawSvg(st);drawMaps(st);
+  $('code').querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===st.line));
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadCase(i){
+  curCase=i;
+  steps=buildSteps(CASES[i]);
+  posIdx=0;
+  $('slider').max=steps.length-1;
+  document.querySelectorAll('.casebtn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  stopPlay();render();
+}
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">用例 ${i+1}：s="${c.s}" t="${c.t}"</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>loadCase(i));
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadCase(0);
+</script>
+</body>
+</html>

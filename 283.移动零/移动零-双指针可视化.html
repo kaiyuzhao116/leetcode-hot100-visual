@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>283. 移动零 · 双指针可视化</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='18' font-size='18'>0</text></svg>">
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel2:#1c2128;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;
+    --purple:#bc8cff;--orange:#e3b341;--red:#f85149;--mono:"Cascadia Code",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.5;padding:22px;max-width:1180px;margin:0 auto}
+  .top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:21px;font-weight:700}
+  .diff{font-size:12px;color:var(--green);border:1px solid var(--green);border-radius:6px;padding:2px 8px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .methodbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .mbtn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:10px 16px;cursor:pointer;font-size:13px;flex:1;min-width:200px;text-align:left}
+  .mbtn.active{border-color:var(--blue);background:rgba(88,166,255,.12)}
+  .mbtn .mt{font-weight:700;display:block;margin-bottom:2px}
+  .mbtn .md{font-size:11px;color:var(--muted)}
+  .mbtn.active .mt{color:var(--blue)}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .casebtn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px}
+  .casebtn.active{border-color:var(--purple);background:rgba(188,140,255,.12);color:var(--purple)}
+  .ideacard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:var(--muted)}
+  .ideacard b{color:var(--blue)}
+  .vizwrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+  .vizwrap h2{font-size:13px;color:var(--muted);margin-bottom:20px;font-weight:600}
+  .arrayrow{display:flex;gap:10px;flex-wrap:wrap}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .abox{width:56px;height:56px;border-radius:10px;background:var(--panel2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;position:relative}
+  .abox.zero{color:var(--red)}
+  .abox.nonzero{color:var(--green)}
+  .abox.scan{border-color:var(--orange);box-shadow:0 0 0 2px rgba(227,179,65,.4)}
+  .abox.write{border-color:var(--blue);box-shadow:0 0 0 2px rgba(88,166,255,.45)}
+  .abox.act{border-color:var(--purple);box-shadow:0 0 0 2px rgba(188,140,255,.5);animation:popIn .3s ease}
+  .abox.filled{background:rgba(63,185,80,.12)}
+  .idx{font-size:11px;color:var(--muted)}
+  .ptr{font-size:10px;height:16px;border-radius:4px;padding:0 5px;display:flex;align-items:center;font-weight:700}
+  .ptr.pfast{color:var(--orange);border:1px solid var(--orange)}
+  .ptr.pslow{color:var(--blue);border:1px solid var(--blue)}
+  .msg{background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:14px;min-height:44px}
+  .infobar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .icard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .icard .lab{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .icard .vval{font-size:17px;font-weight:700}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  button.ctl{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px}
+  button.ctl:hover{border-color:var(--blue)}
+  button.ctl.primary{background:var(--blue);color:#0d1117;border-color:var(--blue);font-weight:700}
+  .slider{flex:1;min-width:140px;accent-color:var(--blue)}
+  .stepmeta{font-size:12px;color:var(--muted);min-width:64px;text-align:right}
+  .speed{display:flex;gap:4px;margin-left:auto}
+  .spd{background:var(--panel);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;font-size:11px}
+  .spd.active{border-color:var(--green);color:var(--green)}
+  .codewrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto}
+  .codewrap h2{font-size:13px;color:var(--muted);margin-bottom:12px}
+  .ln{display:block;padding:2px 10px;font-size:13px;white-space:pre;border-left:3px solid transparent}
+  .ln.on{background:rgba(88,166,255,.13);border-left-color:var(--blue)}
+  .kw{color:#ff7b72}
+  @keyframes popIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  @media(max-width:760px){.infobar{grid-template-columns:1fr}.abox{width:46px;height:46px;font-size:17px}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>283. 移动零</h1>
+    <span class="diff">简单</span>
+  </div>
+  <div class="sub">原地把所有 0 移到末尾、保持非零相对顺序 · 时间 O(n) 空间 O(1)</div>
+
+  <div class="methodbar" id="methodbar"></div>
+  <div class="casebar" id="casebar"></div>
+
+  <div class="ideacard" id="idea"></div>
+
+  <div class="vizwrap">
+    <h2>数组变化（指针标签：橙=快指针扫描，蓝=写指针）</h2>
+    <div class="arrayrow" id="arrayrow"></div>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="infobar">
+    <div class="icard"><div class="lab" id="labFast">快指针</div><div class="vval" id="vFast" style="color:var(--orange)">0</div></div>
+    <div class="icard"><div class="lab" id="labSlow">写指针</div><div class="vval" id="vSlow" style="color:var(--blue)">0</div></div>
+    <div class="icard"><div class="lab">已就位非零个数</div><div class="vval" id="vDone" style="color:var(--green)">0</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctl primary" id="play"><span id="playtxt">播放</span></button>
+    <button class="ctl" id="prev">上一步</button>
+    <button class="ctl" id="next">下一步</button>
+    <button class="ctl" id="reset">重置</button>
+    <input type="range" class="slider" id="slider" min="0" max="0" value="0">
+    <span class="stepmeta" id="stepmeta">0 / 0</span>
+    <div class="speed">
+      <button class="spd" data-ms="1200">0.5x</button>
+      <button class="spd active" data-ms="800">1x</button>
+      <button class="spd" data-ms="400">2x</button>
+    </div>
+  </div>
+
+  <div class="codewrap">
+    <h2 id="codeTitle">Java 代码</h2>
+    <div id="code"></div>
+  </div>
+
+<script>
+const CASES=[
+  [0,1,0,3,12],
+  [0,0,1],
+  [1,0,1]
+];
+const METHODS=[
+  {name:'覆盖 + 补零法',desc:'两次循环：非零覆盖到写指针，最后统一补零',
+    idea:'写指针 <b>uer</b> 指向下一个非零该放的位置。快指针 <b>i</b> 扫描，遇到非零就把 nums[i] 覆盖到 nums[uer] 并 uer++；第一遍后前 uer 个是非零，第二遍把 uer 之后全部填 0。',
+    code:[
+      '<span class="kw">class</span> Solution {',
+      '  <span class="kw">public void</span> moveZeroes(<span class="kw">int</span>[] nums) {',
+      '      <span class="kw">int</span> uer = 0;',
+      '      <span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; nums.length; i++){',
+      '          <span class="kw">if</span> (nums[i] != 0){',
+      '              nums[uer] = nums[i];',
+      '              uer++;',
+      '          }',
+      '      }',
+      '      <span class="kw">for</span> ( ; uer &lt; nums.length; uer++){',
+      '          nums[uer] = 0;',
+      '      }',
+      '  }',
+      '}'
+    ]},
+  {name:'交换法（一次遍历）',desc:'非零直接和写指针交换，0 自动后移，不用补零',
+    idea:'写指针 <b>uer</b> 之前都是已就位非零。快指针 <b>i</b> 遇到非零，直接 swap(nums[i],nums[uer])，非零换到前面、0 换到当前位置被逐步挤到后面，一次遍历即可。',
+    code:[
+      '<span class="kw">class</span> Solution {',
+      '  <span class="kw">public void</span> moveZeroes(<span class="kw">int</span>[] nums) {',
+      '      <span class="kw">int</span> uer = 0;',
+      '      <span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; nums.length; i++){',
+      '          <span class="kw">if</span> (nums[i] != 0){',
+      '              <span class="kw">int</span> t = nums[i];',
+      '              nums[i] = nums[uer];',
+      '              nums[uer] = t;',
+      '              uer++;',
+      '          }',
+      '      }',
+      '  }',
+      '}'
+    ]}
+];
+$('methodbar').innerHTML=METHODS.map((m,i)=>`<button class="mbtn${i===0?' active':''}"><span class="mt">${m.name}</span><span class="md">${m.desc}</span></button>`).join('');
+function buildCover(nums){
+  const arr=nums.slice();const out=[];
+  let slow=0;
+  const base=()=>({arr:arr.slice(),fast:null,slow,scan:null,write:null,act:[],filled:slow,line:null});
+  const push=e=>out.push(Object.assign(base(),e));
+  push({msg:'初始化写指针 uer=0，开始第一遍循环，i 扫描数组。',line:2});
+  for(let i=0;i<arr.length;i++){
+    push({fast:i,scan:i,msg:`i=${i}，nums[i]=${arr[i]}，判断是否非零。`,line:3});
+    if(arr[i]!==0){
+      push({fast:i,scan:i,write:slow,act:[slow,i],msg:`nums[i]=${arr[i]} 非零，覆盖 nums[${slow}]=${arr[i]}。`,line:5});
+      arr[slow]=arr[i];slow++;
+      push({fast:i,slow,msg:`uer++ 变成 ${slow}，已就位 ${slow} 个非零。`,line:6});
+    }else{
+      push({fast:i,scan:i,msg:`nums[i]=0，跳过，uer 不动（仍为 ${slow}）。`,line:4});
+    }
+  }
+  push({slow,msg:`第一遍结束，前 ${slow} 个是非零，开始第二遍把位置 ${slow} 之后补 0。`,line:9});
+  for(let k=slow;k<arr.length;k++){
+    arr[k]=0;push({slow,write:k,act:[k],msg:`nums[${k}]=0，补零。`,line:10});
+  }
+  push({slow,msg:`完成，数组 [${arr.join(',')}]，所有 0 已在末尾。`,line:12});
+  return out;
+}
+function buildSwap(nums){
+  const arr=nums.slice();const out=[];
+  let slow=0;
+  const base=()=>({arr:arr.slice(),fast:null,slow,scan:null,write:null,act:[],filled:slow,line:null});
+  const push=e=>out.push(Object.assign(base(),e));
+  push({msg:'初始化写指针 uer=0，一次循环，i 扫描。',line:2});
+  for(let i=0;i<arr.length;i++){
+    push({fast:i,scan:i,msg:`i=${i}，nums[i]=${arr[i]}，判断是否非零。`,line:3});
+    if(arr[i]!==0){
+      push({fast:i,scan:i,write:slow,act:[i,slow],msg:`非零，交换 nums[${i}] 和 nums[${slow}]（值 ${arr[i]} 和 ${arr[slow]}）。`,line:5});
+      const t=arr[i];arr[i]=arr[slow];arr[slow]=t;slow++;
+      push({fast:i,slow,msg:`交换完成，uer++=${slow}，0 已被换到后面。`,line:8});
+    }else{
+      push({fast:i,scan:i,msg:`nums[i]=0，跳过，uer 不动。`,line:4});
+    }
+  }
+  push({slow,msg:`一次遍历结束，不用补零，数组 [${arr.join(',')}]。`,line:11});
+  return out;
+}
+let steps=[],posIdx=0,curMethod=0,curCase=0,timer=null,playMs=800;
+function $(id){return document.getElementById(id);}
+function render(){
+  const s=steps[posIdx];
+  $('msg').innerHTML=s.msg;
+  $('stepmeta').textContent=`${posIdx} / ${steps.length-1}`;
+  $('slider').value=posIdx;
+  $('vFast').textContent=s.fast===null?'—':s.fast;
+  $('vSlow').textContent=s.slow;
+  $('vDone').textContent=s.filled;
+  $('arrayrow').innerHTML=s.arr.map((v,j)=>{
+    let cls='abox '+(v===0?'zero':'nonzero');
+    if(j<s.slow&&v!==0)cls+=' filled';
+    if(s.act.includes(j))cls+=' act';
+    if(j===s.write)cls+=' write';
+    if(j===s.scan)cls+=' scan';
+    let ptrs='';
+    if(j===s.fast)ptrs+='<span class="ptr pfast">i</span>';
+    if(j===s.slow)ptrs+='<span class="ptr pslow">uer</span>';
+    return `<div class="cell"><div class="${cls}">${v}</div><div>${ptrs}</div><div class="idx">${j}</div></div>`;
+  }).join('');
+  document.querySelectorAll('.ln').forEach((el,i)=>el.classList.toggle('on',i===s.line));
+}
+function build(){
+  const nums=CASES[curCase];
+  steps=curMethod===0?buildCover(nums):buildSwap(nums);
+  posIdx=0;$('slider').max=steps.length-1;render();
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null;$('playtxt').textContent='播放';}}
+function loadMethod(m){
+  curMethod=m;stopPlay();
+  $('idea').innerHTML=METHODS[m].idea;
+  $('code').innerHTML=METHODS[m].code.map(l=>`<span class="ln">${l}</span>`).join('');
+  document.querySelectorAll('.mbtn').forEach((b,i)=>b.classList.toggle('active',i===m));
+  build();
+}
+document.querySelectorAll('.mbtn').forEach((b,i)=>b.onclick=()=>loadMethod(i));
+$('casebar').innerHTML=CASES.map((c,i)=>`<button class="casebtn${i===0?' active':''}">用例 ${i+1}</button>`).join('');
+document.querySelectorAll('.casebtn').forEach((b,i)=>b.onclick=()=>{
+  curCase=i;stopPlay();
+  document.querySelectorAll('.casebtn').forEach((x,j)=>x.classList.toggle('active',j===i));
+  build();
+});
+$('play').onclick=()=>{
+  if(timer){stopPlay();return;}
+  $('playtxt').textContent='暂停';
+  timer=setInterval(()=>{if(posIdx>=steps.length-1){stopPlay();}else{posIdx++;render();}},playMs);
+};
+$('next').onclick=()=>{stopPlay();if(posIdx<steps.length-1){posIdx++;render();}};
+$('prev').onclick=()=>{stopPlay();if(posIdx>0){posIdx--;render();}};
+$('reset').onclick=()=>{stopPlay();posIdx=0;render();};
+$('slider').oninput=e=>{stopPlay();posIdx=+e.target.value;render();};
+document.querySelectorAll('.spd').forEach(b=>b.onclick=()=>{
+  playMs=+b.dataset.ms;
+  document.querySelectorAll('.spd').forEach(x=>x.classList.toggle('active',x===b));
+  if(timer){stopPlay();$('play').onclick();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')$('next').onclick();
+  if(e.key==='ArrowLeft')$('prev').onclick();
+});
+loadMethod(0);
+</script>
+</body>
+</html>
