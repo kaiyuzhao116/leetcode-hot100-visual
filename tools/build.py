@@ -341,6 +341,12 @@ git push
 
 `build.py` 会自动更新进度数字、专题完成度、题目清单里的「查看图解」链接，以及首页的卡片和筛选器 —— 不需要手工改任何一处计数。
 
+Windows 上也可以直接运行 `tools/publish.ps1`，它等于「重建 + 提交 + 推送」三连：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/publish.ps1 "新增 34. 在排序数组中查找元素的第一个和最后一个位置"
+```
+
 ---
 
 ## 一起把它补完
