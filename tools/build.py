@@ -172,10 +172,9 @@ def readme(data):
     # 专题进度表
     tbl = ["| 专题 | 题数 | 已完成 | 进度 |", "|:--|--:|--:|:--|"]
     for g in data["groups"]:
-        bar_pct = int(round(g["done"] * 100 / g["total"]))
-        tbl.append("| **%s** | %d | %d | %s %d%% |" % (
-            g["cat"], g["total"], g["done"],
-            "●" * (bar_pct // 10) + "○" * (10 - bar_pct // 10), bar_pct))
+        p = int(round(g["done"] * 100 / g["total"]))
+        mark = "✅" if p == 100 else ("⬜" if p == 0 else "🟡")
+        tbl.append("| **%s** | %d | %d | %s %d%% |" % (g["cat"], g["total"], g["done"], mark, p))
 
     # 题目清单
     blocks = []
@@ -189,7 +188,8 @@ def readme(data):
             if r["done"]:
                 first = r["entries"][0]
                 cnt = len(r["entries"])
-                link = "[%s](%s)" % ("查看 %d 篇" % cnt if cnt > 1 else "查看图解", first["url"])
+                link = "[%s](%s/blob/main/%s)" % (
+                    "查看 %d 篇" % cnt if cnt > 1 else "查看图解", REPO_URL, first["url"])
             else:
                 link = "—"
             lines.append("| %d | %s | %s %s | %s |" % (
@@ -204,9 +204,9 @@ def readme(data):
         rows = ["| # | 题目 | 图解 |", "|:--|:--|:--|"]
         for e in data["extras"]:
             first = e["entries"][0]
-            rows.append("| %d | %s | [%s](%s) |" % (
+            rows.append("| %d | %s | [%s](%s/blob/main/%s) |" % (
                 e["num"], e["title"],
-                "查看 %d 篇" % len(e["entries"]) if len(e["entries"]) > 1 else "查看图解", first["url"]))
+                "查看 %d 篇" % len(e["entries"]) if len(e["entries"]) > 1 else "查看图解", REPO_URL, first["url"]))
         extra_tbl = "\n".join(rows)
 
     missing_txt = "、".join(str(n) for n in data["missing"]) or "无"
@@ -221,7 +221,7 @@ def readme(data):
 [![Forks](https://img.shields.io/github/forks/@@OWNER@@/@@REPO@@?style=for-the-badge&logo=git&color=58a6ff)](https://github.com/@@OWNER@@/@@REPO@@/forks)
 [![Last Commit](https://img.shields.io/github/last-commit/@@OWNER@@/@@REPO@@?style=for-the-badge&color=3fb950)](https://github.com/@@OWNER@@/@@REPO@@/commits/main)
 [![Progress](https://img.shields.io/badge/%E8%BF%9B%E5%BA%A6-@@DONE@@%2F@@TOTAL@@-3fb950?style=for-the-badge)](@@REPO_URL@@)
-[![License](https://img.shields.io/badge/License-MIT-bc8cff?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-bc8cff?style=for-the-badge)](https://github.com/@@OWNER@@/@@REPO@@/blob/main/LICENSE)
 
 [🌐 在线刷题](@@SITE@@) &nbsp;·&nbsp; [📘 题目清单](#题目清单) &nbsp;·&nbsp; [🧩 进度看板](#进度看板) &nbsp;·&nbsp; [🚀 每日更新](#每天怎么更新)
 
@@ -249,12 +249,12 @@ LeetCode「热题 100」是中文社区公认的算法入门主线，但大多�
 
 <table>
 <tr>
-<td width="50%"><img src="screenshots/n-queens.png" alt="51. N 皇后：DFS 回溯与剪枝，冲突格标红、代码行同步高亮"></td>
-<td width="50%"><img src="screenshots/rain-water.png" alt="42. 接雨水：双指针，水位随左右边界收缩上涨"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/@@OWNER@@/@@REPO@@/main/screenshots/n-queens.png" alt="51. N 皇后：DFS 回溯与剪枝，冲突格标红、代码行同步高亮"></td>
+<td width="50%"><img src="https://raw.githubusercontent.com/@@OWNER@@/@@REPO@@/main/screenshots/rain-water.png" alt="42. 接雨水：双指针，水位随左右边界收缩上涨"></td>
 </tr>
 <tr>
-<td><img src="screenshots/two-sum.png" alt="1. 两数之和：HashMap 建表与查补数逐步演示"></td>
-<td><img src="screenshots/home.png" alt="在线首页：按专题筛选、搜索、进度统计"></td>
+<td><img src="https://raw.githubusercontent.com/@@OWNER@@/@@REPO@@/main/screenshots/two-sum.png" alt="1. 两数之和：HashMap 建表与查补数逐步演示"></td>
+<td><img src="https://raw.githubusercontent.com/@@OWNER@@/@@REPO@@/main/screenshots/home.png" alt="在线首页：按专题筛选、搜索、进度统计"></td>
 </tr>
 </table>
 
@@ -368,7 +368,7 @@ powershell -ExecutionPolicy Bypass -File tools/publish.ps1 "新增 34. 在排序
 ## 说明
 
 - 题目描述与版权归 [LeetCode](https://leetcode.cn/) 所有，本仓库仅作学习交流。
-- 代码与图解均为原创整理，采用 [MIT License](LICENSE)，转载请保留出处。
+- 代码与图解均为原创整理，采用 [MIT License](https://github.com/@@OWNER@@/@@REPO@@/blob/main/LICENSE)，转载请保留出处。
 
 <div align="center"><sub>如果它对你有用，请点亮右上角的 ⭐ Star，让更多正在刷 Hot 100 的人看到它。</sub></div>
 """
